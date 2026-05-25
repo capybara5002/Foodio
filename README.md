@@ -1,4 +1,4 @@
-# 🍜 Vĩnh Khánh Food Street Map
+# 🍜 Foodio Map
 
 Ứng dụng web bản đồ tương tác dành riêng cho khu phố ẩm thực Vĩnh Khánh — hiển thị thông tin quán ăn theo thời gian thực, kèm audio giới thiệu đa ngôn ngữ.
 
