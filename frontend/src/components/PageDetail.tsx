@@ -1,0 +1,252 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState } from 'react';
+import { Restaurant } from '../types';
+
+interface PageDetailProps {
+  restaurant: Restaurant;
+  onBack: () => void;
+  onOpenBooking: () => void;
+  onStartAudio: () => void;
+  onGoToChat: () => void;
+}
+
+export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartAudio, onGoToChat }: PageDetailProps) {
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleShare = () => {
+    setToastMessage('🔗 Link copied! Enjoy sharing this creative street food spot.');
+    setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  const handleAddDish = (dishName: string) => {
+    setToastMessage(`😋 Added ${dishName} to your tasting list!`);
+    setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  return (
+    <div className="w-full bg-[#fdfcf9] pb-24 text-on-surface">
+      
+      {/* Immersive Photo Hero Header Banner Section */}
+      <div 
+        className="relative w-full h-[320px] bg-cover bg-center border-b border-[#1a1a1a]/10"
+        style={{ backgroundImage: `url('${restaurant.image}')` }}
+      >
+        {/* Absolute Floating Controllers */}
+        <div className="absolute top-4 left-0 w-full flex justify-between items-center px-4 z-10 pt-4">
+          <button 
+            type="button"
+            onClick={onBack}
+            className="w-10 h-10 flex items-center justify-center rounded-sm bg-white border border-[#1a1a1a]/25 shadow text-on-surface hover:bg-[#f9f7f2] active:scale-95 transition-transform cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-xl">arrow_back</span>
+          </button>
+          
+          <div className="flex gap-2">
+            <button 
+              type="button"
+              onClick={handleShare}
+              className="w-10 h-10 flex items-center justify-center rounded-sm bg-white border border-[#1a1a1a]/25 shadow text-on-surface hover:bg-[#f9f7f2] active:scale-95 transition-transform cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-xl">share</span>
+            </button>
+            <button 
+              type="button"
+              onClick={() => setIsFavorite(!isFavorite)}
+              className="w-10 h-10 flex items-center justify-center rounded-sm bg-white border border-[#1a1a1a]/25 shadow hover:bg-[#f9f7f2] active:scale-95 transition-transform cursor-pointer"
+            >
+              <span className={`material-symbols-outlined text-xl ${isFavorite ? 'filled text-[#e2533b]' : 'text-on-surface'}`}>
+                {isFavorite ? 'favorite' : 'favorite_border'}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom fading vignette */}
+        <div className="absolute bottom-0 w-full h-24 bg-gradient-to-t from-[#fdfcf9] to-transparent pointer-events-none" />
+      </div>
+
+      {/* Main Content Layout Sheet Container - Magazine open spread aesthetic */}
+      <main className="relative -mt-10 bg-white border-t-2 border-[#1a1a1a] pt-8 px-5 md:px-8 flex flex-col gap-6 z-20 max-w-2xl mx-auto shadow-md">
+        
+        {/* Title and Badge specifications */}
+        <section className="flex flex-col gap-2">
+          <div className="flex justify-between items-start gap-4">
+            <div>
+              <span className="text-[10px] tracking-[0.3em] uppercase text-[#e2533b] font-extrabold block mb-1">STREET FOOD SELECTION</span>
+              <h1 className="font-serif italic font-bold text-headline-lg-mobile md:text-headline-lg text-[#1a1a1a] leading-none">
+                {restaurant.name}
+                {restaurant.isVerified && (
+                  <span className="ml-2 align-middle text-[#e2533b] material-symbols-outlined text-[18px] filled select-none">verified</span>
+                )}
+              </h1>
+            </div>
+            
+            <div className="flex items-center gap-1.5 bg-[#e2533b] text-white px-3 py-1.5 rounded-none shadow-sm shrink-0 select-none">
+              <span className="material-symbols-outlined text-[15px] filled text-white">star</span>
+              <span className="font-mono text-xs font-black">{restaurant.rating}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60 pt-2 border-t border-[#1a1a1a]/10 mt-2">
+            <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2.5 py-1 rounded-none font-bold text-[#1a1a1a]">{restaurant.priceRange}</span>
+            <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2.5 py-1 rounded-none font-bold text-[#1a1a1a]">{restaurant.category}</span>
+            <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2.5 py-1 rounded-none font-bold text-[#1a1a1a]">Vietnamese</span>
+            <span className="flex items-center gap-1 text-[#e2533b] font-bold ml-1">
+              <span className="material-symbols-outlined text-sm font-black">location_on</span>
+              {restaurant.distance}
+            </span>
+          </div>
+        </section>
+
+        {/* Action Row CTA: Audio Guide and Chat triggers */}
+        <section className="flex items-center gap-3">
+          <button 
+            type="button"
+            onClick={onStartAudio}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3.5 px-4 rounded-none shadow-md active:scale-98 transition-all font-mono text-[10px] uppercase tracking-widest cursor-pointer"
+          >
+            📚 Play Audio Guide // 🔊
+          </button>
+          
+          <button 
+            type="button"
+            onClick={onGoToChat}
+            aria-label="Direct message with restaurant owner"
+            className="flex items-center justify-center w-12 h-12 bg-white border border-[#1a1a1a]/25 text-on-surface hover:bg-[#f9f7f2] rounded-none shadow-sm active:scale-95 transition-transform cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-lg">chat</span>
+          </button>
+        </section>
+
+        {/* Contact and address specification box */}
+        <section className="flex flex-col gap-3 p-4 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-xs text-[#1a1a1a]">
+          
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined text-[#e2533b] mt-0.5 text-lg select-none">map</span>
+            <div>
+              <p className="font-bold">{restaurant.address}</p>
+              <p className="text-[#1a1a1a]/60 text-[11px] font-sans mt-0.5">{restaurant.area}</p>
+            </div>
+          </div>
+          
+          <hr className="border-[#1a1a1a]/10" />
+
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined text-[#e2533b] mt-0.5 text-lg select-none">schedule</span>
+            <div>
+              <p className="font-bold">
+                Open Now <span className="text-[#1a1a1a]/60 font-normal ml-2">{restaurant.openingHours}</span>
+              </p>
+            </div>
+          </div>
+
+        </section>
+
+        {/* Menu signature dishes highlighting bento lists */}
+        <section className="flex flex-col gap-3">
+          <div className="flex justify-between items-baseline border-b border-[#1a1a1a]/10 pb-2 mb-2">
+            <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">Signature Dishes</h2>
+            <button className="font-mono text-[9px] uppercase tracking-wider font-extrabold text-[#e2533b] hover:underline">See All</button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {restaurant.dishes.map((dish) => (
+              <div 
+                key={dish.id} 
+                className="bg-white border border-[#1a1a1a]/15 rounded-none overflow-hidden shadow-xs flex flex-col relative group hover:border-[#e2533b]/45 transition-colors"
+              >
+                {/* Image panel */}
+                <div 
+                  className="h-28 w-full bg-cover bg-center filter grayscale group-hover:grayscale-0 transition-all duration-300"
+                  style={{ backgroundImage: `url('${dish.image}')` }}
+                />
+                
+                <div className="p-3.5 flex flex-col justify-between flex-1 gap-1">
+                  <div>
+                    <h3 className="font-serif italic font-bold text-xs md:text-sm text-[#1a1a1a] truncate">{dish.name}</h3>
+                    <p className="font-sans text-[10px] text-[#1a1a1a]/55 line-clamp-1 mt-1 font-light leading-tight">{dish.description}</p>
+                  </div>
+                  <p className="font-mono font-bold text-[#e2533b] text-xs mt-1.5">${dish.price.toFixed(2)}</p>
+                </div>
+
+                {/* Add target floating button */}
+                <button 
+                  type="button"
+                  onClick={() => handleAddDish(dish.name)}
+                  className="absolute bottom-3 right-3 w-7 h-7 bg-[#1a1a1a] hover:bg-[#e2533b] text-white rounded-none flex items-center justify-center shadow active:scale-90 transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[13px] font-bold">add</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Foodie list reviews */}
+        <section className="flex flex-col gap-3 pb-12">
+          <div className="border-b border-[#1a1a1a]/10 pb-2 mb-2">
+            <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">Foodie Reviews</h2>
+          </div>
+          
+          <div className="flex overflow-x-auto gap-3 hide-scrollbar -mx-5 px-5 pb-2">
+            {restaurant.reviews.map((rev) => (
+              <div 
+                key={rev.id}
+                className="min-w-[280px] md:min-w-[340px] bg-white p-4 rounded-none shadow-xs border border-[#1a1a1a]/15 flex flex-col gap-2 shrink-0 relative"
+              >
+                {/* Visual quotation mark mark */}
+                <span className="absolute right-3 top-3 font-serif italic text-6xl text-[#1a1a1a]/5 select-none font-black leading-none">“</span>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-mono font-bold text-xs select-none">
+                    {rev.avatar}
+                  </div>
+                  
+                  <div className="flex-1">
+                    <p className="font-bold text-xs text-[#1a1a1a]">{rev.author}</p>
+                    <p className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 mt-0.5">{rev.role}</p>
+                  </div>
+
+                  {/* Stars indicators */}
+                  <div className="flex text-[#e2533b]">
+                    {Array.from({ length: 5 }).map((_, st) => (
+                      <span key={st} className="material-symbols-outlined text-xs filled select-none text-[#e2533b]">star</span>
+                    ))}
+                  </div>
+                </div>
+
+                <p className="font-serif italic text-[11px] md:text-xs text-[#1a1a1a]/70 leading-relaxed line-clamp-3 font-light mt-1">
+                  "{rev.comment}"
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+      </main>
+
+      {/* Sticky Bottom Action Sheet Row */}
+      <div className="fixed bottom-0 left-0 w-full bg-[#fdfcf9] border-t border-[#1a1a1a]/10 px-4 py-3 shadow-lg z-40 flex justify-center pb-safe">
+        <button 
+          onClick={onOpenBooking}
+          className="w-full max-w-md bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest py-3.5 rounded-none shadow-md active:scale-[0.98] transition-all text-center cursor-pointer"
+        >
+          Book a Table // Reserve
+        </button>
+      </div>
+
+      {/* Glowing dynamic notification toast */}
+      {toastMessage && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white px-5 py-2.5 rounded-none text-xs font-semibold tracking-wider uppercase border border-[#e2533b]/20 shadow-2xl z-[100] animate-in fade-in slide-in-from-bottom-4">
+          {toastMessage}
+        </div>
+      )}
+
+    </div>
+  );
+}

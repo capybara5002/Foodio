@@ -119,7 +119,7 @@ Foodio-FoodStreet/
 | Lớp | Công nghệ | Lý do chọn |
 |---|---|---|
 | **Backend Core** | ASP.NET Core 8 Web API | Yêu cầu đề bài |
-| **ORM & Database** | Entity Framework Core + SQLite | Không cần cài SQL Server, file `.db` duy nhất |
+| **ORM & Database** | Entity Framework Core + SQL Server | Dùng SQL Server theo yêu cầu |
 | **Real-time** | SignalR (built-in .NET) | Push update quán ăn tới client, không cần thư viện ngoài |
 | **Auth** | JWT Bearer (đơn giản) | Không cần session, phù hợp SPA |
 | **File Storage** | Local disk (`/Uploads/audio/`) | Đủ dùng cho đồ án, không cần S3/Azure |
@@ -178,8 +178,8 @@ SignalR Hub: /hubs/restaurant
 
 | Ngày | Việc cần làm |
 |---|---|
-| 1–2 | Tạo project ASP.NET Core, cài EF Core + SQLite, thiết kế Models |
-| 3 | Viết `AppDbContext`, tạo Migration đầu tiên, seed data ~10 quán Vĩnh Khánh |
+| 1–2 | Tạo project ASP.NET Core, cài EF Core + SQL Server, thiết kế Models |
+| 3 | Viết `AppDbContext`, tạo Migration đầu tiên |
 | 4 | Viết `RestaurantsController` — GET all, GET by id |
 | 5 | Viết `AuthController` — login/register bằng JWT đơn giản |
 | 6–7 | Test bằng Swagger UI, sửa bug, viết DTOs |
@@ -193,7 +193,7 @@ SignalR Hub: /hubs/restaurant
 
 | Ngày | Việc cần làm |
 |---|---|
-| 1–2 | Thiết lập React + Vite, cài Leaflet + React-Leaflet, render bản đồ khu Vĩnh Khánh |
+| 1–2 | Thiết lập React + Vite, cài Leaflet + React-Leaflet, render bản đồ khu Vĩnh Khánh (map trống để tự thêm quán) |
 | 3 | Fetch quán từ API, render `RestaurantMarker` lên bản đồ đúng tọa độ |
 | 4 | Cài `@microsoft/signalr`, viết `RestaurantHub.cs` phía backend |
 | 5 | Viết `useSignalR.js` — lắng nghe event `RestaurantStatusChanged` |
@@ -230,7 +230,7 @@ SignalR Hub: /hubs/restaurant
 | 2 | Viết `Reviews` — khách để lại đánh giá sao + bình luận |
 | 3 | Hoàn thiện UI: `StatusBadge`, `LoadingSpinner`, responsive mobile |
 | 4 | Xử lý lỗi cơ bản: 401, 404, mạng mất kết nối SignalR |
-| 5 | Seed thêm data thực (ảnh, tọa độ chính xác các quán Vĩnh Khánh) |
+| 5 | Nhập thêm data thực (ảnh, tọa độ chính xác các quán Vĩnh Khánh) |
 | 6 | Viết báo cáo đồ án — kiến trúc, ERD, API docs |
 | 7 | Rehearsal demo — chạy thử toàn bộ use case, fix bug cuối |
 
@@ -244,7 +244,7 @@ SignalR Hub: /hubs/restaurant
 ```bash
 cd backend/Foodio.API
 dotnet restore
-dotnet ef database update   # tạo file foodio.db
+dotnet ef database update   # tạo database SQL Server
 dotnet run                  # chạy tại https://localhost:7000
 # Swagger: https://localhost:7000/swagger
 ```
@@ -263,7 +263,7 @@ npm run dev                 # chạy tại http://localhost:5173
 
 ### Backend (NuGet)
 ```
-Microsoft.EntityFrameworkCore.Sqlite
+Microsoft.EntityFrameworkCore.SqlServer
 Microsoft.EntityFrameworkCore.Tools
 Microsoft.AspNetCore.Authentication.JwtBearer
 Microsoft.AspNetCore.SignalR
