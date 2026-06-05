@@ -19,12 +19,12 @@ import {
 import NavBar from './components/NavBar';
 import AudioPlayer from './components/AudioPlayer';
 import BookingModal from './components/BookingModal';
-import PageMap from './components/PageMap';
-import PageDiscover from './components/PageDiscover';
-import PageDetail from './components/PageDetail';
-import PageCreate from './components/PageCreate';
-import PageInbox from './components/PageInbox';
-import PageProfile from './components/PageProfile';
+import PageMap from './pages/PageMap';
+import PageDiscover from './pages/PageDiscover';
+import PageDetail from './pages/PageDetail';
+import PageCreate from './pages/PageCreate';
+import PageInbox from './pages/PageInbox';
+import PageProfile from './pages/PageProfile';
 
 function App() {
   const [currentTab, setCurrentTab] = useState<'map' | 'discover' | 'create' | 'inbox' | 'profile'>('map');
