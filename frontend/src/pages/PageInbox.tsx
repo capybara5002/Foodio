@@ -8,38 +8,93 @@ import { ChatThread, ChatMessage } from '../types';
 
 interface PageInboxProps {
   threads: ChatThread[];
-  onSendMessage: (threadId: string, text: string) => void;
   activeThreadId: string;
   onSelectThread: (threadId: string) => void;
-  onReceiveResponse: (threadId: string, response: string) => void;
+  onRefreshThreads?: () => void;
 }
 
-export default function PageInbox({ threads, onSendMessage, activeThreadId, onSelectThread, onReceiveResponse }: PageInboxProps) {
+export default function PageInbox({ threads, activeThreadId, onSelectThread, onRefreshThreads }: PageInboxProps) {
   const [inputText, setInputText] = useState('');
   const [mobileView, setMobileView] = useState<'threads' | 'chat'>('threads');
   const [isTyping, setIsTyping] = useState(false);
   const [mockCallState, setMockCallState] = useState<'idle' | 'calling'>('idle');
 
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [errorMessages, setErrorMessages] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeThread = threads.find((t) => t.id === activeThreadId) || threads[0];
 
-  // Auto scroll to bottom when messages list updates
+  const fetchMessages = async (threadId: string) => {
+    if (!threadId) return;
+    setLoadingMessages(true);
+    setErrorMessages(null);
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${baseUrl}/api/chatthreads/${threadId}/messages`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setMessages(data);
+    } catch (err: any) {
+      console.error("Error fetching chat messages:", err);
+      setErrorMessages("Failed to load chat history.");
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const postMessage = async (sender: string, text: string) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${baseUrl}/api/chatmessages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender,
+          text,
+          chatThreadId: activeThreadId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      await fetchMessages(activeThreadId);
+      
+      if (onRefreshThreads) {
+        onRefreshThreads();
+      }
+    } catch (err: any) {
+      console.error("Error sending message to backend:", err);
+    }
+  };
+
+  useEffect(() => {
+    void fetchMessages(activeThreadId);
+  }, [activeThreadId]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeThread.messages, isTyping]);
+  }, [messages, isTyping]);
 
-  const handleSend = (e: FormEvent) => {
+  const handleSend = async (e: FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
 
     const query = inputText.trim();
-    onSendMessage(activeThread.id, query);
     setInputText('');
 
-    // Trigger simulated typing & automated response
+    await postMessage('user', query);
+
     setIsTyping(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       let automatedResponse = "Perfect! Let us know if you need any adjustments or recommendations. We'll have your street-side table ready! 🐌🍻";
       
       const qLower = query.toLowerCase();
@@ -54,7 +109,7 @@ export default function PageInbox({ threads, onSendMessage, activeThreadId, onSe
       }
 
       setIsTyping(false);
-      onReceiveResponse(activeThread.id, automatedResponse);
+      await postMessage('restaurant', automatedResponse);
     }, 2500);
   };
 
@@ -191,8 +246,27 @@ export default function PageInbox({ threads, onSendMessage, activeThreadId, onSe
             </span>
           </div>
 
+          {loadingMessages && (
+            <div className="flex flex-col items-center justify-center py-8 text-[#1a1a1a]/60">
+              <span className="animate-spin text-xl">⏳</span>
+              <span className="font-mono text-[9px] mt-1.5 uppercase tracking-widest font-medium">Loading history...</span>
+            </div>
+          )}
+
+          {errorMessages && (
+            <div className="text-center py-8 font-mono text-[9px] uppercase text-[#e2533b]">
+              {errorMessages}
+            </div>
+          )}
+
+          {!loadingMessages && !errorMessages && messages.length === 0 && (
+            <div className="text-center py-8 font-mono text-[9px] uppercase text-[#1a1a1a]/40">
+              No messages yet. Start the conversation!
+            </div>
+          )}
+
           {/* Actual streams rendering */}
-          {activeThread.messages.map((msg) => {
+          {!loadingMessages && !errorMessages && messages.map((msg) => {
             const isUser = msg.sender === 'user';
             return (
               <div 

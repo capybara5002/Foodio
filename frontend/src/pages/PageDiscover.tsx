@@ -3,21 +3,86 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AudioTour, CommunityPost } from '../types';
 
 interface PageDiscoverProps {
   tours: AudioTour[];
-  posts: CommunityPost[];
   onPlayTour: (tour: AudioTour) => void;
-  onLikePost: (postId: string) => void;
-  onSavePost: (postId: string) => void;
 }
 
-export default function PageDiscover({ tours, posts, onPlayTour, onLikePost, onSavePost }: PageDiscoverProps) {
+export default function PageDiscover({ tours, onPlayTour }: PageDiscoverProps) {
   const [subTab, setSubTab] = useState<'tours' | 'feed'>('tours');
   const [feedFilter, setFeedFilter] = useState<'forYou' | 'following'>('forYou');
   const [tourFilter, setTourFilter] = useState('All');
+
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (subTab === 'feed') {
+      const fetchPosts = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+          const response = await fetch(`${baseUrl}/api/communityposts`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          if (active) {
+            setPosts(data);
+          }
+        } catch (err: any) {
+          console.error("Error fetching community posts:", err);
+          if (active) {
+            setError("Could not load posts. Please try again later.");
+          }
+        } finally {
+          if (active) {
+            setLoading(false);
+          }
+        }
+      };
+      void fetchPosts();
+    }
+    return () => {
+      active = false;
+    };
+  }, [subTab]);
+
+  const handleLikePost = (postId: string) => {
+    setPosts((prevPosts) =>
+      prevPosts.map((post) => {
+        if (post.id === postId) {
+          const isCurrentlyLiked = post.isLiked;
+          return {
+            ...post,
+            isLiked: !isCurrentlyLiked,
+            likesCount: isCurrentlyLiked ? post.likesCount - 1 : post.likesCount + 1
+          };
+        }
+        return post;
+      })
+    );
+  };
+
+  const handleSavePost = (postId: string) => {
+    setPosts((prevPosts) =>
+      prevPosts.map((post) => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            isSaved: !post.isSaved
+          };
+        }
+        return post;
+      })
+    );
+  };
 
   const tourCategories = ['All', 'Night Markets', 'Seafood', 'Street Food', 'Fine Dining'];
 
@@ -214,8 +279,27 @@ export default function PageDiscover({ tours, posts, onPlayTour, onLikePost, onS
             </button>
           </div>
 
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-12 text-[#1a1a1a]/60">
+              <span className="animate-spin text-2xl">⏳</span>
+              <span className="font-mono text-[10px] mt-2 uppercase tracking-widest font-bold">Loading Feed...</span>
+            </div>
+          )}
+
+          {error && (
+            <div className="text-center py-12 font-mono text-[10px] uppercase text-[#e2533b] font-bold">
+              ⚠️ {error}
+            </div>
+          )}
+
+          {!loading && !error && posts.length === 0 && (
+            <div className="text-center py-12 font-mono text-[10px] uppercase text-[#1a1a1a]/40 font-bold">
+              No posts found.
+            </div>
+          )}
+
           {/* Social Posts lists */}
-          {posts.map((post) => (
+          {!loading && !error && posts.map((post) => (
             <article 
               key={post.id}
               className="bg-white rounded-none border border-[#1a1a1a]/15 shadow-sm overflow-hidden flex flex-col"
@@ -267,7 +351,7 @@ export default function PageDiscover({ tours, posts, onPlayTour, onLikePost, onS
                   {/* Likes and Comment metrics */}
                   <div className="flex items-center gap-4">
                     <button 
-                      onClick={() => onLikePost(post.id)}
+                      onClick={() => handleLikePost(post.id)}
                       className={`flex items-center gap-1 px-1 py-1 rounded transition-colors cursor-pointer ${
                         post.isLiked ? 'text-[#e2533b]' : 'text-[#1a1a1a]/55 hover:text-[#e2533b]'
                       }`}
@@ -286,7 +370,7 @@ export default function PageDiscover({ tours, posts, onPlayTour, onLikePost, onS
 
                   {/* Bookmark Save Action */}
                   <button 
-                    onClick={() => onSavePost(post.id)}
+                    onClick={() => handleSavePost(post.id)}
                     className={`p-1 hover:bg-[#1a1a1a]/5 rounded transition-colors cursor-pointer ${
                       post.isSaved ? 'text-[#e2533b]' : 'text-[#1a1a1a]/60'
                     }`}

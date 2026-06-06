@@ -80,6 +80,7 @@ public class CraveMapController : ControllerBase
     }
 
     [HttpGet("community-posts")]
+    [HttpGet("/api/communityposts")]
     public async Task<ActionResult<IReadOnlyList<CommunityPostDto>>> GetCommunityPosts()
     {
         var posts = await _db.CommunityPosts
@@ -91,6 +92,7 @@ public class CraveMapController : ControllerBase
     }
 
     [HttpPost("community-posts")]
+    [HttpPost("/api/communityposts")]
     public async Task<ActionResult<CommunityPostDto>> CreateCommunityPost(CommunityPostDto dto)
     {
         var post = new CommunityPost
@@ -146,6 +148,56 @@ public class CraveMapController : ControllerBase
             Text = dto.Text,
             Timestamp = string.IsNullOrWhiteSpace(dto.Timestamp) ? "Just now" : dto.Timestamp,
             Status = dto.Status,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        thread.LastMessageText = message.Text;
+        thread.LastMessageTime = message.Timestamp;
+
+        _db.ChatMessages.Add(message);
+        await _db.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetChatThreads), message.ToDto());
+    }
+
+    [HttpGet("/api/chatthreads/{threadId}/messages")]
+    public async Task<ActionResult<IReadOnlyList<ChatMessageDto>>> GetChatThreadMessages(string threadId)
+    {
+        var thread = await _db.ChatThreads
+            .AsNoTracking()
+            .Include(t => t.Messages)
+            .FirstOrDefaultAsync(t => t.Id == threadId);
+
+        if (thread is null)
+        {
+            return NotFound();
+        }
+
+        var messagesDto = thread.Messages
+            .OrderBy(m => m.CreatedAt)
+            .Select(m => m.ToDto())
+            .ToList();
+
+        return Ok(messagesDto);
+    }
+
+    [HttpPost("/api/chatmessages")]
+    public async Task<ActionResult<ChatMessageDto>> CreateChatMessageDirect(ChatMessageCreationDto dto)
+    {
+        var thread = await _db.ChatThreads.FindAsync(dto.ChatThreadId);
+        if (thread is null)
+        {
+            return NotFound("Chat thread not found.");
+        }
+
+        var message = new ChatMessage
+        {
+            Id = $"msg_{Guid.NewGuid():N}",
+            ChatThreadId = dto.ChatThreadId,
+            Sender = dto.Sender,
+            Text = dto.Text,
+            Timestamp = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7)).ToString("h:mm tt"),
+            Status = "sent",
             CreatedAt = DateTimeOffset.UtcNow
         };
 

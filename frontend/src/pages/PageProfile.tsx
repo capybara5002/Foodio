@@ -1,18 +1,29 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface PageProfileProps {
   userEmail: string;
-  totalPostsCount: number;
 }
 
-export default function PageProfile({ userEmail, totalPostsCount }: PageProfileProps) {
+export default function PageProfile({ userEmail }: PageProfileProps) {
   const [appLanguage, setAppLanguage] = useState<'vi' | 'en'>('vi');
   const [showStatus, setShowStatus] = useState<string | null>(null);
+  const [postsCount, setPostsCount] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchPostsCount = async () => {
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${baseUrl}/api/communityposts`);
+        if (!response.ok) throw new Error("Failed to fetch posts count");
+        const data = await response.json();
+        const userPosts = data.filter((p: any) => p.author === 'hoangsonle1805' || p.author === 'hoangsonle1805@gmail.com');
+        setPostsCount(userPosts.length);
+      } catch (error) {
+        console.error("Failed to load user posts count in profile:", error);
+      }
+    };
+    void fetchPostsCount();
+  }, []);
 
   const handleToggleLanguage = () => {
     const nextLang = appLanguage === 'en' ? 'vi' : 'en';
@@ -53,7 +64,7 @@ export default function PageProfile({ userEmail, totalPostsCount }: PageProfileP
         <div className="grid grid-cols-2 gap-3.5 text-center">
           <div className="bg-white p-4 rounded-none border-2 border-[#1a1a1a] flex flex-col gap-1 items-center shadow">
             <span className="material-symbols-outlined text-[#e2533b] text-xl">reviews</span>
-            <span className="font-serif italic font-bold text-2xl text-[#1a1a1a]">{totalPostsCount}</span>
+            <span className="font-serif italic font-bold text-2xl text-[#1a1a1a]">{postsCount}</span>
             <span className="font-mono text-[9px] text-[#1a1a1a]/50 uppercase tracking-wider font-extrabold">Posts Published</span>
           </div>
 

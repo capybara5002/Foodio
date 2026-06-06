@@ -4,16 +4,14 @@
  */
 
 import { useEffect, useState } from 'react';
-import { initialRestaurants, initialCommunityFeed, initialChatThreads, initialAudioTours } from './data';
-import { Restaurant, CommunityPost, ChatThread, AudioTour, ChatMessage } from './types';
+import { initialRestaurants, initialChatThreads, initialAudioTours } from './data';
+import { Restaurant, ChatThread, AudioTour, ChatMessage } from './types';
 import {
   createBooking,
   createCommunityPost,
   getAudioTours,
   getChatThreads,
-  getCommunityPosts,
-  getRestaurants,
-  sendChatMessage
+  getRestaurants
 } from './api/cravemapApi';
 
 import NavBar from './components/NavBar';
@@ -33,7 +31,6 @@ function App() {
   const [activeAudioTour, setActiveAudioTour] = useState<AudioTour | null>(null);
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>(initialRestaurants);
-  const [posts, setPosts] = useState<CommunityPost[]>(initialCommunityFeed);
   const [chatThreads, setChatThreads] = useState<ChatThread[]>(initialChatThreads);
   const [audioTours, setAudioTours] = useState<AudioTour[]>(initialAudioTours);
 
@@ -46,9 +43,8 @@ function App() {
 
     const loadData = async () => {
       try {
-        const [remoteRestaurants, remotePosts, remoteThreads, remoteTours] = await Promise.all([
+        const [remoteRestaurants, remoteThreads, remoteTours] = await Promise.all([
           getRestaurants(),
-          getCommunityPosts(),
           getChatThreads(),
           getAudioTours()
         ]);
@@ -56,7 +52,6 @@ function App() {
         if (cancelled) return;
 
         if (remoteRestaurants.length > 0) setRestaurants(remoteRestaurants);
-        if (remotePosts.length > 0) setPosts(remotePosts);
         if (remoteThreads.length > 0) setChatThreads(remoteThreads);
         if (remoteTours.length > 0) setAudioTours(remoteTours);
       } catch (error) {
@@ -83,91 +78,23 @@ function App() {
     }
   };
 
-  const handleSendMessage = (threadId: string, text: string) => {
-    setChatThreads((prevThreads) =>
-      prevThreads.map((thread) => {
-        if (thread.id === threadId) {
-          const newMsg: ChatMessage = {
-            id: `msg_user_${Date.now()}`,
-            sender: 'user',
-            text,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            status: 'sent'
-          };
-
-          void sendChatMessage(threadId, newMsg).catch(() => undefined);
-
-          return {
-            ...thread,
-            lastMessageText: text,
-            lastMessageTime: 'Now',
-            messages: [...thread.messages, newMsg]
-          };
-        }
-        return thread;
-      })
-    );
+  const handleRefreshThreads = async () => {
+    try {
+      const remoteThreads = await getChatThreads();
+      if (remoteThreads.length > 0) {
+        setChatThreads(remoteThreads);
+      }
+    } catch (error) {
+      console.warn('Failed to refresh chat threads:', error);
+    }
   };
 
-  const handleReceiveResponse = (threadId: string, responseText: string) => {
-    setChatThreads((prevThreads) =>
-      prevThreads.map((thread) => {
-        if (thread.id === threadId) {
-          const newMsg: ChatMessage = {
-            id: `msg_res_${Date.now()}`,
-            sender: 'restaurant',
-            text: responseText,
-            timestamp: 'Just now'
-          };
-          return {
-            ...thread,
-            lastMessageText: responseText,
-            lastMessageTime: 'Now',
-            unreadCount: currentTab === 'inbox' && activeThreadId === threadId ? 0 : thread.unreadCount + 1,
-            messages: [...thread.messages, newMsg]
-          };
-        }
-        return thread;
-      })
-    );
-  };
-
-  const handleLikePost = (postId: string) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((post) => {
-        if (post.id === postId) {
-          const isCurrentlyLiked = post.isLiked;
-          return {
-            ...post,
-            isLiked: !isCurrentlyLiked,
-            likesCount: isCurrentlyLiked ? post.likesCount - 1 : post.likesCount + 1
-          };
-        }
-        return post;
-      })
-    );
-  };
-
-  const handleSavePost = (postId: string) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((post) => {
-        if (post.id === postId) {
-          return {
-            ...post,
-            isSaved: !post.isSaved
-          };
-        }
-        return post;
-      })
-    );
-  };
-
-  const handleAddPost = (newPost: { content: string; image: string; rating: number; locationName: string }) => {
-    const freshPost: CommunityPost = {
+  const handleAddPost = async (newPost: { content: string; image: string; rating: number; locationName: string }) => {
+    const freshPost = {
       id: `post_user_${Date.now()}`,
       author: 'hoangsonle1805',
       handle: '@son_hoang_foodie',
-      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBRKZRdFtQr7QINgok2cIIj_I4mo7HJMI7i5ywrSs9Z-FpldNZJam-o0Inzqk-l4q9x7dEjZCSdbxyBG9GTzUHdlbB2drKAOGcd6-cTW4zsrmvKvckSZ_1jZyK1kaIqAl8k8O49SYBJO_04AYp1RJCKM-MbF7mPfP2ft_oHP4dPdDBwslbmjGzpvcU0A5pEyWXm837Es0Z7AgcbTvM2zx2gftDZiniFueWJf8phqDltfzBrhQiLeouhVErO1tWNv5-n1WvtpIAvlw',
+      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBRKz2YnyvZVLIBglb9f9NCrquX4dKnpC6f_I1bacYnGKPkCdd4BK4ec4NSU3T0QDdjyD09txLee_GTY0faM2F7c2iZtVrQ5AWBSRzGLIRZO8qylHZIKMAGiBCW0yPydeRXezrelYofwryiKBLEy4t0THRWH9807xh6L2T4xl221ZBFmgNwcC8Xqx34_V1ZveUHvBcv4cs9R-oNv4eYz9I-wfJoaK1POgGMvhhjPVERdEp3OZI9gxH39c_gaG667-MpaMfEpaiArA',
       timeAgo: 'Vừa xong',
       rating: Number(newPost.rating.toFixed(1)),
       image: newPost.image,
@@ -179,10 +106,12 @@ function App() {
       isSaved: false
     };
 
-    setPosts([freshPost, ...posts]);
     setCurrentTab('discover');
-
-    void createCommunityPost(freshPost).catch(() => undefined);
+    try {
+      await createCommunityPost(freshPost);
+    } catch (error) {
+      console.error('Failed to create community post:', error);
+    }
   };
 
   const handleConfirmBooking = (bookingDetails: { date: string; time: string; guests: number; seating: string }) => {
@@ -263,10 +192,7 @@ function App() {
         return (
           <PageDiscover
             tours={audioTours}
-            posts={posts}
             onPlayTour={(tour) => setActiveAudioTour(tour)}
-            onLikePost={handleLikePost}
-            onSavePost={handleSavePost}
           />
         );
       case 'create':
@@ -280,12 +206,11 @@ function App() {
               setActiveThreadId(tid);
               setChatThreads((prev) => prev.map((t) => (t.id === tid ? { ...t, unreadCount: 0 } : t)));
             }}
-            onSendMessage={handleSendMessage}
-            onReceiveResponse={handleReceiveResponse}
+            onRefreshThreads={handleRefreshThreads}
           />
         );
       case 'profile':
-        return <PageProfile userEmail={userEmail} totalPostsCount={posts.filter((p) => p.author === 'hoangsonle1805').length} />;
+        return <PageProfile userEmail={userEmail} />;
       default:
         return (
           <PageMap

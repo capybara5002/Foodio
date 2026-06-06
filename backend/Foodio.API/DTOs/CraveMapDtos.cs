@@ -85,6 +85,11 @@ public record ChatMessageDto(
     string Timestamp,
     string? Status);
 
+public record ChatMessageCreationDto(
+    string Sender,
+    string Text,
+    string ChatThreadId);
+
 public record ChatThreadDto(
     string Id,
     string RestaurantId,
