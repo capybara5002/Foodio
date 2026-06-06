@@ -248,13 +248,15 @@ function App() {
         onConfirm={handleConfirmBooking}
       />
 
-      <footer className="hidden md:flex bg-surface-container-high text-on-surface-variant font-label-sm text-[11px] py-4 border-t border-outline-variant/20 items-center justify-center gap-2 select-none z-40 relative">
-        <span>© 2026 CraveMap Food Exploration System. Match visual mockup layouts.</span>
-        <span className="w-1.5 h-1.5 bg-primary rounded-full" />
-        <span>
-          User Active: <strong className="font-bold">{userEmail}</strong>
-        </span>
-      </footer>
+      {currentTab !== 'map' && (
+        <footer className="hidden md:flex bg-surface-container-high text-on-surface-variant font-label-sm text-[11px] py-4 border-t border-outline-variant/20 items-center justify-center gap-2 select-none z-40 relative">
+          <span>© 2026 CraveMap Food Exploration System. Match visual mockup layouts.</span>
+          <span className="w-1.5 h-1.5 bg-primary rounded-full" />
+          <span>
+            User Active: <strong className="font-bold">{userEmail}</strong>
+          </span>
+        </footer>
+      )}
     </div>
   );
 }
