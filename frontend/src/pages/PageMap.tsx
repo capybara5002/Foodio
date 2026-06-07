@@ -10,7 +10,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 
 import { Restaurant } from '../types';
-import { X, BadgeCheck, Star, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, Fish, SlidersHorizontal, Droplet } from 'lucide-react';
+import { X, BadgeCheck, Star, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight } from 'lucide-react';
 
 // Standard Leaflet asset fixes for Vite builds to prevent broken image references
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -28,10 +28,12 @@ interface PageMapProps {
   restaurants: Restaurant[];
   onSelectRestaurant: (id: string) => void;
   onSelectTour: () => void;
-  searchText: string;
+  searchSelection: { restaurantId: string; requestId: number } | null;
 }
 
 // Coordinate constraints for Vinh Khanh Food Street
+const VINH_KHANH_CENTER: [number, number] = [10.7580, 106.7020];
+const MAP_ZOOM = 16;
 const SW_BOUNDS: [number, number] = [10.7500, 106.6950];
 const NE_BOUNDS: [number, number] = [10.7650, 106.7150];
 const MAX_BOUNDS = L.latLngBounds(SW_BOUNDS, NE_BOUNDS);
@@ -218,8 +220,7 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
   return null;
 }
 
-export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, searchText }: PageMapProps) {
-  const [activeFilter, setActiveFilter] = useState<'trending' | 'seafood' | 'bbq' | 'snails'>('trending');
+export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, searchSelection }: PageMapProps) {
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [locateTrigger, setLocateTrigger] = useState(false);
   const [gpsNotification, setGpsNotification] = useState(false);
@@ -242,7 +243,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
   }, [selectedRestaurant]);
 
   // Keyboard movement state
-  const [userLocation, setUserLocation] = useState<[number, number]>([10.7575, 106.7035]);
+  const [userLocation, setUserLocation] = useState<[number, number]>(VINH_KHANH_CENTER);
 
   // Freeze layouts and disable background scrolling dynamically when Map mounts
   useEffect(() => {
@@ -322,25 +323,18 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
     setTimeout(() => setGpsNotification(false), 2000);
   };
 
-  // Filter restaurants based on category filters and search text
-  const filteredRestaurants = restaurants.filter((r) => {
-    let matchesCategory = true;
-    if (activeFilter === 'trending') matchesCategory = r.rating >= 4.5;
-    else if (activeFilter === 'seafood') matchesCategory = r.category.toLowerCase() === 'seafood';
-    else if (activeFilter === 'bbq') matchesCategory = r.category.toLowerCase().includes('bbq') || r.category.toLowerCase().includes('grill');
-    else if (activeFilter === 'snails') matchesCategory = r.category.toLowerCase().includes('snail') || r.category.toLowerCase() === 'seafood';
+  const handleRestaurantSelection = (restaurant: Restaurant) => {
+    setSelectedRestaurant(restaurant);
+  };
 
-    let matchesSearch = true;
-    if (searchText) {
-      const q = searchText.toLowerCase();
-      matchesSearch = r.name.toLowerCase().includes(q) ||
-        r.category.toLowerCase().includes(q) ||
-        r.address.toLowerCase().includes(q) ||
-        r.area.toLowerCase().includes(q);
+  useEffect(() => {
+    if (!searchSelection) return;
+
+    const restaurant = restaurants.find((r) => r.id === searchSelection.restaurantId);
+    if (restaurant) {
+      handleRestaurantSelection(restaurant);
     }
-
-    return matchesCategory && matchesSearch;
-  });
+  }, [restaurants, searchSelection]);
 
   const selectedCoords = selectedRestaurant ? getCoordinates(selectedRestaurant) : null;
 
@@ -572,46 +566,17 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
       <div
         className={`map-container-wrap ${selectedRestaurant ? 'panel-open' : ''} flex flex-col`}
       >
-        {/* Floating Top Filters */}
-        <div className="absolute top-4 w-full z-[1000] px-4 pointer-events-none">
-          <div className="max-w-2xl mx-auto flex gap-2 overflow-x-auto hide-scrollbar pb-2 pointer-events-auto">
-            {(['trending', 'seafood', 'bbq', 'snails'] as const).map((filter) => {
-              const label = filter.charAt(0).toUpperCase() + filter.slice(1);
-              const IconComponent = filter === 'trending' ? Flame
-                : filter === 'snails' ? SlidersHorizontal
-                  : filter === 'seafood' ? Fish
-                    : filter === 'bbq' ? Flame
-                      : Droplet;
-
-              return (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setActiveFilter(filter)}
-                  className={`shrink-0 px-4 py-2 rounded-none font-mono text-[10px] uppercase tracking-wider border-2 shadow transition-all flex items-center gap-1.5 cursor-pointer ${activeFilter === filter
-                      ? 'bg-[#e2533b] text-white border-transparent font-bold scale-102'
-                      : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2]'
-                    }`}
-                >
-                  <IconComponent size={15} />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Real Leaflet Map — dynamic key ensures map remounts when default center changes */}
         <MapContainer
           key="vinh-khanh-map-stable-v3"
-          center={[10.7592, 106.7066]}
-          zoom={16}
+          center={VINH_KHANH_CENTER}
+          zoom={MAP_ZOOM}
           maxBounds={MAX_BOUNDS}
           maxBoundsViscosity={1.0}
           className="w-full h-full z-10"
           zoomControl={false}
         >
-          <MapViewUpdater center={[10.7592, 106.7066]} zoom={16} />
+          <MapViewUpdater center={VINH_KHANH_CENTER} zoom={MAP_ZOOM} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -627,8 +592,8 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
             </Popup>
           </Marker>
 
-          {/* Render restaurant markers */}
-          {filteredRestaurants.map((restaurant) => {
+          {/* Render every backend restaurant marker regardless of active search text. */}
+          {restaurants.map((restaurant) => {
             const coords = getCoordinates(restaurant);
             const isSelected = selectedRestaurant?.id === restaurant.id;
 
@@ -639,7 +604,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                 icon={getRestaurantIcon(restaurant.category, isSelected)}
                 eventHandlers={{
                   click: () => {
-                    setSelectedRestaurant(restaurant);
+                    handleRestaurantSelection(restaurant);
                   }
                 }}
               >

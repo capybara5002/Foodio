@@ -28,15 +28,14 @@ function AppContent() {
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [activeAudioTour, setActiveAudioTour] = useState<AudioTour | null>(null);
+  const [mapSearchQuery, setMapSearchQuery] = useState('');
+  const [mapSearchSelection, setMapSearchSelection] = useState<{ restaurantId: string; requestId: number } | null>(null);
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>(initialRestaurants);
   const [chatThreads, setChatThreads] = useState<ChatThread[]>(initialChatThreads);
   const [audioTours, setAudioTours] = useState<AudioTour[]>(initialAudioTours);
 
   const [activeThreadId, setActiveThreadId] = useState<string>('oc_oanh_thread');
-
-  // Search filter state
-  const [searchText, setSearchText] = useState('');
 
   // Authentication interception states
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -129,6 +128,12 @@ function AppContent() {
     if (firstTour) {
       setActiveAudioTour(firstTour);
     }
+  };
+
+  const handleMapSearchSelect = (restaurantId: string) => {
+    setSelectedRestaurantId(null);
+    setCurrentTab('map');
+    setMapSearchSelection({ restaurantId, requestId: Date.now() });
   };
 
   const handleRefreshThreads = async () => {
@@ -250,7 +255,7 @@ function AppContent() {
             restaurants={restaurants}
             onSelectRestaurant={handleSelectRestaurant}
             onSelectTour={handleSelectTour}
-            searchText={searchText}
+            searchSelection={mapSearchSelection}
           />
         );
       case 'discover':
@@ -258,7 +263,7 @@ function AppContent() {
           <PageDiscover
             tours={audioTours}
             onPlayTour={(tour) => setActiveAudioTour(tour)}
-            searchText={searchText}
+            searchText=""
           />
         );
       case 'create':
@@ -293,7 +298,7 @@ function AppContent() {
             restaurants={restaurants}
             onSelectRestaurant={handleSelectRestaurant}
             onSelectTour={handleSelectTour}
-            searchText={searchText}
+            searchSelection={mapSearchSelection}
           />
         );
     }
@@ -319,8 +324,10 @@ function AppContent() {
           }
         }}
         unreadInboxCount={unreadInboxCount}
-        searchText={searchText}
-        onSearchChange={setSearchText}
+        restaurants={restaurants}
+        searchQuery={mapSearchQuery}
+        onSearchQueryChange={setMapSearchQuery}
+        onSearchRestaurantSelect={handleMapSearchSelect}
       />
 
       {/* Floating QR scan notification banner */}
