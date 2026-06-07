@@ -161,3 +161,39 @@ public record QrVerifyResponseDto(
     string RestaurantName,
     int TableNumber,
     string Token);
+
+public record RestaurantRequestCreateDto(
+    string Name,
+    string PriceRange,
+    int CategoryId,
+    int FoodStreetId,
+    string Distance,
+    string Address,
+    string Area,
+    string OpeningHours,
+    string Image,
+    decimal Latitude,
+    decimal Longitude);
+
+public record RestaurantRequestDto(
+    string Id,
+    string OwnerId,
+    string OwnerName,
+    string OwnerEmail,
+    string Name,
+    string PriceRange,
+    string CategoryName,
+    string FoodStreetName,
+    string Distance,
+    string Address,
+    string Area,
+    string OpeningHours,
+    string Image,
+    decimal Latitude,
+    decimal Longitude,
+    string Status,
+    string? AdminNote,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? ReviewedAt);
+
+public record RestaurantRequestReviewDto(string? AdminNote);

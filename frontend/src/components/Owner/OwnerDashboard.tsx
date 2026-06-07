@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Restaurant, Category } from '../../types';
-import { Trash2, X } from 'lucide-react';
+import { Restaurant, Category, RestaurantRequest } from '../../types';
+import { Trash2, X, Clock, AlertCircle } from 'lucide-react';
 
 interface OwnerDashboardProps {
   onRestaurantUpdated?: (updated: Restaurant) => void;
@@ -10,6 +10,7 @@ interface OwnerDashboardProps {
 export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardProps) {
   const { user, updateUserRestaurantId } = useAuth();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [restaurantRequest, setRestaurantRequest] = useState<RestaurantRequest | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [foodStreets, setFoodStreets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,14 +67,12 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   
-  // No hardcoded fallback to "oc_dao" so newly upgraded owners can create a new restaurant
   const activeRestaurantId = user?.restaurantId;
 
   const fetchRestaurant = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Fetch categories and streets first since they are needed in both creation and edit views
       const [catRes, streetRes] = await Promise.all([
         fetch(`${baseUrl}/api/cravemap/categories`),
         fetch(`${baseUrl}/api/food-streets`)
@@ -90,7 +89,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
       if (activeRestaurantId) {
         const restRes = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`);
-        if (!restRes.ok) throw new Error('Failed to load restaurant details. Please make sure the backend is seeded.');
+        if (!restRes.ok) throw new Error('Failed to load restaurant details.');
         const restData: Restaurant = await restRes.json();
         setRestaurant(restData);
 
@@ -109,6 +108,13 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
           latitude: restData.latitude || 10.759031,
           longitude: restData.longitude || 106.706962
         });
+      } else if (user?.id) {
+        // Fetch pending request if no restaurant is linked
+        const reqRes = await fetch(`${baseUrl}/api/owner/restaurant-request/${user.id}`);
+        if (reqRes.ok) {
+          const reqData = await reqRes.json();
+          setRestaurantRequest(reqData);
+        }
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred.');
@@ -119,7 +125,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
   useEffect(() => {
     void fetchRestaurant();
-  }, [activeRestaurantId]);
+  }, [activeRestaurantId, user?.id]);
 
   const handleCreateRestaurant = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,7 +133,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${baseUrl}/api/owner/restaurant/create/${user.id}`, {
+      const res = await fetch(`${baseUrl}/api/owner/restaurant-request?ownerId=${user.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -137,34 +143,13 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || 'Failed to create restaurant.');
+        throw new Error(text || 'Failed to submit request.');
       }
 
-      const newRest: Restaurant = await res.json();
-      setRestaurant(newRest);
-      updateUserRestaurantId(newRest.id); // Update context and localStorage
-
-      setRestForm({
-        name: newRest.name,
-        priceRange: newRest.priceRange,
-        categoryId: (newRest as any).categoryId || 1,
-        foodStreetId: (newRest as any).foodStreetId || 1,
-        distance: newRest.distance,
-        address: newRest.address,
-        area: newRest.area,
-        openingHours: newRest.openingHours,
-        image: newRest.image,
-        isVerified: newRest.isVerified,
-        replySpeed: newRest.replySpeed,
-        latitude: newRest.latitude || 10.759031,
-        longitude: newRest.longitude || 106.706962
-      });
-
-      if (onRestaurantUpdated) {
-        onRestaurantUpdated(newRest);
-      }
+      const newRequest: RestaurantRequest = await res.json();
+      setRestaurantRequest(newRequest);
     } catch (err: any) {
-      setError(err.message || 'Error creating restaurant.');
+      setError(err.message || 'Error submitting request.');
     } finally {
       setIsLoading(false);
     }
@@ -275,6 +260,26 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   }
 
   if (!activeRestaurantId) {
+    if (restaurantRequest && restaurantRequest.status !== 'Rejected') {
+      return (
+        <div className="max-w-md mx-auto w-full px-4 py-6">
+          <div className="bg-white border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a] text-center">
+            <Clock size={40} className="mx-auto text-[#1a1a1a] mb-4" strokeWidth={1.5} />
+            <h2 className="font-serif italic font-bold text-2xl uppercase mb-2">
+              Đang chờ duyệt
+            </h2>
+            <p className="text-sm text-[#1a1a1a]/70 font-sans mb-4">
+              Yêu cầu đăng ký quán ăn <strong>{restaurantRequest.name}</strong> của bạn đã được gửi thành công. Vui lòng chờ Admin phê duyệt.
+            </p>
+            <div className="bg-[#f9f7f2] border-2 border-[#1a1a1a] p-3 text-left">
+              <p className="text-[10px] font-mono uppercase font-bold text-[#1a1a1a]/50 mb-1">Mã yêu cầu</p>
+              <p className="font-mono text-xs">{restaurantRequest.id}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-md mx-auto w-full px-4 py-6">
         <div className="bg-white border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a]">
@@ -283,16 +288,27 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               CHỦ QUÁN MỚI
             </span>
             <h2 className="font-serif italic font-bold text-2xl uppercase">
-              Tạo quán ăn của bạn
+              Đăng ký quán ăn
             </h2>
             <p className="text-xs text-[#1a1a1a]/60 mt-1 font-sans">
-              Bạn chưa có quán ăn nào được liên kết. Hãy điền thông tin bên dưới để khởi tạo quán ăn của riêng bạn trên CraveMap!
+              Điền thông tin bên dưới để gửi yêu cầu mở quán trên CraveMap. Yêu cầu của bạn sẽ được Admin xét duyệt.
             </p>
           </div>
 
           {error && (
             <div className="bg-red-50 border border-red-300 text-xs font-mono font-bold text-[#e2533b] p-3 mb-4">
               Error: {error}
+            </div>
+          )}
+
+          {restaurantRequest?.status === 'Rejected' && (
+            <div className="bg-red-50 border-2 border-[#e2533b] p-4 mb-6 flex gap-3 items-start">
+              <AlertCircle className="text-[#e2533b] shrink-0" size={20} />
+              <div>
+                <p className="font-mono text-[10px] uppercase font-bold text-[#e2533b] mb-1">Yêu cầu bị từ chối</p>
+                <p className="text-xs text-[#1a1a1a]/80">{restaurantRequest.adminNote || 'Không có lý do cụ thể.'}</p>
+                <p className="text-[10px] text-[#1a1a1a]/50 mt-2 italic">Vui lòng chỉnh sửa thông tin và gửi lại yêu cầu.</p>
+              </div>
             </div>
           )}
 
@@ -429,7 +445,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               type="submit"
               className="w-full mt-4 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-xs active:scale-[0.98]"
             >
-              Tạo và liên kết quán ăn
+              Gửi yêu cầu đăng ký quán
             </button>
           </form>
         </div>

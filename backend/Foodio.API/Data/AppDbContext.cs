@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<AudioTour> AudioTours => Set<AudioTour>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<RestaurantRequest> RestaurantRequests => Set<RestaurantRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

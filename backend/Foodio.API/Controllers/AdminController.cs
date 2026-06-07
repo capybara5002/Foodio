@@ -93,7 +93,8 @@ public class AdminController : ControllerBase
             return NotFound("User not found.");
         }
 
-        _db.Users.Remove(user);
+        // Soft delete
+        user.IsActive = false;
         await _db.SaveChangesAsync();
 
         return NoContent();
@@ -112,5 +113,133 @@ public class AdminController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(user.ToDto());
+    }
+
+    // ── Restaurant Request Management ──
+
+    [HttpGet("restaurant-requests")]
+    public async Task<ActionResult<IReadOnlyList<RestaurantRequestDto>>> GetRestaurantRequests([FromQuery] string? status = null)
+    {
+        var query = _db.RestaurantRequests
+            .Include(r => r.Owner)
+            .Include(r => r.Category)
+            .Include(r => r.FoodStreet)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(status))
+            query = query.Where(r => r.Status == status);
+
+        var requests = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+
+        return Ok(requests.Select(ToRequestDto).ToList());
+    }
+
+    [HttpPost("restaurant-requests/{id}/approve")]
+    public async Task<ActionResult<RestaurantRequestDto>> ApproveRequest(string id)
+    {
+        var request = await _db.RestaurantRequests
+            .Include(r => r.Owner)
+            .Include(r => r.Category)
+            .Include(r => r.FoodStreet)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (request == null) return NotFound("Request not found.");
+        if (request.Status != "Pending") return BadRequest($"Request is already {request.Status}.");
+
+        // Create the restaurant
+        var restaurantId = CreateSlugId(request.Name);
+
+        var restaurant = new Restaurant
+        {
+            Id = restaurantId,
+            Name = request.Name,
+            Rating = 0,
+            PriceRange = request.PriceRange,
+            CategoryId = request.CategoryId,
+            FoodStreetId = request.FoodStreetId,
+            Distance = request.Distance,
+            Address = request.Address,
+            Area = request.Area,
+            OpeningHours = request.OpeningHours,
+            Image = request.Image,
+            IsVerified = false,
+            ReplySpeed = "Thường trả lời trong 5 phút",
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _db.Restaurants.Add(restaurant);
+
+        // Link restaurant to owner
+        var owner = await _db.Users.FindAsync(request.OwnerId);
+        if (owner != null)
+        {
+            owner.RestaurantId = restaurantId;
+        }
+
+        request.Status = "Approved";
+        request.ReviewedAt = DateTimeOffset.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        return Ok(ToRequestDto(request));
+    }
+
+    [HttpPost("restaurant-requests/{id}/reject")]
+    public async Task<ActionResult<RestaurantRequestDto>> RejectRequest(string id, [FromBody] RestaurantRequestReviewDto dto)
+    {
+        var request = await _db.RestaurantRequests
+            .Include(r => r.Owner)
+            .Include(r => r.Category)
+            .Include(r => r.FoodStreet)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (request == null) return NotFound("Request not found.");
+        if (request.Status != "Pending") return BadRequest($"Request is already {request.Status}.");
+
+        request.Status = "Rejected";
+        request.AdminNote = dto.AdminNote;
+        request.ReviewedAt = DateTimeOffset.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        return Ok(ToRequestDto(request));
+    }
+
+    // ── Helpers ──
+
+    private static RestaurantRequestDto ToRequestDto(RestaurantRequest r) => new(
+        r.Id,
+        r.OwnerId,
+        r.Owner?.Username ?? "",
+        r.Owner?.Email ?? "",
+        r.Name,
+        r.PriceRange,
+        r.Category?.Name ?? "",
+        r.FoodStreet?.Name ?? "",
+        r.Distance,
+        r.Address,
+        r.Area,
+        r.OpeningHours,
+        r.Image,
+        r.Latitude,
+        r.Longitude,
+        r.Status,
+        r.AdminNote,
+        r.CreatedAt,
+        r.ReviewedAt);
+
+    private static string CreateSlugId(string name)
+    {
+        var safe = new string(name.ToLowerInvariant()
+            .Select(ch => char.IsLetterOrDigit(ch) ? ch : '_')
+            .ToArray())
+            .Trim('_');
+
+        return $"{safe}_{Guid.NewGuid():N}"[..Math.Min(safe.Length + 33, 64)];
     }
 }

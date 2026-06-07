@@ -105,3 +105,25 @@ export interface Category {
   id: number;
   name: string;
 }
+
+export interface RestaurantRequest {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  ownerEmail: string;
+  name: string;
+  priceRange: string;
+  categoryName: string;
+  foodStreetName: string;
+  distance: string;
+  address: string;
+  area: string;
+  openingHours: string;
+  image: string;
+  latitude: number;
+  longitude: number;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  adminNote?: string;
+  createdAt: string;
+  reviewedAt?: string;
+}
