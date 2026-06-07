@@ -9,17 +9,12 @@ interface NavBarProps {
   currentTab: 'map' | 'discover' | 'create' | 'inbox' | 'profile';
   onChangeTab: (tab: 'map' | 'discover' | 'create' | 'inbox' | 'profile') => void;
   unreadInboxCount: number;
+  searchText: string;
+  onSearchChange: (text: string) => void;
 }
 
-export default function NavBar({ currentTab, onChangeTab, unreadInboxCount }: NavBarProps) {
-  const [showSearchAlert, setShowSearchAlert] = useState(false);
-
-  const handleSearchClick = () => {
-    setShowSearchAlert(true);
-    setTimeout(() => {
-      setShowSearchAlert(false);
-    }, 2500);
-  };
+export default function NavBar({ currentTab, onChangeTab, unreadInboxCount, searchText, onSearchChange }: NavBarProps) {
+  const [showSearchInput, setShowSearchInput] = useState(false);
 
   return (
     <>
@@ -87,17 +82,40 @@ export default function NavBar({ currentTab, onChangeTab, unreadInboxCount }: Na
         </div>
 
         {/* Right Search & Filter Action Bar */}
-        <div className="flex items-center gap-1">
-          <button 
-            onClick={handleSearchClick}
-            aria-label="Search food locations"
-            className="text-[#e2533b] hover:bg-[#1a1a1a]/5 transition-colors p-2 rounded-full flex items-center justify-center cursor-pointer"
-          >
-            <span className="material-symbols-outlined font-semibold select-none text-xl">search</span>
-          </button>
+        <div className="flex items-center gap-2">
+          {showSearchInput ? (
+            <div className="flex items-center border-2 border-[#1a1a1a] bg-white px-2 py-1 shadow-[2px_2px_0px_0px_#1a1a1a] transition-all duration-200">
+              <span className="material-symbols-outlined text-[#1a1a1a]/60 text-sm select-none mr-1">search</span>
+              <input 
+                type="text" 
+                value={searchText} 
+                onChange={(e) => onSearchChange(e.target.value)} 
+                placeholder="Tìm món ăn, địa điểm..." 
+                className="text-xs font-mono bg-transparent outline-none w-36 sm:w-56"
+                autoFocus
+              />
+              <button 
+                onClick={() => {
+                  onSearchChange('');
+                  setShowSearchInput(false);
+                }}
+                className="material-symbols-outlined text-[14px] hover:text-[#e2533b] cursor-pointer ml-1 select-none font-bold"
+              >
+                close
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => setShowSearchInput(true)}
+              aria-label="Search food locations"
+              className="text-[#e2533b] hover:bg-[#1a1a1a]/5 transition-colors p-2 rounded-full flex items-center justify-center cursor-pointer"
+            >
+              <span className="material-symbols-outlined font-semibold select-none text-xl">search</span>
+            </button>
+          )}
 
           <button 
-            onClick={handleSearchClick}
+            onClick={() => setShowSearchInput(!showSearchInput)}
             aria-label="Filter category types"
             className="text-[#e2533b] hover:bg-[#1a1a1a]/5 transition-colors p-2 rounded-full flex items-center justify-center cursor-pointer"
           >
@@ -105,13 +123,6 @@ export default function NavBar({ currentTab, onChangeTab, unreadInboxCount }: Na
           </button>
         </div>
       </header>
-
-      {/* Floating search status alert overlay */}
-      {showSearchAlert && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white px-5 py-2.5 rounded-full text-xs font-semibold tracking-wider uppercase border border-[#e2533b]/20 shadow-xl z-[100] animate-in fade-in slide-in-from-top-4">
-          🔍 Enter snack name or street to search Vinh Khanh...
-        </div>
-      )}
 
       {/* Bottom Layout Menu Tab Navigation (Mobile only, visible on < md breakpoint, centered on full width) */}
       <nav className="fixed bottom-0 left-0 w-full z-50 bg-[#fdfcf9] border-t border-[#1a1a1a]/10 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex justify-around items-center h-16 md:hidden pb-safe">

@@ -31,6 +31,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+await DbInitializer.ApplyMigrationsAsync(app.Services);
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

@@ -30,6 +30,9 @@ public class Review
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
+    [MaxLength(1000)]
+    public string? ImageUrl { get; set; }
+
     [Required]
     [MaxLength(64)]
     public string RestaurantId { get; set; } = string.Empty;

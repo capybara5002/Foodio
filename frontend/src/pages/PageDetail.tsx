@@ -12,11 +12,23 @@ interface PageDetailProps {
   onOpenBooking: () => void;
   onStartAudio: () => void;
   onGoToChat: () => void;
+  requireAuth: (message: string, action: () => void) => void;
 }
 
-export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartAudio, onGoToChat }: PageDetailProps) {
+export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartAudio, onGoToChat, requireAuth }: PageDetailProps) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showAllDishes, setShowAllDishes] = useState(false);
+
+  // Advanced Review Filters State
+  const [starFilter, setStarFilter] = useState<number | 'All'>('All');
+  const [hasImageFilter, setHasImageFilter] = useState<boolean>(false);
+
+  const filteredReviews = restaurant.reviews.filter((rev) => {
+    if (starFilter !== 'All' && Math.floor(rev.rating) !== starFilter) return false;
+    if (hasImageFilter && !rev.imageUrl) return false;
+    return true;
+  });
 
   const handleShare = () => {
     setToastMessage('🔗 Link copied! Enjoy sharing this creative street food spot.');
@@ -151,11 +163,18 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
         <section className="flex flex-col gap-3">
           <div className="flex justify-between items-baseline border-b border-[#1a1a1a]/10 pb-2 mb-2">
             <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">Signature Dishes</h2>
-            <button className="font-mono text-[9px] uppercase tracking-wider font-extrabold text-[#e2533b] hover:underline">See All</button>
+            {restaurant.dishes.length > 2 && (
+              <button 
+                onClick={() => setShowAllDishes(!showAllDishes)}
+                className="font-mono text-[9px] uppercase tracking-wider font-extrabold text-[#e2533b] hover:underline cursor-pointer"
+              >
+                {showAllDishes ? 'Show Less' : 'See All'}
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {restaurant.dishes.map((dish) => (
+            {(showAllDishes ? restaurant.dishes : restaurant.dishes.slice(0, 2)).map((dish) => (
               <div 
                 key={dish.id} 
                 className="bg-white border border-[#1a1a1a]/15 rounded-none overflow-hidden shadow-xs flex flex-col relative group hover:border-[#e2533b]/45 transition-colors"
@@ -192,39 +211,91 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
           <div className="border-b border-[#1a1a1a]/10 pb-2 mb-2">
             <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">Foodie Reviews</h2>
           </div>
+
+          {/* Advanced Filter UI */}
+          <div className="flex flex-col gap-3 p-3.5 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-xs font-mono text-left">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold uppercase tracking-wider text-[10px] text-[#1a1a1a]/55">Số sao:</span>
+              <div className="flex flex-wrap gap-1">
+                {(['All', 5, 4, 3, 2, 1] as const).map(stars => (
+                  <button
+                    key={stars}
+                    onClick={() => setStarFilter(stars)}
+                    className={`px-2.5 py-1 border transition-all cursor-pointer font-bold text-[9px] uppercase tracking-wider ${
+                      starFilter === stars 
+                        ? 'bg-[#e2533b] text-white border-transparent shadow-xs' 
+                        : 'bg-white text-[#1a1a1a] border-[#1a1a1a]/15 hover:bg-[#fdfcf9]'
+                    }`}
+                  >
+                    {stars === 'All' ? 'Tất cả' : `${stars} ★`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 border-t border-[#1a1a1a]/10 pt-2.5 mt-0.5">
+              <input
+                id="photoFilter"
+                type="checkbox"
+                checked={hasImageFilter}
+                onChange={(e) => setHasImageFilter(e.target.checked)}
+                className="w-4 h-4 border-2 border-[#1a1a1a] rounded-none focus:ring-0 checked:bg-[#e2533b] cursor-pointer"
+              />
+              <label htmlFor="photoFilter" className="font-bold uppercase tracking-wider text-[10px] text-[#1a1a1a]/70 select-none cursor-pointer">
+                🖼️ Đánh giá có hình ảnh
+              </label>
+            </div>
+          </div>
           
           <div className="flex overflow-x-auto gap-3 hide-scrollbar -mx-5 px-5 pb-2">
-            {restaurant.reviews.map((rev) => (
-              <div 
-                key={rev.id}
-                className="min-w-[280px] md:min-w-[340px] bg-white p-4 rounded-none shadow-xs border border-[#1a1a1a]/15 flex flex-col gap-2 shrink-0 relative"
-              >
-                {/* Visual quotation mark mark */}
-                <span className="absolute right-3 top-3 font-serif italic text-6xl text-[#1a1a1a]/5 select-none font-black leading-none">“</span>
-
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-mono font-bold text-xs select-none">
-                    {rev.avatar}
-                  </div>
-                  
-                  <div className="flex-1">
-                    <p className="font-bold text-xs text-[#1a1a1a]">{rev.author}</p>
-                    <p className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 mt-0.5">{rev.role}</p>
-                  </div>
-
-                  {/* Stars indicators */}
-                  <div className="flex text-[#e2533b]">
-                    {Array.from({ length: 5 }).map((_, st) => (
-                      <span key={st} className="material-symbols-outlined text-xs filled select-none text-[#e2533b]">star</span>
-                    ))}
-                  </div>
-                </div>
-
-                <p className="font-serif italic text-[11px] md:text-xs text-[#1a1a1a]/70 leading-relaxed line-clamp-3 font-light mt-1">
-                  "{rev.comment}"
-                </p>
+            {filteredReviews.length === 0 ? (
+              <div className="min-w-full text-center py-8 font-mono text-[10px] uppercase text-[#1a1a1a]/40 font-bold">
+                Không có đánh giá phù hợp bộ lọc.
               </div>
-            ))}
+            ) : (
+              filteredReviews.map((rev) => (
+                <div 
+                  key={rev.id}
+                  className="min-w-[280px] md:min-w-[340px] bg-white p-4 rounded-none shadow-xs border border-[#1a1a1a]/15 flex flex-col gap-2 shrink-0 relative text-left"
+                >
+                  {/* Visual quotation mark mark */}
+                  <span className="absolute right-3 top-3 font-serif italic text-6xl text-[#1a1a1a]/5 select-none font-black leading-none">“</span>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-mono font-bold text-xs select-none">
+                      {rev.avatar}
+                    </div>
+                    
+                    <div className="flex-1">
+                      <p className="font-bold text-xs text-[#1a1a1a]">{rev.author}</p>
+                      <p className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 mt-0.5">{rev.role}</p>
+                    </div>
+
+                    {/* Stars indicators */}
+                    <div className="flex text-[#e2533b]">
+                      {Array.from({ length: 5 }).map((_, st) => (
+                        <span key={st} className={`material-symbols-outlined text-xs select-none ${st < Math.floor(rev.rating) ? 'filled' : ''}`}>star</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="font-serif italic text-[11px] md:text-xs text-[#1a1a1a]/70 leading-relaxed font-light mt-1 flex-1">
+                    "{rev.comment}"
+                  </p>
+
+                  {/* Review Image Preview */}
+                  {rev.imageUrl && (
+                    <div className="mt-2 border border-[#1a1a1a]/10 overflow-hidden aspect-video w-full bg-[#f9f7f2]">
+                      <img 
+                        src={rev.imageUrl} 
+                        alt="Review Attachment" 
+                        className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-300"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </section>
 

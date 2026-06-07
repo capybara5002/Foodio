@@ -18,6 +18,18 @@ export interface FoodieReview {
   rating: number;
   comment: string;
   avatar: string;
+  imageUrl?: string;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: 'Admin' | 'Owner' | 'User' | 'Guest';
+  restaurantId?: string;
+  tableNumber?: number;
+  isActive: boolean;
+  createdAt?: string;
 }
 
 export interface Restaurant {
@@ -87,4 +99,9 @@ export interface AudioTour {
   stopsCount: number;
   vibe: string;
   description: string;
+}
+
+export interface Category {
+  id: number;
+  name: string;
 }

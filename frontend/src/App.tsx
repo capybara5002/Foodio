@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { useEffect, useState } from 'react';
 import { initialRestaurants, initialChatThreads, initialAudioTours } from './data';
 import { Restaurant, ChatThread, AudioTour, ChatMessage } from './types';
@@ -17,6 +12,7 @@ import {
 import NavBar from './components/NavBar';
 import AudioPlayer from './components/AudioPlayer';
 import BookingModal from './components/BookingModal';
+import LoginModal from './components/Common/LoginModal';
 import PageMap from './pages/PageMap';
 import PageDiscover from './pages/PageDiscover';
 import PageDetail from './pages/PageDetail';
@@ -24,7 +20,10 @@ import PageCreate from './pages/PageCreate';
 import PageInbox from './pages/PageInbox';
 import PageProfile from './pages/PageProfile';
 
-function App() {
+import { AuthProvider, useAuth } from './context/AuthContext';
+
+function AppContent() {
+  const { user, qrLogin, logout } = useAuth();
   const [currentTab, setCurrentTab] = useState<'map' | 'discover' | 'create' | 'inbox' | 'profile'>('map');
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -36,7 +35,18 @@ function App() {
 
   const [activeThreadId, setActiveThreadId] = useState<string>('oc_oanh_thread');
 
-  const userEmail = 'hoangsonle1805@gmail.com';
+  // Search filter state
+  const [searchText, setSearchText] = useState('');
+
+  // Authentication interception states
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [loginMessage, setLoginMessage] = useState('');
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
+  // QR verification status banner states
+  const [qrStatus, setQrStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const userEmail = user ? user.email : 'Chưa đăng nhập';
 
   useEffect(() => {
     let cancelled = false;
@@ -66,6 +76,49 @@ function App() {
     };
   }, []);
 
+  // Detect QR Token inside URL on load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const qrToken = params.get('qr');
+    if (qrToken) {
+      const verifySession = async () => {
+        try {
+          const guestUser = await qrLogin(qrToken);
+          setQrStatus({
+            type: 'success',
+            message: `🎯 Quét mã QR thành công! Chào mừng bạn đến bàn ${guestUser.tableNumber}.`
+          });
+          // Redirect to the restaurant scanned if possible
+          if (guestUser.restaurantId) {
+            setSelectedRestaurantId(guestUser.restaurantId);
+          }
+          setTimeout(() => setQrStatus(null), 5000);
+        } catch (err: any) {
+          setQrStatus({
+            type: 'error',
+            message: `❌ Không thể xác thực QR: ${err.message || 'Mã hết hạn hoặc không hợp lệ'}`
+          });
+          setTimeout(() => setQrStatus(null), 5000);
+        } finally {
+          // Clear query params to clean URL
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+        }
+      };
+      void verifySession();
+    }
+  }, [qrLogin]);
+
+  const requireAuth = (message: string, action: () => void) => {
+    if (user && user.role !== 'Guest') {
+      action();
+    } else {
+      setLoginMessage(message);
+      setPendingAction(() => action);
+      setIsLoginOpen(true);
+    }
+  };
+
   const handleSelectRestaurant = (id: string) => {
     setSelectedRestaurantId(id);
   };
@@ -92,8 +145,8 @@ function App() {
   const handleAddPost = async (newPost: { content: string; image: string; rating: number; locationName: string }) => {
     const freshPost = {
       id: `post_user_${Date.now()}`,
-      author: 'hoangsonle1805',
-      handle: '@son_hoang_foodie',
+      author: user?.username || 'user_anonymous',
+      handle: `@${user?.username || 'user_anonymous'}`,
       avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBRKz2YnyvZVLIBglb9f9NCrquX4dKnpC6f_I1bacYnGKPkCdd4BK4ec4NSU3T0QDdjyD09txLee_GTY0faM2F7c2iZtVrQ5AWBSRzGLIRZO8qylHZIKMAGiBCW0yPydeRXezrelYofwryiKBLEy4t0THRWH9807xh6L2T4xl221ZBFmgNwcC8Xqx34_V1ZveUHvBcv4cs9R-oNv4eYz9I-wfJoaK1POgGMvhhjPVERdEp3OZI9gxH39c_gaG667-MpaMfEpaiArA',
       timeAgo: 'Vừa xong',
       rating: Number(newPost.rating.toFixed(1)),
@@ -153,6 +206,10 @@ function App() {
     }, 1200);
   };
 
+  const handleRestaurantUpdated = (updated: Restaurant) => {
+    setRestaurants((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+  };
+
   const unreadInboxCount = chatThreads.reduce((total, t) => total + t.unreadCount, 0);
 
   const renderMainContent = () => {
@@ -162,19 +219,26 @@ function App() {
         <PageDetail
           restaurant={selectedRestaurant}
           onBack={() => setSelectedRestaurantId(null)}
-          onOpenBooking={() => setIsBookingOpen(true)}
+          onOpenBooking={() => {
+            requireAuth('Bạn cần đăng nhập bằng tài khoản để đặt bàn ăn.', () => {
+              setIsBookingOpen(true);
+            });
+          }}
           onStartAudio={() => {
             const relevantTour = audioTours.find((t) => t.title.toLowerCase().includes('seafood')) || audioTours[0];
             setActiveAudioTour(relevantTour);
           }}
           onGoToChat={() => {
-            const matchOanh = chatThreads.find((t) => t.restaurantId === 'oc_oanh');
-            if (matchOanh) {
-              setActiveThreadId(matchOanh.id);
-            }
-            setSelectedRestaurantId(null);
-            setCurrentTab('inbox');
+            requireAuth('Bạn cần đăng nhập bằng tài khoản để chat với quán ăn.', () => {
+              const matchOanh = chatThreads.find((t) => t.restaurantId === 'oc_oanh');
+              if (matchOanh) {
+                setActiveThreadId(matchOanh.id);
+              }
+              setSelectedRestaurantId(null);
+              setCurrentTab('inbox');
+            });
           }}
+          requireAuth={requireAuth}
         />
       );
     }
@@ -186,6 +250,7 @@ function App() {
             restaurants={restaurants}
             onSelectRestaurant={handleSelectRestaurant}
             onSelectTour={handleSelectTour}
+            searchText={searchText}
           />
         );
       case 'discover':
@@ -193,6 +258,7 @@ function App() {
           <PageDiscover
             tours={audioTours}
             onPlayTour={(tour) => setActiveAudioTour(tour)}
+            searchText={searchText}
           />
         );
       case 'create':
@@ -210,13 +276,24 @@ function App() {
           />
         );
       case 'profile':
-        return <PageProfile userEmail={userEmail} />;
+        return (
+          <PageProfile 
+            userEmail={userEmail} 
+            onLoginTrigger={() => {
+              setLoginMessage('Đăng nhập hệ thống Foodio');
+              setPendingAction(null);
+              setIsLoginOpen(true);
+            }} 
+            onRestaurantUpdated={handleRestaurantUpdated}
+          />
+        );
       default:
         return (
           <PageMap
             restaurants={restaurants}
             onSelectRestaurant={handleSelectRestaurant}
             onSelectTour={handleSelectTour}
+            searchText={searchText}
           />
         );
     }
@@ -231,11 +308,43 @@ function App() {
       <NavBar
         currentTab={currentTab}
         onChangeTab={(tab) => {
-          setSelectedRestaurantId(null);
-          setCurrentTab(tab);
+          if (tab === 'create') {
+            requireAuth('Bạn cần đăng nhập bằng tài khoản để tạo bài viết hoặc đánh giá.', () => {
+              setSelectedRestaurantId(null);
+              setCurrentTab('create');
+            });
+          } else {
+            setSelectedRestaurantId(null);
+            setCurrentTab(tab);
+          }
         }}
         unreadInboxCount={unreadInboxCount}
+        searchText={searchText}
+        onSearchChange={setSearchText}
       />
+
+      {/* Floating QR scan notification banner */}
+      {qrStatus && (
+        <div className={`fixed top-20 left-1/2 -translate-x-1/2 px-6 py-3 border-2 border-[#1a1a1a] shadow-[4px_4px_0px_0px_#1a1a1a] font-mono text-xs font-bold z-[9999] animate-in slide-in-from-top-4 ${
+          qrStatus.type === 'success' ? 'bg-[#cbf3d2] text-green-900' : 'bg-[#f8d7da] text-red-900'
+        }`}>
+          {qrStatus.message}
+        </div>
+      )}
+
+      {/* Guest Mode Active indicator on bottom left */}
+      {user?.role === 'Guest' && (
+        <div className="fixed bottom-20 left-4 md:bottom-6 md:left-4 z-[45] bg-[#ffe0b2] border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] px-3.5 py-1.5 font-mono text-[9px] font-bold uppercase tracking-wider text-[#e65100] flex items-center gap-1.5 select-none">
+          <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+          <span>Bàn {user.tableNumber} (Chế độ Khách)</span>
+          <button 
+            onClick={logout}
+            className="ml-2 underline text-[#1a1a1a] hover:text-[#e2533b]"
+          >
+            Đăng nhập
+          </button>
+        </div>
+      )}
 
       <main className="flex-1 w-full animate-fade-in duration-300">{renderMainContent()}</main>
 
@@ -246,6 +355,18 @@ function App() {
         isOpen={isBookingOpen}
         onClose={() => setIsBookingOpen(false)}
         onConfirm={handleConfirmBooking}
+      />
+
+      <LoginModal 
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        message={loginMessage}
+        onSuccess={() => {
+          if (pendingAction) {
+            pendingAction();
+            setPendingAction(null);
+          }
+        }}
       />
 
       {currentTab !== 'map' && (
@@ -261,4 +382,10 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}

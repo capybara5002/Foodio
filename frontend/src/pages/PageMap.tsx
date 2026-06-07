@@ -27,6 +27,7 @@ interface PageMapProps {
   restaurants: Restaurant[];
   onSelectRestaurant: (id: string) => void;
   onSelectTour: () => void;
+  searchText: string;
 }
 
 // Coordinate constraints for Vinh Khanh Food Street
@@ -158,7 +159,7 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
   return null;
 }
 
-export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour }: PageMapProps) {
+export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, searchText }: PageMapProps) {
   const [activeFilter, setActiveFilter] = useState<'trending' | 'seafood' | 'bbq' | 'snails'>('trending');
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [locateTrigger, setLocateTrigger] = useState(false);
@@ -243,13 +244,24 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour 
     setTimeout(() => setGpsNotification(false), 2000);
   };
 
-  // Filter restaurants based on category filters
+  // Filter restaurants based on category filters and search text
   const filteredRestaurants = restaurants.filter((r) => {
-    if (activeFilter === 'trending') return r.rating >= 4.5;
-    if (activeFilter === 'seafood') return r.category.toLowerCase() === 'seafood';
-    if (activeFilter === 'bbq') return r.category.toLowerCase().includes('bbq') || r.category.toLowerCase().includes('grill');
-    if (activeFilter === 'snails') return r.category.toLowerCase().includes('snail') || r.category.toLowerCase() === 'seafood';
-    return true;
+    let matchesCategory = true;
+    if (activeFilter === 'trending') matchesCategory = r.rating >= 4.5;
+    else if (activeFilter === 'seafood') matchesCategory = r.category.toLowerCase() === 'seafood';
+    else if (activeFilter === 'bbq') matchesCategory = r.category.toLowerCase().includes('bbq') || r.category.toLowerCase().includes('grill');
+    else if (activeFilter === 'snails') matchesCategory = r.category.toLowerCase().includes('snail') || r.category.toLowerCase() === 'seafood';
+
+    let matchesSearch = true;
+    if (searchText) {
+      const q = searchText.toLowerCase();
+      matchesSearch = r.name.toLowerCase().includes(q) ||
+                      r.category.toLowerCase().includes(q) ||
+                      r.address.toLowerCase().includes(q) ||
+                      r.area.toLowerCase().includes(q);
+    }
+
+    return matchesCategory && matchesSearch;
   });
 
   const selectedCoords = selectedRestaurant ? getCoordinates(selectedRestaurant) : null;

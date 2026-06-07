@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<AudioTour> AudioTours => Set<AudioTour>();
     public DbSet<Booking> Bookings => Set<Booking>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -204,9 +205,13 @@ public class AppDbContext : DbContext
             new MenuItem { Id = "dish_bm25_1", RestaurantId = "banh_mi_25", Name = "Original Pate Banh Mi", Price = 3.25m, Image = banhMiImage, Description = "Crisp baguette with pate, pork, herbs, pickles, and chili.", IsAvailable = true });
 
         modelBuilder.Entity<Review>().HasData(
-            new Review { Id = "rev_1", RestaurantId = "oc_dao", Author = "Jane Doe", Role = "Local Guide", Rating = 5.0m, Avatar = "JD", Comment = "Incredible alley spot. The garlic butter sauce is perfect with bread.", CreatedAt = createdAt },
-            new Review { Id = "rev_oanh_1", RestaurantId = "oc_oanh", Author = "Minh Tuan", Role = "Snail aficionado", Rating = 5.0m, Avatar = "MT", Comment = "Fast service and a lively street-side seafood atmosphere.", CreatedAt = createdAt },
-            new Review { Id = "rev_pq_1", RestaurantId = "pho_quynh", Author = "An Binh", Role = "Pho lover", Rating = 4.0m, Avatar = "AB", Comment = "Open all night and very popular near Bui Vien walking street.", CreatedAt = createdAt });
+            new Review { Id = "rev_1", RestaurantId = "oc_dao", Author = "Jane Doe", Role = "Local Guide", Rating = 5.0m, Avatar = "JD", Comment = "Incredible alley spot. The garlic butter sauce is perfect with bread.", CreatedAt = createdAt, ImageUrl = seafoodImage },
+            new Review { Id = "rev_2", RestaurantId = "oc_dao", Author = "Alex Smith", Role = "Food Traveler", Rating = 4.0m, Avatar = "AS", Comment = "Great crab but a bit crowded. Prices are moderate.", CreatedAt = createdAt, ImageUrl = null },
+            new Review { Id = "rev_3", RestaurantId = "oc_dao", Author = "Nguyen Van A", Role = "Street Food Lover", Rating = 3.0m, Avatar = "NV", Comment = "Average snails. The service is nice though.", CreatedAt = createdAt, ImageUrl = null },
+            new Review { Id = "rev_oanh_1", RestaurantId = "oc_oanh", Author = "Minh Tuan", Role = "Snail aficionado", Rating = 5.0m, Avatar = "MT", Comment = "Fast service and a lively street-side seafood atmosphere.", CreatedAt = createdAt, ImageUrl = seafoodImage },
+            new Review { Id = "rev_oanh_2", RestaurantId = "oc_oanh", Author = "Tran Binh", Role = "Snack critic", Rating = 4.0m, Avatar = "TB", Comment = "Lively place. Highly recommend the tamarind sauce snails.", CreatedAt = createdAt, ImageUrl = null },
+            new Review { Id = "rev_pq_1", RestaurantId = "pho_quynh", Author = "An Binh", Role = "Pho lover", Rating = 4.0m, Avatar = "AB", Comment = "Open all night and very popular near Bui Vien walking street.", CreatedAt = createdAt, ImageUrl = phoImage },
+            new Review { Id = "rev_pq_2", RestaurantId = "pho_quynh", Author = "John C", Role = "Backpacker", Rating = 5.0m, Avatar = "JC", Comment = "Delicious hot broth, super fresh herbs. Best late night meal!", CreatedAt = createdAt, ImageUrl = phoImage });
 
         modelBuilder.Entity<CommunityPost>().HasData(
             new CommunityPost { Id = "post_1", Author = "foodie_explorer", Handle = "@foodie_explorer", Avatar = seafoodImage, TimeAgo = "2 hours ago", Rating = 4.8m, Image = seafoodImage, Content = "A tiny alley stall with bold seafood flavors and a packed local crowd.", LocationName = "Oc Dao", LikesCount = 245, CommentsCount = 18, IsLiked = false, IsSaved = false, CreatedAt = createdAt },
@@ -226,5 +231,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<AudioTour>().HasData(
             new AudioTour { Id = "tour_1", Title = "Midnight Snacking", Location = "District 1 and District 4 alleys", Image = seafoodImage, MapImage = seafoodImage, IsTrending = true, Rating = 4.9m, Duration = "2.5 hrs", StopsCount = 6, Vibe = "Energetic", Description = "A vibrant nighttime walk through seafood alleys, noodle counters, and quick snack stops." },
             new AudioTour { Id = "tour_2", Title = "Seafood Heaven Tour", Location = "Vinh Khanh Food Street", Image = seafoodImage, MapImage = seafoodImage, IsTrending = false, Rating = 4.7m, Duration = "1.5 hrs", StopsCount = 4, Vibe = "Premium", Description = "Fresh shellfish, grilled oysters, and local ordering tips from the canal-side stalls." });
+
+        modelBuilder.Entity<User>().HasData(
+            new User { Id = "usr_1", Username = "admin", Email = "admin@foodio.com", PasswordHash = "admin123", Role = "Admin", IsActive = true, CreatedAt = createdAt },
+            new User { Id = "usr_2", Username = "owner_ocdao", Email = "owner@foodio.com", PasswordHash = "owner123", Role = "Owner", RestaurantId = "oc_dao", IsActive = true, CreatedAt = createdAt },
+            new User { Id = "usr_3", Username = "customer", Email = "customer@foodio.com", PasswordHash = "customer123", Role = "User", IsActive = true, CreatedAt = createdAt }
+        );
     }
 }

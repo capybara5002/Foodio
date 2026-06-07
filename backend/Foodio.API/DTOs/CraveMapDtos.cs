@@ -24,7 +24,8 @@ public record FoodieReviewDto(
     string Role,
     decimal Rating,
     string Comment,
-    string Avatar);
+    string Avatar,
+    string? ImageUrl);
 
 public record RestaurantDto(
     string Id,
@@ -129,3 +130,34 @@ public record BookingDto(
     int Guests,
     string Seating,
     string Status);
+
+public record UserDto(
+    string Id,
+    string Username,
+    string Email,
+    string Role,
+    string? RestaurantId,
+    bool IsActive,
+    DateTimeOffset CreatedAt);
+
+public record UserLoginRequestDto(string Email, string Password);
+
+public record UserRegisterRequestDto(string Username, string Email, string Password);
+
+public record UserCreateUpdateDto(
+    string Username,
+    string Email,
+    string Role,
+    string? RestaurantId,
+    string? Password,
+    bool IsActive);
+
+public record QrGenerateRequestDto(string RestaurantId, int TableNumber);
+
+public record QrVerifyRequestDto(string Token);
+
+public record QrVerifyResponseDto(
+    string RestaurantId,
+    string RestaurantName,
+    int TableNumber,
+    string Token);
