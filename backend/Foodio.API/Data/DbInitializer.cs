@@ -8,6 +8,18 @@ public static class DbInitializer
     {
         await using var scope = services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await context.Database.MigrateAsync();
+        try
+        {
+            await context.Users.AnyAsync();
+        }
+        catch (Exception)
+        {
+            try
+            {
+                await context.Database.EnsureDeletedAsync();
+            }
+            catch (Exception) { }
+            await context.Database.EnsureCreatedAsync();
+        }
     }
 }

@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { AudioTour } from '../types';
 import { generateAudioTourNarrative } from '../api/cravemapApi';
+import { X, RotateCcw, RotateCw, Play, Pause } from 'lucide-react';
 
 interface AudioPlayerProps {
   tour: AudioTour | null;
@@ -115,7 +116,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
                 onClick={onClose}
                 className="text-[#1a1a1a]/60 hover:text-[#e2533b] transition-colors p-1"
               >
-                <span className="material-symbols-outlined text-[18px] font-black">close</span>
+                <X size={15} strokeWidth={3} />
               </button>
             </div>
             <p className="font-sans text-[10px] text-[#1a1a1a]/60 truncate font-light tracking-wide">
@@ -183,7 +184,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
             className="text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-95 transition-transform"
             onClick={() => setProgress(Math.max(0, progress - 10))}
           >
-            <span className="material-symbols-outlined text-xl">replay_10</span>
+            <RotateCcw size={20} />
           </button>
 
           <button
@@ -191,9 +192,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
             className="w-10 h-10 bg-[#e2533b] hover:bg-[#1a1a1a] text-white rounded-none flex items-center justify-center shadow active:scale-95 transition-all cursor-pointer"
             onClick={() => setIsPlaying(!isPlaying)}
           >
-            <span className="material-symbols-outlined filled text-xl text-white">
-              {isPlaying ? 'pause' : 'play_arrow'}
-            </span>
+            {isPlaying ? <Pause size={20} className="fill-current" /> : <Play size={20} className="fill-current" />}
           </button>
 
           <button 
@@ -201,7 +200,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
             className="text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-95 transition-transform"
             onClick={() => setProgress(Math.min(100, progress + 10))}
           >
-            <span className="material-symbols-outlined text-xl">forward_10</span>
+            <RotateCw size={20} />
           </button>
         </div>
       </div>
