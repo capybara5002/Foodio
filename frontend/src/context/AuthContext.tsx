@@ -9,6 +9,7 @@ interface AuthContextType {
   qrLogin: (token: string) => Promise<User>;
   logout: () => void;
   clearQrSession: () => void;
+  updateUserRestaurantId: (restaurantId: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -114,8 +115,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserRestaurantId = (restaurantId: string) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, restaurantId };
+      localStorage.setItem('foodio_user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, qrLogin, logout, clearQrSession }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, qrLogin, logout, clearQrSession, updateUserRestaurantId }}>
       {children}
     </AuthContext.Provider>
   );

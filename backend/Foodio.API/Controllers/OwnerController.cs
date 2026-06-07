@@ -124,4 +124,71 @@ public class OwnerController : ControllerBase
 
         return Ok(updated!.ToDto());
     }
+
+    [HttpPost("restaurant/create/{ownerId}")]
+    public async Task<ActionResult<RestaurantDto>> CreateRestaurantForOwner([FromRoute] string ownerId, [FromBody] RestaurantUpsertDto dto)
+    {
+        var owner = await _db.Users.FindAsync(ownerId);
+        if (owner == null)
+        {
+            return NotFound("Owner user not found.");
+        }
+
+        if (owner.Role != "Owner")
+        {
+            return BadRequest("User is not an Owner.");
+        }
+
+        if (!string.IsNullOrEmpty(owner.RestaurantId))
+        {
+            return BadRequest("Owner already has a restaurant assigned.");
+        }
+
+        var restaurantId = CreateSlugId(dto.Name);
+
+        var restaurant = new Restaurant
+        {
+            Id = restaurantId,
+            Name = dto.Name,
+            Rating = dto.Rating,
+            PriceRange = dto.PriceRange,
+            CategoryId = dto.CategoryId,
+            FoodStreetId = dto.FoodStreetId,
+            Distance = dto.Distance,
+            Address = dto.Address,
+            Area = dto.Area,
+            OpeningHours = dto.OpeningHours,
+            Image = string.IsNullOrWhiteSpace(dto.Image) ? "https://images.unsplash.com/photo-1555396273-367ea4eb4db5" : dto.Image,
+            IsVerified = dto.IsVerified,
+            ReplySpeed = dto.ReplySpeed,
+            Latitude = dto.Latitude,
+            Longitude = dto.Longitude,
+            IsActive = dto.IsActive,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _db.Restaurants.Add(restaurant);
+        owner.RestaurantId = restaurantId;
+
+        await _db.SaveChangesAsync();
+
+        var created = await _db.Restaurants
+            .Include(r => r.Category)
+            .Include(r => r.Dishes)
+            .Include(r => r.Reviews)
+            .FirstAsync(r => r.Id == restaurant.Id);
+
+        return Ok(created.ToDto());
+    }
+
+    private static string CreateSlugId(string name)
+    {
+        var safe = new string(name.ToLowerInvariant()
+            .Select(ch => char.IsLetterOrDigit(ch) ? ch : '_')
+            .ToArray())
+            .Trim('_');
+
+        return $"{safe}_{Guid.NewGuid():N}"[..Math.Min(safe.Length + 33, 64)];
+    }
 }
+

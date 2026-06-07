@@ -8,9 +8,10 @@ interface OwnerDashboardProps {
 }
 
 export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardProps) {
-  const { user } = useAuth();
+  const { user, updateUserRestaurantId } = useAuth();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [foodStreets, setFoodStreets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -25,6 +26,23 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     address: '',
     area: '',
     openingHours: '',
+    image: '',
+    isVerified: true,
+    replySpeed: 'Usually replies in 5m',
+    latitude: 10.759031,
+    longitude: 106.706962
+  });
+
+  // Create Restaurant Form state
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    priceRange: '$$',
+    categoryId: 1,
+    foodStreetId: 1,
+    distance: '0.1 km away',
+    address: '',
+    area: 'Quận 4',
+    openingHours: '16:00 - 23:00',
     image: '',
     isVerified: true,
     replySpeed: 'Usually replies in 5m',
@@ -48,43 +66,50 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   
-  // Fallback to "oc_dao" if the logged-in user doesn't have an explicit restaurantId (for testing/demo purposes)
-  const activeRestaurantId = user?.restaurantId || 'oc_dao';
+  // No hardcoded fallback to "oc_dao" so newly upgraded owners can create a new restaurant
+  const activeRestaurantId = user?.restaurantId;
 
   const fetchRestaurant = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [restRes, catRes] = await Promise.all([
-        fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`),
-        fetch(`${baseUrl}/api/cravemap/categories`)
+      // Fetch categories and streets first since they are needed in both creation and edit views
+      const [catRes, streetRes] = await Promise.all([
+        fetch(`${baseUrl}/api/cravemap/categories`),
+        fetch(`${baseUrl}/api/food-streets`)
       ]);
-
-      if (!restRes.ok) throw new Error('Failed to load restaurant details. Please make sure the backend is seeded.');
-      const restData: Restaurant = await restRes.json();
-      setRestaurant(restData);
 
       if (catRes.ok) {
         const catData = await catRes.json();
         setCategories(catData);
       }
+      if (streetRes.ok) {
+        const streetData = await streetRes.json();
+        setFoodStreets(streetData);
+      }
 
-      setRestForm({
-        name: restData.name,
-        priceRange: restData.priceRange,
-        categoryId: (restData as any).categoryId || 1,
-        foodStreetId: (restData as any).foodStreetId || 1,
-        distance: restData.distance,
-        address: restData.address,
-        area: restData.area,
-        openingHours: restData.openingHours,
-        image: restData.image,
-        isVerified: restData.isVerified,
-        replySpeed: restData.replySpeed,
-        latitude: restData.latitude || 10.759031,
-        longitude: restData.longitude || 106.706962
-      });
+      if (activeRestaurantId) {
+        const restRes = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`);
+        if (!restRes.ok) throw new Error('Failed to load restaurant details. Please make sure the backend is seeded.');
+        const restData: Restaurant = await restRes.json();
+        setRestaurant(restData);
 
+        setRestForm({
+          name: restData.name,
+          priceRange: restData.priceRange,
+          categoryId: (restData as any).categoryId || 1,
+          foodStreetId: (restData as any).foodStreetId || 1,
+          distance: restData.distance,
+          address: restData.address,
+          area: restData.area,
+          openingHours: restData.openingHours,
+          image: restData.image,
+          isVerified: restData.isVerified,
+          replySpeed: restData.replySpeed,
+          latitude: restData.latitude || 10.759031,
+          longitude: restData.longitude || 106.706962
+        });
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred.');
     } finally {
@@ -95,6 +120,55 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   useEffect(() => {
     void fetchRestaurant();
   }, [activeRestaurantId]);
+
+  const handleCreateRestaurant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${baseUrl}/api/owner/restaurant/create/${user.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(createForm)
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Failed to create restaurant.');
+      }
+
+      const newRest: Restaurant = await res.json();
+      setRestaurant(newRest);
+      updateUserRestaurantId(newRest.id); // Update context and localStorage
+
+      setRestForm({
+        name: newRest.name,
+        priceRange: newRest.priceRange,
+        categoryId: (newRest as any).categoryId || 1,
+        foodStreetId: (newRest as any).foodStreetId || 1,
+        distance: newRest.distance,
+        address: newRest.address,
+        area: newRest.area,
+        openingHours: newRest.openingHours,
+        image: newRest.image,
+        isVerified: newRest.isVerified,
+        replySpeed: newRest.replySpeed,
+        latitude: newRest.latitude || 10.759031,
+        longitude: newRest.longitude || 106.706962
+      });
+
+      if (onRestaurantUpdated) {
+        onRestaurantUpdated(newRest);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error creating restaurant.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleUpdateRestaurant = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,6 +270,169 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       <div className="flex flex-col items-center justify-center py-20 text-[#1a1a1a]/60">
         <span className="animate-spin text-3xl">⏳</span>
         <span className="font-mono text-xs mt-2 uppercase tracking-widest font-bold">Loading restaurant details...</span>
+      </div>
+    );
+  }
+
+  if (!activeRestaurantId) {
+    return (
+      <div className="max-w-md mx-auto w-full px-4 py-6">
+        <div className="bg-white border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a]">
+          <div className="mb-6 border-b-2 border-dashed border-[#1a1a1a]/20 pb-4">
+            <span className="text-[9px] tracking-[0.3em] uppercase text-[#e2533b] font-mono font-bold block mb-1">
+              CHỦ QUÁN MỚI
+            </span>
+            <h2 className="font-serif italic font-bold text-2xl uppercase">
+              Tạo quán ăn của bạn
+            </h2>
+            <p className="text-xs text-[#1a1a1a]/60 mt-1 font-sans">
+              Bạn chưa có quán ăn nào được liên kết. Hãy điền thông tin bên dưới để khởi tạo quán ăn của riêng bạn trên CraveMap!
+            </p>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-300 text-xs font-mono font-bold text-[#e2533b] p-3 mb-4">
+              Error: {error}
+            </div>
+          )}
+
+          <form onSubmit={handleCreateRestaurant} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Tên quán ăn</label>
+              <input 
+                type="text"
+                value={createForm.name}
+                onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Ví dụ: Ốc Oanh Vinh Khánh"
+                className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none focus:bg-[#f9f7f2]"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Mức giá</label>
+                <select
+                  value={createForm.priceRange}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, priceRange: e.target.value }))}
+                  className="w-full bg-white border-2 border-[#1a1a1a] px-2.5 py-1.5 text-sm focus:outline-none"
+                >
+                  <option value="$">$ (Rẻ)</option>
+                  <option value="$$">$$ (Trung bình)</option>
+                  <option value="$$$">$$$ (Sang chảnh)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Thể loại ẩm thực</label>
+                <select
+                  value={createForm.categoryId}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, categoryId: parseInt(e.target.value) }))}
+                  className="w-full bg-white border-2 border-[#1a1a1a] px-2.5 py-1.5 text-sm focus:outline-none"
+                >
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Phố ẩm thực</label>
+              <select
+                value={createForm.foodStreetId}
+                onChange={(e) => setCreateForm(prev => ({ ...prev, foodStreetId: parseInt(e.target.value) }))}
+                className="w-full bg-white border-2 border-[#1a1a1a] px-2.5 py-1.5 text-sm focus:outline-none"
+              >
+                {foodStreets.map(st => (
+                  <option key={st.id} value={st.id}>{st.name} ({st.district})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Địa chỉ chi tiết</label>
+              <input 
+                type="text"
+                value={createForm.address}
+                onChange={(e) => setCreateForm(prev => ({ ...prev, address: e.target.value }))}
+                placeholder="Ví dụ: 530 Vĩnh Khánh, Phường 10"
+                className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Khu vực (Quận)</label>
+                <input 
+                  type="text"
+                  value={createForm.area}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, area: e.target.value }))}
+                  placeholder="Ví dụ: Quận 4"
+                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Giờ mở cửa</label>
+                <input 
+                  type="text"
+                  value={createForm.openingHours}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, openingHours: e.target.value }))}
+                  placeholder="Ví dụ: 16:00 - 23:00"
+                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Link ảnh quán ăn</label>
+              <input 
+                type="text"
+                value={createForm.image}
+                onChange={(e) => setCreateForm(prev => ({ ...prev, image: e.target.value }))}
+                placeholder="https://images.unsplash.com/..."
+                className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-xs focus:outline-none font-mono"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Vĩ độ (Latitude)</label>
+                <input 
+                  type="number"
+                  step="0.000001"
+                  value={createForm.latitude}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, latitude: parseFloat(e.target.value) }))}
+                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Kinh độ (Longitude)</label>
+                <input 
+                  type="number"
+                  step="0.000001"
+                  value={createForm.longitude}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, longitude: parseFloat(e.target.value) }))}
+                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono"
+                  required
+                />
+              </div>
+            </div>
+
+            <button 
+              type="submit"
+              className="w-full mt-4 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-xs active:scale-[0.98]"
+            >
+              Tạo và liên kết quán ăn
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
