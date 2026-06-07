@@ -134,6 +134,20 @@ function RoutingControl({ userLocation, destination }: RoutingControlProps) {
   return null;
 }
 
+// Sub-component to force map center ONCE on mount — prevents Leaflet caching stale viewport
+function MapViewUpdater({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+  const hasFired = useRef(false);
+  useEffect(() => {
+    if (!hasFired.current) {
+      hasFired.current = true;
+      map.setView(center, zoom, { animate: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
+  return null;
+}
+
 // Controller component to center viewport dynamically
 interface MapControllerProps {
   userLocation: [number, number];
@@ -144,6 +158,7 @@ interface MapControllerProps {
 
 function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoordinates }: MapControllerProps) {
   const map = useMap();
+  const prevSelectedRef = useRef<Restaurant | null>(null);
 
   useEffect(() => {
     if (locateTrigger) {
@@ -155,14 +170,50 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
     if (selectedRestaurant) {
       const coords = getCoordinates(selectedRestaurant);
       const bounds = L.latLngBounds([userLocation[0], userLocation[1]], coords);
-      map.fitBounds(bounds, {
-        padding: [80, 80],
-        maxZoom: 17,
-        animate: true,
-        duration: 0.8
-      });
+
+      const wasNull = prevSelectedRef.current === null;
+      prevSelectedRef.current = selectedRestaurant;
+
+      const performFitBounds = () => {
+        map.invalidateSize();
+
+        const isMobile = window.innerWidth < 768;
+        // Shift visible center upward on mobile bottom sheet (50vh bottom padding)
+        const paddingBottom = isMobile ? Math.floor(window.innerHeight * 0.5) + 40 : 80;
+
+        map.fitBounds(bounds, {
+          paddingTopLeft: [80, 80],
+          paddingBottomRight: [80, paddingBottom],
+          maxZoom: 17,
+          animate: true,
+          duration: 0.8
+        });
+      };
+
+      if (wasNull && window.innerWidth >= 768) {
+        // Desktop transition width (100% -> 70%) takes 300ms. Delay fitBounds until map resizing finishes.
+        const timer = setTimeout(() => {
+          performFitBounds();
+        }, 300);
+        return () => clearTimeout(timer);
+      } else {
+        // Fit immediately when selecting a restaurant on mobile
+        performFitBounds();
+      }
+    } else {
+      prevSelectedRef.current = null;
+      if (window.innerWidth >= 768) {
+        // Desktop transition width back to 100% takes 300ms. Invalidate size after width expands.
+        const timer = setTimeout(() => {
+          map.invalidateSize();
+        }, 300);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [selectedRestaurant, map, userLocation, getCoordinates]);
+    // NOTE: userLocation intentionally excluded — arrow-key walking must NOT re-trigger fitBounds.
+    // fitBounds should only fire when selectedRestaurant changes (marker click / close).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRestaurant, map, getCoordinates]);
 
   return null;
 }
@@ -172,6 +223,23 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [locateTrigger, setLocateTrigger] = useState(false);
   const [gpsNotification, setGpsNotification] = useState(false);
+
+  // Transition state for smooth sliding animations
+  const [activeRestaurant, setActiveRestaurant] = useState<Restaurant | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (selectedRestaurant) {
+      setActiveRestaurant(selectedRestaurant);
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+      const timer = setTimeout(() => {
+        setActiveRestaurant(null);
+      }, 300); // Wait for transition duration (300ms) before unmounting content
+      return () => clearTimeout(timer);
+    }
+  }, [selectedRestaurant]);
 
   // Keyboard movement state
   const [userLocation, setUserLocation] = useState<[number, number]>([10.7575, 106.7035]);
@@ -241,8 +309,10 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
     }
     // Specific logical fallbacks along Vinh Khanh street bounds for consistency
     if (r.id === 'oc_dao') return [10.7589, 106.7082];
+    if (r.id === 'oc_oanh') return [10.7590, 106.7070];
     if (r.id === 'pho_quynh') return [10.7562, 106.7025];
-    return [10.7578, 106.7042];
+    if (r.id === 'banh_mi_25') return [10.7578, 106.7042];
+    return [10.7592, 106.7066];
   };
 
   const handleGeoLocate = () => {
@@ -264,9 +334,9 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
     if (searchText) {
       const q = searchText.toLowerCase();
       matchesSearch = r.name.toLowerCase().includes(q) ||
-                      r.category.toLowerCase().includes(q) ||
-                      r.address.toLowerCase().includes(q) ||
-                      r.area.toLowerCase().includes(q);
+        r.category.toLowerCase().includes(q) ||
+        r.address.toLowerCase().includes(q) ||
+        r.area.toLowerCase().includes(q);
     }
 
     return matchesCategory && matchesSearch;
@@ -276,7 +346,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
 
   return (
     <div className="fixed inset-x-0 bottom-0 top-[72px] bottom-16 md:bottom-0 flex bg-[#fdfcf9] overflow-hidden text-[#1a1a1a] z-40 transition-all duration-300">
-      
+
       <style>{`
         .leaflet-container {
           background-color: #fcfbfa !important;
@@ -296,148 +366,211 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
+        .info-panel {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 50vh;
+          max-height: 50vh;
+          border-top: 2px solid #1a1a1a;
+          border-radius: 16px 16px 0 0;
+          box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.1), 0 -8px 10px -6px rgba(0, 0, 0, 0.1);
+          transform: translateY(100%);
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s ease-in-out;
+          z-index: 1005;
+          visibility: hidden;
+        }
+        .info-panel.open {
+          transform: translateY(0);
+          visibility: visible;
+        }
+        .info-panel.closed {
+          transform: translateY(100%);
+          visibility: hidden;
+        }
+        .map-container-wrap {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @media (min-width: 768px) {
+          .info-panel {
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 30%;
+            height: 100%;
+            max-height: 100%;
+            border-top: none;
+            border-right: 2px solid #1a1a1a;
+            border-radius: 0;
+            box-shadow: 10px 0 25px -5px rgba(0, 0, 0, 0.1), 8px 0 10px -6px rgba(0, 0, 0, 0.1);
+            transform: translateX(-100%);
+          }
+          .info-panel.open {
+            transform: translateX(0);
+          }
+          .info-panel.closed {
+            transform: translateX(-100%);
+          }
+          .map-container-wrap {
+            right: 0;
+            left: auto;
+            width: 100%;
+          }
+          .map-container-wrap.panel-open {
+            width: 70%;
+          }
+        }
       `}</style>
 
-      {/* Left Section: Google Maps-Style Details Panel */}
-      <aside 
-        className="h-full bg-[#fdfcf9] flex flex-col transition-all duration-300 overflow-y-auto shrink-0 z-50 shadow-2xl relative border-r-2 border-[#1a1a1a]"
-        style={{ 
-          width: selectedRestaurant ? '30%' : '0px',
-          opacity: selectedRestaurant ? 1 : 0,
-          visibility: selectedRestaurant ? 'visible' : 'hidden'
-        }}
-      >
-        {selectedRestaurant && (
-          <div className="w-full flex flex-col">
-            {/* Header Banner Image */}
-            <div 
-              className="relative w-full h-[180px] bg-cover bg-center border-b border-[#1a1a1a]/15"
-              style={{ backgroundImage: `url('${selectedRestaurant.image}')` }}
-            >
-              {/* Close Button overlay */}
-              <button 
-                type="button"
-                onClick={() => setSelectedRestaurant(null)}
-                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-white border border-[#1a1a1a]/20 text-on-surface hover:bg-[#f9f7f2] active:scale-95 transition-all z-20 cursor-pointer shadow-sm"
+      {/* Left/Bottom Section: Google Maps-Style Responsive Details Panel */}
+      <aside className={`info-panel ${isOpen ? 'open' : 'closed'} bg-[#fdfcf9] flex flex-col`}>
+        {/* Mobile bottom sheet drag handle */}
+        <div
+          onClick={() => setSelectedRestaurant(null)}
+          className="md:hidden flex justify-center py-3 shrink-0 bg-[#fdfcf9] border-b border-[#1a1a1a]/5 cursor-pointer rounded-t-[16px]"
+        >
+          <div className="w-12 h-1 bg-[#1a1a1a]/20 rounded-full" />
+        </div>
+
+        {/* Scrollable Panel Content wrapper */}
+        <div className="flex-1 overflow-y-auto hide-scrollbar">
+          {activeRestaurant && (
+            <div className="w-full flex flex-col">
+              {/* Header Banner Image */}
+              <div
+                className="relative w-full h-[180px] bg-cover bg-center border-b border-[#1a1a1a]/15"
+                style={{ backgroundImage: `url('${activeRestaurant.image}')` }}
               >
-                <X size={14} strokeWidth={3} />
-              </button>
-              <div className="absolute bottom-0 w-full h-12 bg-gradient-to-t from-[#fdfcf9] to-transparent pointer-events-none" />
-            </div>
-
-            {/* Info details wrapper */}
-            <div className="p-4 flex flex-col gap-4">
-              
-              {/* Header Title Section */}
-              <div className="flex flex-col gap-1.5 text-left">
-                <span className="text-[8px] tracking-[0.25em] uppercase text-[#e2533b] font-extrabold block">STREET STALL SELECTION</span>
-                <div className="flex justify-between items-start gap-2">
-                  <h2 className="font-serif italic font-bold text-lg text-[#1a1a1a] leading-none truncate">
-                    {selectedRestaurant.name}
-                    {selectedRestaurant.isVerified && (
-                      <BadgeCheck size={15} className="ml-1 inline-block fill-[#e2533b] text-white select-none align-middle" />
-                    )}
-                  </h2>
-                  <div className="flex items-center gap-0.5 bg-[#e2533b] text-white px-2 py-0.5 shrink-0 select-none">
-                    <Star size={10} className="fill-white text-white" />
-                    <span className="font-mono text-[10px] font-bold">{selectedRestaurant.rating}</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5 font-mono text-[8px] uppercase tracking-wider text-[#1a1a1a]/60 mt-1">
-                  <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2 py-0.5 font-bold text-[#1a1a1a]">{selectedRestaurant.priceRange}</span>
-                  <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2 py-0.5 font-bold text-[#1a1a1a]">{selectedRestaurant.category}</span>
-                  <span className="flex items-center gap-0.5 text-[#e2533b] font-bold">
-                    <MapPin size={10} className="text-[#e2533b]" />
-                    {selectedRestaurant.distance}
-                  </span>
-                </div>
+                {/* Close Button overlay */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedRestaurant(null)}
+                  className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-white border border-[#1a1a1a]/20 text-on-surface hover:bg-[#f9f7f2] active:scale-95 transition-all z-20 cursor-pointer shadow-sm"
+                >
+                  <X size={14} strokeWidth={3} />
+                </button>
+                <div className="absolute bottom-0 w-full h-12 bg-gradient-to-t from-[#fdfcf9] to-transparent pointer-events-none" />
               </div>
 
-              {/* View Full Page Details CTA */}
-              <button 
-                type="button"
-                onClick={() => onSelectRestaurant(selectedRestaurant.id)}
-                className="w-full flex items-center justify-center gap-1 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3 px-4 rounded-none shadow-md active:scale-98 transition-all font-mono text-[9px] uppercase tracking-widest cursor-pointer"
-              >
-                View Full Info & Book // 🔗
-              </button>
+              {/* Info details wrapper */}
+              <div className="p-4 flex flex-col gap-4">
 
-              {/* Address Card details */}
-              <div className="flex flex-col gap-2.5 p-3 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-[11px] text-[#1a1a1a] text-left">
-                <div className="flex items-start gap-2.5">
-                  <Map size={16} className="text-[#e2533b] mt-0.5 select-none" />
-                  <div>
-                    <p className="font-bold leading-snug">{selectedRestaurant.address}</p>
-                    <p className="text-[#1a1a1a]/60 text-[9px] mt-0.5">{selectedRestaurant.area}</p>
-                  </div>
-                </div>
-                <hr className="border-[#1a1a1a]/10" />
-                <div className="flex items-start gap-2.5">
-                  <Clock size={16} className="text-[#e2533b] mt-0.5 select-none" />
-                  <p className="font-bold">
-                    Open Now <span className="text-[#1a1a1a]/60 font-normal ml-1.5">{selectedRestaurant.openingHours}</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Dishes Preview Bento */}
-              <div className="flex flex-col gap-2 text-left">
-                <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] border-b border-[#1a1a1a]/10 pb-1">Signature Dishes</h3>
-                <div className="grid grid-cols-1 gap-2">
-                  {selectedRestaurant.dishes.map((dish) => (
-                    <div 
-                      key={dish.id} 
-                      className="bg-white border border-[#1a1a1a]/10 rounded-none overflow-hidden shadow-xs flex items-center p-2 gap-2"
-                    >
-                      <div 
-                        className="h-12 w-12 bg-cover bg-center shrink-0 border border-[#1a1a1a]/10 grayscale hover:grayscale-0 transition-all"
-                        style={{ backgroundImage: `url('${dish.image}')` }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-serif italic font-bold text-xs text-[#1a1a1a] truncate">{dish.name}</h4>
-                        <p className="font-mono font-bold text-[#e2533b] text-[10px] mt-0.5">${dish.price.toFixed(2)}</p>
-                      </div>
+                {/* Header Title Section */}
+                <div className="flex flex-col gap-1.5 text-left">
+                  <span className="text-[8px] tracking-[0.25em] uppercase text-[#e2533b] font-extrabold block">STREET STALL SELECTION</span>
+                  <div className="flex justify-between items-start gap-2">
+                    <h2 className="font-serif italic font-bold text-lg text-[#1a1a1a] leading-none truncate">
+                      {activeRestaurant.name}
+                      {activeRestaurant.isVerified && (
+                        <BadgeCheck size={15} className="ml-1 inline-block fill-[#e2533b] text-white select-none align-middle" />
+                      )}
+                    </h2>
+                    <div className="flex items-center gap-0.5 bg-[#e2533b] text-white px-2 py-0.5 shrink-0 select-none">
+                      <Star size={10} className="fill-white text-white" />
+                      <span className="font-mono text-[10px] font-bold">{activeRestaurant.rating}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              {/* Reviews Preview list */}
-              <div className="flex flex-col gap-2 text-left pb-6">
-                <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] border-b border-[#1a1a1a]/10 pb-1">Reviews</h3>
-                <div className="flex flex-col gap-2">
-                  {selectedRestaurant.reviews.slice(0, 2).map((rev) => (
-                    <div 
-                      key={rev.id} 
-                      className="bg-white p-2.5 rounded-none border border-[#1a1a1a]/10 relative text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-mono font-bold text-[10px] select-none">
-                          {rev.avatar}
-                        </div>
+                  <div className="flex flex-wrap items-center gap-1.5 font-mono text-[8px] uppercase tracking-wider text-[#1a1a1a]/60 mt-1">
+                    <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2 py-0.5 font-bold text-[#1a1a1a]">{activeRestaurant.priceRange}</span>
+                    <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2 py-0.5 font-bold text-[#1a1a1a]">{activeRestaurant.category}</span>
+                    <span className="flex items-center gap-0.5 text-[#e2533b] font-bold">
+                      <MapPin size={10} className="text-[#e2533b]" />
+                      {activeRestaurant.distance}
+                    </span>
+                  </div>
+                </div>
+
+                {/* View Full Page Details CTA */}
+                <button
+                  type="button"
+                  onClick={() => onSelectRestaurant(activeRestaurant.id)}
+                  className="w-full flex items-center justify-center gap-1 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3 px-4 rounded-none shadow-md active:scale-98 transition-all font-mono text-[9px] uppercase tracking-widest cursor-pointer"
+                >
+                  View Full Info & Book // 🔗
+                </button>
+
+                {/* Address Card details */}
+                <div className="flex flex-col gap-2.5 p-3 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-[11px] text-[#1a1a1a] text-left">
+                  <div className="flex items-start gap-2.5">
+                    <Map size={16} className="text-[#e2533b] mt-0.5 select-none" />
+                    <div>
+                      <p className="font-bold leading-snug">{activeRestaurant.address}</p>
+                      <p className="text-[#1a1a1a]/60 text-[9px] mt-0.5">{activeRestaurant.area}</p>
+                    </div>
+                  </div>
+                  <hr className="border-[#1a1a1a]/10" />
+                  <div className="flex items-start gap-2.5">
+                    <Clock size={16} className="text-[#e2533b] mt-0.5 select-none" />
+                    <p className="font-bold">
+                      Open Now <span className="text-[#1a1a1a]/60 font-normal ml-1.5">{activeRestaurant.openingHours}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Dishes Preview Bento */}
+                <div className="flex flex-col gap-2 text-left">
+                  <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] border-b border-[#1a1a1a]/10 pb-1">Signature Dishes</h3>
+                  <div className="grid grid-cols-1 gap-2">
+                    {activeRestaurant.dishes.map((dish) => (
+                      <div
+                        key={dish.id}
+                        className="bg-white border border-[#1a1a1a]/10 rounded-none overflow-hidden shadow-xs flex items-center p-2 gap-2"
+                      >
+                        <div
+                          className="h-12 w-12 bg-cover bg-center shrink-0 border border-[#1a1a1a]/15 grayscale hover:grayscale-0 transition-all"
+                          style={{ backgroundImage: `url('${dish.image}')` }}
+                        />
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-[10px] text-[#1a1a1a] truncate">{rev.author}</p>
-                          <p className="font-mono text-[8px] uppercase tracking-wider text-[#1a1a1a]/40">{rev.role}</p>
+                          <h4 className="font-serif italic font-bold text-xs text-[#1a1a1a] truncate">{dish.name}</h4>
+                          <p className="font-mono font-bold text-[#e2533b] text-[10px] mt-0.5">${dish.price.toFixed(2)}</p>
                         </div>
                       </div>
-                      <p className="font-serif italic text-[10px] text-[#1a1a1a]/70 leading-relaxed font-light mt-1.5">
-                        "{rev.comment}"
-                      </p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
+                {/* Reviews Preview list */}
+                <div className="flex flex-col gap-2 text-left pb-6">
+                  <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] border-b border-[#1a1a1a]/10 pb-1">Reviews</h3>
+                  <div className="flex flex-col gap-2">
+                    {activeRestaurant.reviews.slice(0, 2).map((rev) => (
+                      <div
+                        key={rev.id}
+                        className="bg-white p-2.5 rounded-none border border-[#1a1a1a]/10 relative text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-mono font-bold text-[10px] select-none">
+                            {rev.avatar}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-[10px] text-[#1a1a1a] truncate">{rev.author}</p>
+                            <p className="font-mono text-[8px] uppercase tracking-wider text-[#1a1a1a]/40">{rev.role}</p>
+                          </div>
+                        </div>
+                        <p className="font-serif italic text-[10px] text-[#1a1a1a]/70 leading-relaxed font-light mt-1.5">
+                          "{rev.comment}"
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
 
       {/* Right Section: Map View Container */}
-      <div 
-        className="relative h-full transition-all duration-300 flex-1 flex flex-col" 
-        style={{ width: selectedRestaurant ? '70%' : '100%' }}
+      <div
+        className={`map-container-wrap ${selectedRestaurant ? 'panel-open' : ''} flex flex-col`}
       >
         {/* Floating Top Filters */}
         <div className="absolute top-4 w-full z-[1000] px-4 pointer-events-none">
@@ -445,21 +578,20 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
             {(['trending', 'seafood', 'bbq', 'snails'] as const).map((filter) => {
               const label = filter.charAt(0).toUpperCase() + filter.slice(1);
               const IconComponent = filter === 'trending' ? Flame
-                                  : filter === 'snails' ? SlidersHorizontal
-                                  : filter === 'seafood' ? Fish
-                                  : filter === 'bbq' ? Flame
-                                  : Droplet;
-              
+                : filter === 'snails' ? SlidersHorizontal
+                  : filter === 'seafood' ? Fish
+                    : filter === 'bbq' ? Flame
+                      : Droplet;
+
               return (
-                <button 
+                <button
                   key={filter}
                   type="button"
                   onClick={() => setActiveFilter(filter)}
-                  className={`shrink-0 px-4 py-2 rounded-none font-mono text-[10px] uppercase tracking-wider border-2 shadow transition-all flex items-center gap-1.5 cursor-pointer ${
-                    activeFilter === filter
+                  className={`shrink-0 px-4 py-2 rounded-none font-mono text-[10px] uppercase tracking-wider border-2 shadow transition-all flex items-center gap-1.5 cursor-pointer ${activeFilter === filter
                       ? 'bg-[#e2533b] text-white border-transparent font-bold scale-102'
                       : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2]'
-                  }`}
+                    }`}
                 >
                   <IconComponent size={15} />
                   {label}
@@ -469,15 +601,17 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           </div>
         </div>
 
-        {/* Real Leaflet Map */}
+        {/* Real Leaflet Map — dynamic key ensures map remounts when default center changes */}
         <MapContainer
-          center={[10.7575, 106.7035]}
+          key="vinh-khanh-map-stable-v3"
+          center={[10.7592, 106.7066]}
           zoom={16}
           maxBounds={MAX_BOUNDS}
           maxBoundsViscosity={1.0}
           className="w-full h-full z-10"
-          zoomControl={false} // Clean maps overlay controls
+          zoomControl={false}
         >
+          <MapViewUpdater center={[10.7592, 106.7066]} zoom={16} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -497,7 +631,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           {filteredRestaurants.map((restaurant) => {
             const coords = getCoordinates(restaurant);
             const isSelected = selectedRestaurant?.id === restaurant.id;
-            
+
             return (
               <Marker
                 key={restaurant.id}
@@ -523,9 +657,9 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           <RoutingControl userLocation={userLocation} destination={selectedCoords} />
 
           {/* View Recenter handler */}
-          <MapController 
-            userLocation={userLocation} 
-            selectedRestaurant={selectedRestaurant} 
+          <MapController
+            userLocation={userLocation}
+            selectedRestaurant={selectedRestaurant}
             locateTrigger={locateTrigger}
             getCoordinates={getCoordinates}
           />
@@ -540,7 +674,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
 
         {/* Bottom Left GPS control button & Tour Card overlay */}
         <div className="absolute bottom-6 left-0 w-full px-4 z-[1000] pointer-events-none flex flex-col items-end gap-3">
-          <button 
+          <button
             type="button"
             onClick={handleGeoLocate}
             aria-label="Align camera to current GPS location"
@@ -549,11 +683,11 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
             <LocateFixed size={24} className="group-hover:scale-110 transition-transform" />
           </button>
 
-          <div 
+          <div
             onClick={onSelectTour}
             className="w-full md:w-[380px] self-start md:self-end bg-white rounded-none p-3 shadow-xl border-2 border-[#1a1a1a] pointer-events-auto flex items-center gap-3 transform transition-transform hover:-translate-y-1 cursor-pointer"
           >
-            <div 
+            <div
               className="w-16 h-16 rounded-none bg-cover bg-center shrink-0 border border-[#1a1a1a]/15 grayscale"
               style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBDjvGT6gPlZtXxuECzVxFZA8EEO6irjnnzNm5dhbe_NgWa3EeWsxrWIIABSP3XyA3AbrFQAcGEqIzhi9lKRnwGi034jy7uRSUQnjW6xBD1rrw_Uhe0CEF3qcPN_rno8GRzuVlD_sMExHBf5wQMGp5p6gBf1D5b1LmHi4frvclFfTPXEPz4UNk8BqaFVDrKmZ8uP51ERO88KQb-E2iqOYYwZy8oztX-MBx4M-EjtaSzoQaPOyZGRzc2OX8WB7ksMcxEzPKr2c09xA')" }}
             />
@@ -567,7 +701,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
               <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] mb-0.5 truncate">Vinh Khanh Night Tour</h3>
               <p className="font-sans font-light text-[11px] text-[#1a1a1a]/60 truncate">5 stops • Guided local tasting</p>
             </div>
-            <button 
+            <button
               type="button"
               className="w-8 h-8 rounded-none bg-[#1a1a1a] hover:bg-[#e2533b] text-white flex items-center justify-center shrink-0 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
             >
