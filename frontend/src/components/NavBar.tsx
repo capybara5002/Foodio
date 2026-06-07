@@ -4,22 +4,18 @@
  */
 
 import { useState } from 'react';
+import { Search, X, SlidersHorizontal, Map, Compass, PlusCircle, Mail, User } from 'lucide-react';
 
 interface NavBarProps {
   currentTab: 'map' | 'discover' | 'create' | 'inbox' | 'profile';
   onChangeTab: (tab: 'map' | 'discover' | 'create' | 'inbox' | 'profile') => void;
   unreadInboxCount: number;
+  searchText: string;
+  onSearchChange: (text: string) => void;
 }
 
-export default function NavBar({ currentTab, onChangeTab, unreadInboxCount }: NavBarProps) {
-  const [showSearchAlert, setShowSearchAlert] = useState(false);
-
-  const handleSearchClick = () => {
-    setShowSearchAlert(true);
-    setTimeout(() => {
-      setShowSearchAlert(false);
-    }, 2500);
-  };
+export default function NavBar({ currentTab, onChangeTab, unreadInboxCount, searchText, onSearchChange }: NavBarProps) {
+  const [showSearchInput, setShowSearchInput] = useState(false);
 
   return (
     <>
@@ -47,30 +43,30 @@ export default function NavBar({ currentTab, onChangeTab, unreadInboxCount }: Na
           <button 
             type="button"
             onClick={() => onChangeTab('map')}
-            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 ${currentTab === 'map' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
+            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 flex items-center gap-1.5 ${currentTab === 'map' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
           >
-            🗺️ Food Map
+            <Map size={14} className={currentTab === 'map' ? 'fill-current' : ''} /> Food Map
           </button>
           <button 
             type="button"
             onClick={() => onChangeTab('discover')}
-            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 ${currentTab === 'discover' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
+            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 flex items-center gap-1.5 ${currentTab === 'discover' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
           >
-            🔊 Discover
+            <Compass size={14} className={currentTab === 'discover' ? 'fill-current' : ''} /> Discover
           </button>
           <button 
             type="button"
             onClick={() => onChangeTab('create')}
-            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 ${currentTab === 'create' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
+            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 flex items-center gap-1.5 ${currentTab === 'create' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
           >
-            ✍️ Review
+            <PlusCircle size={14} className={currentTab === 'create' ? 'fill-current' : ''} /> Review
           </button>
           <button 
             type="button"
             onClick={() => onChangeTab('inbox')}
-            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 relative ${currentTab === 'inbox' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
+            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 relative flex items-center gap-1.5 ${currentTab === 'inbox' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
           >
-            💬 Inbox
+            <Mail size={14} className={currentTab === 'inbox' ? 'fill-current' : ''} /> Inbox
             {unreadInboxCount > 0 && (
               <span className="absolute -top-2.5 -right-4 bg-[#e2533b] text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center border border-[#fdfcf9] shadow-xs">
                 {unreadInboxCount}
@@ -80,38 +76,54 @@ export default function NavBar({ currentTab, onChangeTab, unreadInboxCount }: Na
           <button 
             type="button"
             onClick={() => onChangeTab('profile')}
-            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 ${currentTab === 'profile' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
+            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 flex items-center gap-1.5 ${currentTab === 'profile' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
           >
-            👤 Profile
+            <User size={14} className={currentTab === 'profile' ? 'fill-current' : ''} /> Profile
           </button>
         </div>
 
         {/* Right Search & Filter Action Bar */}
-        <div className="flex items-center gap-1">
-          <button 
-            onClick={handleSearchClick}
-            aria-label="Search food locations"
-            className="text-[#e2533b] hover:bg-[#1a1a1a]/5 transition-colors p-2 rounded-full flex items-center justify-center cursor-pointer"
-          >
-            <span className="material-symbols-outlined font-semibold select-none text-xl">search</span>
-          </button>
+        <div className="flex items-center gap-2">
+          {showSearchInput ? (
+            <div className="flex items-center border-2 border-[#1a1a1a] bg-white px-2 py-1 shadow-[2px_2px_0px_0px_#1a1a1a] transition-all duration-200">
+              <Search size={14} className="text-[#1a1a1a]/60 mr-1" />
+              <input 
+                type="text" 
+                value={searchText} 
+                onChange={(e) => onSearchChange(e.target.value)} 
+                placeholder="Tìm món ăn, địa điểm..." 
+                className="text-xs font-mono bg-transparent outline-none w-36 sm:w-56"
+                autoFocus
+              />
+              <button 
+                onClick={() => {
+                  onSearchChange('');
+                  setShowSearchInput(false);
+                }}
+                className="hover:text-[#e2533b] cursor-pointer ml-1 select-none font-bold"
+              >
+                <X size={14} strokeWidth={3} />
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => setShowSearchInput(true)}
+              aria-label="Search food locations"
+              className="text-[#e2533b] hover:bg-[#1a1a1a]/5 transition-colors p-2 rounded-full flex items-center justify-center cursor-pointer"
+            >
+              <Search size={20} className="font-semibold" />
+            </button>
+          )}
 
           <button 
-            onClick={handleSearchClick}
+            onClick={() => setShowSearchInput(!showSearchInput)}
             aria-label="Filter category types"
             className="text-[#e2533b] hover:bg-[#1a1a1a]/5 transition-colors p-2 rounded-full flex items-center justify-center cursor-pointer"
           >
-            <span className="material-symbols-outlined select-none text-xl">tune</span>
+            <SlidersHorizontal size={20} />
           </button>
         </div>
       </header>
-
-      {/* Floating search status alert overlay */}
-      {showSearchAlert && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white px-5 py-2.5 rounded-full text-xs font-semibold tracking-wider uppercase border border-[#e2533b]/20 shadow-xl z-[100] animate-in fade-in slide-in-from-top-4">
-          🔍 Enter snack name or street to search Vinh Khanh...
-        </div>
-      )}
 
       {/* Bottom Layout Menu Tab Navigation (Mobile only, visible on < md breakpoint, centered on full width) */}
       <nav className="fixed bottom-0 left-0 w-full z-50 bg-[#fdfcf9] border-t border-[#1a1a1a]/10 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex justify-around items-center h-16 md:hidden pb-safe">
@@ -123,11 +135,11 @@ export default function NavBar({ currentTab, onChangeTab, unreadInboxCount }: Na
         >
           {currentTab === 'map' ? (
             <div className="bg-[#e2533b] text-white rounded px-4 py-1 flex items-center justify-center shadow-md select-none">
-              <span className="material-symbols-outlined filled text-lg">map</span>
+              <Map size={18} className="fill-current" />
             </div>
           ) : (
             <div className="p-1 rounded text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5 transition-colors duration-150 select-none">
-              <span className="material-symbols-outlined text-lg">map</span>
+              <Map size={18} />
             </div>
           )}
           <span className={`font-label-sm text-[9px] uppercase tracking-wider mt-0.5 ${currentTab === 'map' ? 'font-black text-[#e2533b]' : 'text-[#1a1a1a]/60'}`}>
@@ -142,11 +154,11 @@ export default function NavBar({ currentTab, onChangeTab, unreadInboxCount }: Na
         >
           {currentTab === 'discover' ? (
             <div className="bg-[#e2533b] text-white rounded px-4 py-1 flex items-center justify-center shadow-md select-none">
-              <span className="material-symbols-outlined filled text-lg">explore</span>
+              <Compass size={18} className="fill-current" />
             </div>
           ) : (
             <div className="p-1 rounded text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5 transition-colors duration-150 select-none">
-              <span className="material-symbols-outlined text-lg">explore</span>
+              <Compass size={18} />
             </div>
           )}
           <span className={`font-label-sm text-[9px] uppercase tracking-wider mt-0.5 ${currentTab === 'discover' ? 'font-black text-[#e2533b]' : 'text-[#1a1a1a]/60'}`}>
@@ -161,11 +173,11 @@ export default function NavBar({ currentTab, onChangeTab, unreadInboxCount }: Na
         >
           {currentTab === 'create' ? (
             <div className="bg-[#e2533b] text-white rounded px-4 py-1 flex items-center justify-center shadow-md select-none">
-              <span className="material-symbols-outlined filled text-lg">add_circle</span>
+              <PlusCircle size={18} className="fill-current" />
             </div>
           ) : (
             <div className="p-1 rounded text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5 transition-colors duration-150 select-none">
-              <span className="material-symbols-outlined text-lg">add_circle</span>
+              <PlusCircle size={18} />
             </div>
           )}
           <span className={`font-label-sm text-[9px] uppercase tracking-wider mt-0.5 ${currentTab === 'create' ? 'font-black text-[#e2533b]' : 'text-[#1a1a1a]/60'}`}>
@@ -180,11 +192,11 @@ export default function NavBar({ currentTab, onChangeTab, unreadInboxCount }: Na
         >
           {currentTab === 'inbox' ? (
             <div className="bg-[#e2533b] text-white rounded px-4 py-1 flex items-center justify-center shadow-md select-none">
-              <span className="material-symbols-outlined filled text-lg">mail</span>
+              <Mail size={18} className="fill-current" />
             </div>
           ) : (
             <div className="p-1 rounded text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5 transition-colors duration-150 relative select-none">
-              <span className="material-symbols-outlined text-lg">mail</span>
+              <Mail size={18} />
               {unreadInboxCount > 0 && (
                 <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-[#e2533b] rounded-full" />
               )}
@@ -207,11 +219,11 @@ export default function NavBar({ currentTab, onChangeTab, unreadInboxCount }: Na
         >
           {currentTab === 'profile' ? (
             <div className="bg-[#e2533b] text-white rounded px-4 py-1 flex items-center justify-center shadow-md select-none">
-              <span className="material-symbols-outlined filled text-lg">person</span>
+              <User size={18} className="fill-current" />
             </div>
           ) : (
             <div className="p-1 rounded text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5 transition-colors duration-150 select-none">
-              <span className="material-symbols-outlined text-lg">person</span>
+              <User size={18} />
             </div>
           )}
           <span className={`font-label-sm text-[9px] uppercase tracking-wider mt-0.5 ${currentTab === 'profile' ? 'font-black text-[#e2533b]' : 'text-[#1a1a1a]/60'}`}>

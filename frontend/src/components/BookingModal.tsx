@@ -5,6 +5,7 @@
 
 import { useState, FormEvent } from 'react';
 import { Restaurant } from '../types';
+import { BadgeCheck, X, Calendar, Flame, Store, CheckCircle2, Ticket } from 'lucide-react';
 
 interface BookingModalProps {
   restaurant: Restaurant | null;
@@ -63,7 +64,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
               <div>
                 <h3 className="font-serif italic font-bold text-lg text-[#1a1a1a]">Book a Table</h3>
                 <p className="font-sans text-[11px] text-[#1a1a1a]/60 flex items-center gap-1.5 mt-1 font-light">
-                  <span className="material-symbols-outlined text-[14px] text-[#e2533b] filled">verified</span>
+                  <BadgeCheck size={14} className="fill-[#e2533b] text-white" />
                   At {restaurant.name}
                 </p>
               </div>
@@ -72,7 +73,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                 onClick={onClose}
                 className="w-8 h-8 flex items-center justify-center rounded-none bg-white border border-[#1a1a1a]/15 text-[#1a1a1a] hover:text-[#e2533b] hover:bg-[#f9f7f2] active:scale-95 transition-all"
               >
-                <span className="material-symbols-outlined text-[18px] font-black">close</span>
+                <X size={15} strokeWidth={3} />
               </button>
             </div>
 
@@ -84,7 +85,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                 Select Date
               </label>
               <div className="relative flex items-center bg-white border border-[#1a1a1a]/15 rounded-none px-3 py-1.5">
-                <span className="material-symbols-outlined text-[#e2533b] text-base mr-2">calendar_month</span>
+                <Calendar size={16} className="text-[#e2533b] mr-2" />
                 <input 
                   type="date" 
                   value={date}
@@ -156,7 +157,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                       : 'border-[#1a1a1a]/10 bg-white text-[#1a1a1a]/70 hover:bg-[#f9f7f2]'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-base">outdoor_grill</span>
+                  <Flame size={16} />
                   <span className="font-mono text-[9px] uppercase tracking-wider">Street outdoor</span>
                 </button>
                 <button
@@ -168,7 +169,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                       : 'border-[#1a1a1a]/10 bg-white text-[#1a1a1a]/70 hover:bg-[#f9f7f2]'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-base">storefront</span>
+                  <Store size={16} />
                   <span className="font-mono text-[9px] uppercase tracking-wider">Indoor Room</span>
                 </button>
               </div>
@@ -187,7 +188,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
             {/* Success icon banner */}
             <div className="w-16 h-16 rounded-full bg-secondary-container text-[#785900] flex items-center justify-center shadow-lg relative">
               <div className="absolute inset-0 bg-secondary-container/30 rounded-full animate-ping" />
-              <span className="material-symbols-outlined filled text-[32px]">check_circle</span>
+              <CheckCircle2 size={32} className="fill-[#785900] text-white" />
             </div>
 
             <div className="flex flex-col gap-1 mt-2">
@@ -199,7 +200,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
 
             {/* Voucher status detail */}
             <div className="bg-surface-container-low border border-outline-variant/40 rounded-xl p-3 w-full text-left flex gap-3 items-center mt-2">
-              <span className="material-symbols-outlined text-primary text-xl">confirmation_number</span>
+              <Ticket size={20} className="text-[#1a1a1a]/70" />
               <div>
                 <p className="font-label-lg text-[13px] text-on-surface font-bold">Booking Reference: #CM-79352</p>
                 <p className="font-body-sm text-[11px] text-on-surface-variant">Present this ticket when checking in</p>

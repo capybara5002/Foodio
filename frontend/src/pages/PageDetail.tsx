@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { Restaurant } from '../types';
+import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2 } from 'lucide-react';
 
 interface PageDetailProps {
   restaurant: Restaurant;
@@ -12,11 +13,23 @@ interface PageDetailProps {
   onOpenBooking: () => void;
   onStartAudio: () => void;
   onGoToChat: () => void;
+  requireAuth: (message: string, action: () => void) => void;
 }
 
-export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartAudio, onGoToChat }: PageDetailProps) {
+export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartAudio, onGoToChat, requireAuth }: PageDetailProps) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showAllDishes, setShowAllDishes] = useState(false);
+
+  // Advanced Review Filters State
+  const [starFilter, setStarFilter] = useState<number | 'All'>('All');
+  const [hasImageFilter, setHasImageFilter] = useState<boolean>(false);
+
+  const filteredReviews = restaurant.reviews.filter((rev) => {
+    if (starFilter !== 'All' && Math.floor(rev.rating) !== starFilter) return false;
+    if (hasImageFilter && !rev.imageUrl) return false;
+    return true;
+  });
 
   const handleShare = () => {
     setToastMessage('🔗 Link copied! Enjoy sharing this creative street food spot.');
@@ -43,7 +56,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             onClick={onBack}
             className="w-10 h-10 flex items-center justify-center rounded-sm bg-white border border-[#1a1a1a]/25 shadow text-on-surface hover:bg-[#f9f7f2] active:scale-95 transition-transform cursor-pointer"
           >
-            <span className="material-symbols-outlined text-xl">arrow_back</span>
+            <ArrowLeft size={20} />
           </button>
           
           <div className="flex gap-2">
@@ -52,16 +65,18 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
               onClick={handleShare}
               className="w-10 h-10 flex items-center justify-center rounded-sm bg-white border border-[#1a1a1a]/25 shadow text-on-surface hover:bg-[#f9f7f2] active:scale-95 transition-transform cursor-pointer"
             >
-              <span className="material-symbols-outlined text-xl">share</span>
+              <Share2 size={20} />
             </button>
             <button 
               type="button"
               onClick={() => setIsFavorite(!isFavorite)}
               className="w-10 h-10 flex items-center justify-center rounded-sm bg-white border border-[#1a1a1a]/25 shadow hover:bg-[#f9f7f2] active:scale-95 transition-transform cursor-pointer"
             >
-              <span className={`material-symbols-outlined text-xl ${isFavorite ? 'filled text-[#e2533b]' : 'text-on-surface'}`}>
-                {isFavorite ? 'favorite' : 'favorite_border'}
-              </span>
+              {isFavorite ? (
+                <Heart size={20} className="fill-[#e2533b] text-[#e2533b]" />
+              ) : (
+                <Heart size={20} className="text-on-surface" />
+              )}
             </button>
           </div>
         </div>
@@ -81,13 +96,13 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
               <h1 className="font-serif italic font-bold text-headline-lg-mobile md:text-headline-lg text-[#1a1a1a] leading-none">
                 {restaurant.name}
                 {restaurant.isVerified && (
-                  <span className="ml-2 align-middle text-[#e2533b] material-symbols-outlined text-[18px] filled select-none">verified</span>
+                  <BadgeCheck size={18} className="ml-2 inline-block fill-[#e2533b] text-white select-none align-middle" />
                 )}
               </h1>
             </div>
             
             <div className="flex items-center gap-1.5 bg-[#e2533b] text-white px-3 py-1.5 rounded-none shadow-sm shrink-0 select-none">
-              <span className="material-symbols-outlined text-[15px] filled text-white">star</span>
+              <Star size={15} className="fill-white text-white" />
               <span className="font-mono text-xs font-black">{restaurant.rating}</span>
             </div>
           </div>
@@ -97,7 +112,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2.5 py-1 rounded-none font-bold text-[#1a1a1a]">{restaurant.category}</span>
             <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2.5 py-1 rounded-none font-bold text-[#1a1a1a]">Vietnamese</span>
             <span className="flex items-center gap-1 text-[#e2533b] font-bold ml-1">
-              <span className="material-symbols-outlined text-sm font-black">location_on</span>
+              <MapPin size={14} className="text-[#e2533b]" />
               {restaurant.distance}
             </span>
           </div>
@@ -110,7 +125,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             onClick={onStartAudio}
             className="flex-1 flex items-center justify-center gap-1.5 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3.5 px-4 rounded-none shadow-md active:scale-98 transition-all font-mono text-[10px] uppercase tracking-widest cursor-pointer"
           >
-            📚 Play Audio Guide // 🔊
+            <Volume2 size={14} /> Play Audio Guide
           </button>
           
           <button 
@@ -119,7 +134,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             aria-label="Direct message with restaurant owner"
             className="flex items-center justify-center w-12 h-12 bg-white border border-[#1a1a1a]/25 text-on-surface hover:bg-[#f9f7f2] rounded-none shadow-sm active:scale-95 transition-transform cursor-pointer"
           >
-            <span className="material-symbols-outlined text-lg">chat</span>
+            <MessageSquare size={18} />
           </button>
         </section>
 
@@ -127,7 +142,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
         <section className="flex flex-col gap-3 p-4 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-xs text-[#1a1a1a]">
           
           <div className="flex items-start gap-3">
-            <span className="material-symbols-outlined text-[#e2533b] mt-0.5 text-lg select-none">map</span>
+            <Map size={18} className="text-[#e2533b] mt-0.5 select-none" />
             <div>
               <p className="font-bold">{restaurant.address}</p>
               <p className="text-[#1a1a1a]/60 text-[11px] font-sans mt-0.5">{restaurant.area}</p>
@@ -137,7 +152,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
           <hr className="border-[#1a1a1a]/10" />
 
           <div className="flex items-start gap-3">
-            <span className="material-symbols-outlined text-[#e2533b] mt-0.5 text-lg select-none">schedule</span>
+            <Clock size={18} className="text-[#e2533b] mt-0.5 select-none" />
             <div>
               <p className="font-bold">
                 Open Now <span className="text-[#1a1a1a]/60 font-normal ml-2">{restaurant.openingHours}</span>
@@ -151,11 +166,18 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
         <section className="flex flex-col gap-3">
           <div className="flex justify-between items-baseline border-b border-[#1a1a1a]/10 pb-2 mb-2">
             <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">Signature Dishes</h2>
-            <button className="font-mono text-[9px] uppercase tracking-wider font-extrabold text-[#e2533b] hover:underline">See All</button>
+            {restaurant.dishes.length > 2 && (
+              <button 
+                onClick={() => setShowAllDishes(!showAllDishes)}
+                className="font-mono text-[9px] uppercase tracking-wider font-extrabold text-[#e2533b] hover:underline cursor-pointer"
+              >
+                {showAllDishes ? 'Show Less' : 'See All'}
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {restaurant.dishes.map((dish) => (
+            {(showAllDishes ? restaurant.dishes : restaurant.dishes.slice(0, 2)).map((dish) => (
               <div 
                 key={dish.id} 
                 className="bg-white border border-[#1a1a1a]/15 rounded-none overflow-hidden shadow-xs flex flex-col relative group hover:border-[#e2533b]/45 transition-colors"
@@ -180,7 +202,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
                   onClick={() => handleAddDish(dish.name)}
                   className="absolute bottom-3 right-3 w-7 h-7 bg-[#1a1a1a] hover:bg-[#e2533b] text-white rounded-none flex items-center justify-center shadow active:scale-90 transition-all cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[13px] font-bold">add</span>
+                  <Plus size={13} strokeWidth={3} />
                 </button>
               </div>
             ))}
@@ -192,39 +214,95 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
           <div className="border-b border-[#1a1a1a]/10 pb-2 mb-2">
             <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">Foodie Reviews</h2>
           </div>
+
+          {/* Advanced Filter UI */}
+          <div className="flex flex-col gap-3 p-3.5 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-xs font-mono text-left">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold uppercase tracking-wider text-[10px] text-[#1a1a1a]/55">Số sao:</span>
+              <div className="flex flex-wrap gap-1">
+                {(['All', 5, 4, 3, 2, 1] as const).map(stars => (
+                  <button
+                    key={stars}
+                    onClick={() => setStarFilter(stars)}
+                    className={`px-2.5 py-1 border transition-all cursor-pointer font-bold text-[9px] uppercase tracking-wider ${
+                      starFilter === stars 
+                        ? 'bg-[#e2533b] text-white border-transparent shadow-xs' 
+                        : 'bg-white text-[#1a1a1a] border-[#1a1a1a]/15 hover:bg-[#fdfcf9]'
+                    }`}
+                  >
+                    {stars === 'All' ? 'Tất cả' : `${stars} ★`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 border-t border-[#1a1a1a]/10 pt-2.5 mt-0.5">
+              <input
+                id="photoFilter"
+                type="checkbox"
+                checked={hasImageFilter}
+                onChange={(e) => setHasImageFilter(e.target.checked)}
+                className="w-4 h-4 border-2 border-[#1a1a1a] rounded-none focus:ring-0 checked:bg-[#e2533b] cursor-pointer"
+              />
+              <label htmlFor="photoFilter" className="font-bold uppercase tracking-wider text-[10px] text-[#1a1a1a]/70 select-none cursor-pointer">
+                🖼️ Đánh giá có hình ảnh
+              </label>
+            </div>
+          </div>
           
           <div className="flex overflow-x-auto gap-3 hide-scrollbar -mx-5 px-5 pb-2">
-            {restaurant.reviews.map((rev) => (
-              <div 
-                key={rev.id}
-                className="min-w-[280px] md:min-w-[340px] bg-white p-4 rounded-none shadow-xs border border-[#1a1a1a]/15 flex flex-col gap-2 shrink-0 relative"
-              >
-                {/* Visual quotation mark mark */}
-                <span className="absolute right-3 top-3 font-serif italic text-6xl text-[#1a1a1a]/5 select-none font-black leading-none">“</span>
-
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-mono font-bold text-xs select-none">
-                    {rev.avatar}
-                  </div>
-                  
-                  <div className="flex-1">
-                    <p className="font-bold text-xs text-[#1a1a1a]">{rev.author}</p>
-                    <p className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 mt-0.5">{rev.role}</p>
-                  </div>
-
-                  {/* Stars indicators */}
-                  <div className="flex text-[#e2533b]">
-                    {Array.from({ length: 5 }).map((_, st) => (
-                      <span key={st} className="material-symbols-outlined text-xs filled select-none text-[#e2533b]">star</span>
-                    ))}
-                  </div>
-                </div>
-
-                <p className="font-serif italic text-[11px] md:text-xs text-[#1a1a1a]/70 leading-relaxed line-clamp-3 font-light mt-1">
-                  "{rev.comment}"
-                </p>
+            {filteredReviews.length === 0 ? (
+              <div className="min-w-full text-center py-8 font-mono text-[10px] uppercase text-[#1a1a1a]/40 font-bold">
+                Không có đánh giá phù hợp bộ lọc.
               </div>
-            ))}
+            ) : (
+              filteredReviews.map((rev) => (
+                <div 
+                  key={rev.id}
+                  className="min-w-[280px] md:min-w-[340px] bg-white p-4 rounded-none shadow-xs border border-[#1a1a1a]/15 flex flex-col gap-2 shrink-0 relative text-left"
+                >
+                  {/* Visual quotation mark mark */}
+                  <span className="absolute right-3 top-3 font-serif italic text-6xl text-[#1a1a1a]/5 select-none font-black leading-none">“</span>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-mono font-bold text-xs select-none">
+                      {rev.avatar}
+                    </div>
+                    
+                    <div className="flex-1">
+                      <p className="font-bold text-xs text-[#1a1a1a]">{rev.author}</p>
+                      <p className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 mt-0.5">{rev.role}</p>
+                    </div>
+
+                    {/* Stars indicators */}
+                    <div className="flex text-[#e2533b]">
+                      {Array.from({ length: 5 }).map((_, st) => (
+                        <Star 
+                          key={st} 
+                          size={12} 
+                          className={`select-none ${st < Math.floor(rev.rating) ? 'fill-[#e2533b] text-[#e2533b]' : 'text-slate-300'}`} 
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="font-serif italic text-[11px] md:text-xs text-[#1a1a1a]/70 leading-relaxed font-light mt-1 flex-1">
+                    "{rev.comment}"
+                  </p>
+
+                  {/* Review Image Preview */}
+                  {rev.imageUrl && (
+                    <div className="mt-2 border border-[#1a1a1a]/10 overflow-hidden aspect-video w-full bg-[#f9f7f2]">
+                      <img 
+                        src={rev.imageUrl} 
+                        alt="Review Attachment" 
+                        className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-300"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </section>
 

@@ -1,6 +1,6 @@
 import { AudioTour, ChatMessage, ChatThread, CommunityPost, Restaurant } from '../types';
 
-const apiBase = import.meta.env.VITE_API_URL ?? '';
+const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY ?? '';
 const geminiModel = 'gemini-2.5-flash';
 
