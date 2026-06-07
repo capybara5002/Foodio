@@ -93,8 +93,7 @@ public class AdminController : ControllerBase
             return NotFound("User not found.");
         }
 
-        // Soft delete
-        user.IsActive = false;
+        _db.Users.Remove(user);
         await _db.SaveChangesAsync();
 
         return NoContent();

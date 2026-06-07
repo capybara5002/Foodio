@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Restaurant, Category, RestaurantRequest } from '../../types';
-import { Trash2, X, Clock, AlertCircle } from 'lucide-react';
+import { Restaurant, Category } from '../../types';
+import { Trash2, X } from 'lucide-react';
 
 interface OwnerDashboardProps {
   onRestaurantUpdated?: (updated: Restaurant) => void;
@@ -10,7 +10,6 @@ interface OwnerDashboardProps {
 export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardProps) {
   const { user, updateUserRestaurantId } = useAuth();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
-  const [restaurantRequest, setRestaurantRequest] = useState<RestaurantRequest | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [foodStreets, setFoodStreets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,13 +65,15 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   const [qrLoading, setQrLoading] = useState(false);
 
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  
+
+  // No hardcoded fallback to "oc_dao" so newly upgraded owners can create a new restaurant
   const activeRestaurantId = user?.restaurantId;
 
   const fetchRestaurant = async () => {
     setIsLoading(true);
     setError(null);
     try {
+      // Fetch categories and streets first since they are needed in both creation and edit views
       const [catRes, streetRes] = await Promise.all([
         fetch(`${baseUrl}/api/cravemap/categories`),
         fetch(`${baseUrl}/api/food-streets`)
@@ -89,7 +90,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
       if (activeRestaurantId) {
         const restRes = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`);
-        if (!restRes.ok) throw new Error('Failed to load restaurant details.');
+        if (!restRes.ok) throw new Error('Failed to load restaurant details. Please make sure the backend is seeded.');
         const restData: Restaurant = await restRes.json();
         setRestaurant(restData);
 
@@ -108,13 +109,6 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
           latitude: restData.latitude || 10.759031,
           longitude: restData.longitude || 106.706962
         });
-      } else if (user?.id) {
-        // Fetch pending request if no restaurant is linked
-        const reqRes = await fetch(`${baseUrl}/api/owner/restaurant-request/${user.id}`);
-        if (reqRes.ok) {
-          const reqData = await reqRes.json();
-          setRestaurantRequest(reqData);
-        }
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred.');
@@ -125,7 +119,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
   useEffect(() => {
     void fetchRestaurant();
-  }, [activeRestaurantId, user?.id]);
+  }, [activeRestaurantId]);
 
   const handleCreateRestaurant = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,7 +127,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${baseUrl}/api/owner/restaurant-request?ownerId=${user.id}`, {
+      const res = await fetch(`${baseUrl}/api/owner/restaurant/create/${user.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -143,13 +137,34 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || 'Failed to submit request.');
+        throw new Error(text || 'Failed to create restaurant.');
       }
 
-      const newRequest: RestaurantRequest = await res.json();
-      setRestaurantRequest(newRequest);
+      const newRest: Restaurant = await res.json();
+      setRestaurant(newRest);
+      updateUserRestaurantId(newRest.id); // Update context and localStorage
+
+      setRestForm({
+        name: newRest.name,
+        priceRange: newRest.priceRange,
+        categoryId: (newRest as any).categoryId || 1,
+        foodStreetId: (newRest as any).foodStreetId || 1,
+        distance: newRest.distance,
+        address: newRest.address,
+        area: newRest.area,
+        openingHours: newRest.openingHours,
+        image: newRest.image,
+        isVerified: newRest.isVerified,
+        replySpeed: newRest.replySpeed,
+        latitude: newRest.latitude || 10.759031,
+        longitude: newRest.longitude || 106.706962
+      });
+
+      if (onRestaurantUpdated) {
+        onRestaurantUpdated(newRest);
+      }
     } catch (err: any) {
-      setError(err.message || 'Error submitting request.');
+      setError(err.message || 'Error creating restaurant.');
     } finally {
       setIsLoading(false);
     }
@@ -260,26 +275,6 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   }
 
   if (!activeRestaurantId) {
-    if (restaurantRequest && restaurantRequest.status !== 'Rejected') {
-      return (
-        <div className="max-w-md mx-auto w-full px-4 py-6">
-          <div className="bg-white border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a] text-center">
-            <Clock size={40} className="mx-auto text-[#1a1a1a] mb-4" strokeWidth={1.5} />
-            <h2 className="font-serif italic font-bold text-2xl uppercase mb-2">
-              Đang chờ duyệt
-            </h2>
-            <p className="text-sm text-[#1a1a1a]/70 font-sans mb-4">
-              Yêu cầu đăng ký quán ăn <strong>{restaurantRequest.name}</strong> của bạn đã được gửi thành công. Vui lòng chờ Admin phê duyệt.
-            </p>
-            <div className="bg-[#f9f7f2] border-2 border-[#1a1a1a] p-3 text-left">
-              <p className="text-[10px] font-mono uppercase font-bold text-[#1a1a1a]/50 mb-1">Mã yêu cầu</p>
-              <p className="font-mono text-xs">{restaurantRequest.id}</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="max-w-md mx-auto w-full px-4 py-6">
         <div className="bg-white border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a]">
@@ -288,10 +283,10 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               CHỦ QUÁN MỚI
             </span>
             <h2 className="font-serif italic font-bold text-2xl uppercase">
-              Đăng ký quán ăn
+              Tạo quán ăn của bạn
             </h2>
             <p className="text-xs text-[#1a1a1a]/60 mt-1 font-sans">
-              Điền thông tin bên dưới để gửi yêu cầu mở quán trên CraveMap. Yêu cầu của bạn sẽ được Admin xét duyệt.
+              Bạn chưa có quán ăn nào được liên kết. Hãy điền thông tin bên dưới để khởi tạo quán ăn của riêng bạn trên CraveMap!
             </p>
           </div>
 
@@ -301,21 +296,10 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             </div>
           )}
 
-          {restaurantRequest?.status === 'Rejected' && (
-            <div className="bg-red-50 border-2 border-[#e2533b] p-4 mb-6 flex gap-3 items-start">
-              <AlertCircle className="text-[#e2533b] shrink-0" size={20} />
-              <div>
-                <p className="font-mono text-[10px] uppercase font-bold text-[#e2533b] mb-1">Yêu cầu bị từ chối</p>
-                <p className="text-xs text-[#1a1a1a]/80">{restaurantRequest.adminNote || 'Không có lý do cụ thể.'}</p>
-                <p className="text-[10px] text-[#1a1a1a]/50 mt-2 italic">Vui lòng chỉnh sửa thông tin và gửi lại yêu cầu.</p>
-              </div>
-            </div>
-          )}
-
           <form onSubmit={handleCreateRestaurant} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Tên quán ăn</label>
-              <input 
+              <input
                 type="text"
                 value={createForm.name}
                 onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
@@ -368,7 +352,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
             <div className="flex flex-col gap-1">
               <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Địa chỉ chi tiết</label>
-              <input 
+              <input
                 type="text"
                 value={createForm.address}
                 onChange={(e) => setCreateForm(prev => ({ ...prev, address: e.target.value }))}
@@ -381,7 +365,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Khu vực (Quận)</label>
-                <input 
+                <input
                   type="text"
                   value={createForm.area}
                   onChange={(e) => setCreateForm(prev => ({ ...prev, area: e.target.value }))}
@@ -393,7 +377,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Giờ mở cửa</label>
-                <input 
+                <input
                   type="text"
                   value={createForm.openingHours}
                   onChange={(e) => setCreateForm(prev => ({ ...prev, openingHours: e.target.value }))}
@@ -406,7 +390,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
             <div className="flex flex-col gap-1">
               <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Link ảnh quán ăn</label>
-              <input 
+              <input
                 type="text"
                 value={createForm.image}
                 onChange={(e) => setCreateForm(prev => ({ ...prev, image: e.target.value }))}
@@ -418,7 +402,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Vĩ độ (Latitude)</label>
-                <input 
+                <input
                   type="number"
                   step="0.000001"
                   value={createForm.latitude}
@@ -430,7 +414,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Kinh độ (Longitude)</label>
-                <input 
+                <input
                   type="number"
                   step="0.000001"
                   value={createForm.longitude}
@@ -441,11 +425,11 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               </div>
             </div>
 
-            <button 
+            <button
               type="submit"
               className="w-full mt-4 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-xs active:scale-[0.98]"
             >
-              Gửi yêu cầu đăng ký quán
+              Tạo và liên kết quán ăn
             </button>
           </form>
         </div>
@@ -465,7 +449,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 text-[#1a1a1a]">
-      
+
       {/* Left: Info Update Form */}
       <div className="flex-1 flex flex-col gap-6">
         <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5">
@@ -474,7 +458,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               <h3 className="font-serif italic font-bold text-lg">Chỉnh sửa Thông tin Quán ăn</h3>
               <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">OWNER TERMINAL</p>
             </div>
-            
+
             {saveSuccess && (
               <span className="bg-[#cbf3d2] text-green-900 border border-green-400 font-mono text-[9px] uppercase tracking-wider font-extrabold px-3 py-1">
                 💾 Đã lưu thành công!
@@ -486,7 +470,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Tên quán ăn</label>
-                <input 
+                <input
                   type="text"
                   value={restForm.name}
                   onChange={(e) => setRestForm(prev => ({ ...prev, name: e.target.value }))}
@@ -497,7 +481,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Ảnh biểu diễn (URL)</label>
-                <input 
+                <input
                   type="text"
                   value={restForm.image}
                   onChange={(e) => setRestForm(prev => ({ ...prev, image: e.target.value }))}
@@ -536,7 +520,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Giờ mở cửa</label>
-                <input 
+                <input
                   type="text"
                   value={restForm.openingHours}
                   onChange={(e) => setRestForm(prev => ({ ...prev, openingHours: e.target.value }))}
@@ -550,7 +534,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Địa chỉ chính xác</label>
-                <input 
+                <input
                   type="text"
                   value={restForm.address}
                   onChange={(e) => setRestForm(prev => ({ ...prev, address: e.target.value }))}
@@ -561,7 +545,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Khu vực (Quận / Huyện)</label>
-                <input 
+                <input
                   type="text"
                   value={restForm.area}
                   onChange={(e) => setRestForm(prev => ({ ...prev, area: e.target.value }))}
@@ -574,7 +558,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-dashed border-[#1a1a1a]/15 pt-3">
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Vĩ độ (Latitude)</label>
-                <input 
+                <input
                   type="number"
                   step="0.000001"
                   value={restForm.latitude}
@@ -586,7 +570,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Kinh độ (Longitude)</label>
-                <input 
+                <input
                   type="number"
                   step="0.000001"
                   value={restForm.longitude}
@@ -597,7 +581,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               </div>
             </div>
 
-            <button 
+            <button
               type="submit"
               className="w-full bg-[#1a1a1a] text-white hover:bg-[#e2533b] py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md active:translate-y-0.5"
             >
@@ -613,7 +597,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               <h3 className="font-serif italic font-bold text-lg">Món ăn đặc trưng</h3>
               <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">SIGNATURE MENU MANAGEMENT</p>
             </div>
-            
+
             <button
               onClick={() => setShowDishModal(true)}
               className="bg-white hover:bg-[#f9f7f2] font-mono text-[9px] uppercase tracking-widest px-3 py-2 border-2 border-[#1a1a1a] transition-all cursor-pointer shadow flex items-center gap-1 active:translate-y-0.5 font-bold"
@@ -624,16 +608,16 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
           <div className="grid grid-cols-2 gap-4">
             {restaurant.dishes.map(d => (
-              <div 
+              <div
                 key={d.id}
                 className="bg-white border border-[#1a1a1a]/15 rounded-none overflow-hidden shadow-xs flex flex-col relative group hover:border-[#e2533b]/45 transition-colors"
               >
                 {/* Image panel */}
-                <div 
+                <div
                   className="h-28 w-full bg-cover bg-center filter grayscale group-hover:grayscale-0 transition-all duration-300"
                   style={{ backgroundImage: `url('${d.image}')` }}
                 />
-                
+
                 <div className="p-3.5 flex flex-col justify-between flex-1 gap-1">
                   <div>
                     <h3 className="font-serif italic font-bold text-xs md:text-sm text-[#1a1a1a] truncate">{d.name}</h3>
@@ -671,7 +655,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
           <div className="w-full flex items-center border-2 border-[#1a1a1a] bg-white px-3 py-1.5 shadow-[2px_2px_0px_0px_#1a1a1a] mt-2">
             <span className="font-mono text-xs font-bold uppercase tracking-wider mr-2 text-[#1a1a1a]/50">Số bàn ăn</span>
-            <input 
+            <input
               type="number"
               value={tableNumber}
               onChange={(e) => setTableNumber(Number(e.target.value))}
@@ -693,13 +677,13 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             <div className="w-full border-2 border-[#1a1a1a] p-4 bg-[#f9f7f2] flex flex-col items-center gap-3 mt-4 animate-in zoom-in-95 duration-200">
               <div className="w-40 h-40 bg-white border-2 border-[#1a1a1a] p-2 flex items-center justify-center relative shadow-xs">
                 {/* Simulated QR Visual Design */}
-                <div 
-                  className="w-full h-full bg-cover" 
-                  style={{ 
+                <div
+                  className="w-full h-full bg-cover"
+                  style={{
                     backgroundImage: `url('https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(simulateScanUrl)}&color=1a1a1a&bgcolor=ffffff')`,
                     backgroundPosition: 'center',
                     backgroundSize: 'contain'
-                  }} 
+                  }}
                 />
               </div>
 
@@ -711,7 +695,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               </div>
 
               {/* Simulation scanning CTA link */}
-              <a 
+              <a
                 href={simulateScanUrl}
                 target="_blank"
                 rel="noreferrer"
@@ -728,7 +712,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       {showDishModal && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-md bg-[#fdfcf9] border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a] relative animate-in zoom-in-95 duration-200">
-            <button 
+            <button
               onClick={() => setShowDishModal(false)}
               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center border-2 border-[#1a1a1a] bg-white hover:bg-[#e2533b] hover:text-white transition-colors cursor-pointer"
             >
@@ -745,7 +729,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             <form onSubmit={handleAddDish} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Tên món ăn</label>
-                <input 
+                <input
                   type="text"
                   value={dishForm.name}
                   onChange={(e) => setDishForm(prev => ({ ...prev, name: e.target.value }))}
@@ -757,7 +741,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Giá tiền ($)</label>
-                <input 
+                <input
                   type="number"
                   step="0.01"
                   value={dishForm.price}
@@ -770,7 +754,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Mô tả ngắn</label>
-                <textarea 
+                <textarea
                   value={dishForm.description}
                   onChange={(e) => setDishForm(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Mô tả tóm tắt món ăn..."
@@ -780,7 +764,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Ảnh món ăn (URL)</label>
-                <input 
+                <input
                   type="text"
                   value={dishForm.image}
                   onChange={(e) => setDishForm(prev => ({ ...prev, image: e.target.value }))}
@@ -789,7 +773,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                 />
               </div>
 
-              <button 
+              <button
                 type="submit"
                 className="w-full mt-2 bg-[#1a1a1a] text-white hover:bg-[#e2533b] py-2.5 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md active:translate-y-0.5"
               >
