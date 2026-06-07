@@ -10,6 +10,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 
 import { Restaurant } from '../types';
+import { X, BadgeCheck, Star, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, Fish, SlidersHorizontal, Droplet } from 'lucide-react';
 
 // Standard Leaflet asset fixes for Vite builds to prevent broken image references
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -36,8 +37,15 @@ const NE_BOUNDS: [number, number] = [10.7650, 106.7150];
 const MAX_BOUNDS = L.latLngBounds(SW_BOUNDS, NE_BOUNDS);
 
 // Custom teardrop pin shape for food stalls
+const getIconSvg = (category: string, size: number) => {
+  if (category.toLowerCase() === 'seafood') {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-fish" style="transform: rotate(-45deg);"><path d="M2 16c.8-1 2-2.2 3.5-3 1.7.5 3.5.8 5.2.8 3.7 0 7.3-1.7 9.8-4.7L22 7l-1.9 1.2a15.7 15.7 0 0 1-9.8 3.5c-1.8 0-3.5-.3-5.2-.8-1.5-.8-2.7-2-3.5-3L2 6v10Z"/><path d="M16 8h.01"/><path d="M12 3h.01"/><path d="M22 17c-.8-1.2-2.2-2-3.5-2"/></svg>`;
+  } else {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flame" style="transform: rotate(-45deg);"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`;
+  }
+};
+
 const getRestaurantIcon = (category: string, isSelected: boolean) => {
-  const iconName = category.toLowerCase() === 'seafood' ? 'set_meal' : 'outdoor_grill';
   const bgColor = isSelected ? '#e2533b' : '#334155';
   const size = isSelected ? 42 : 34;
   const innerSize = isSelected ? 22 : 18;
@@ -47,7 +55,7 @@ const getRestaurantIcon = (category: string, isSelected: boolean) => {
     html: `
       <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s;">
         <div style="display: flex; align-items: center; justify-content: center; width: ${size}px; height: ${size}px; background-color: ${bgColor}; border: 2px solid white; border-radius: 50% 50% 0 50%; transform: rotate(45deg); box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
-          <span class="material-symbols-outlined" style="transform: rotate(-45deg); color: white; font-size: ${innerSize}px; font-weight: bold;">${iconName}</span>
+          ${getIconSvg(category, innerSize)}
         </div>
       </div>
     `,
@@ -312,7 +320,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                 onClick={() => setSelectedRestaurant(null)}
                 className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-white border border-[#1a1a1a]/20 text-on-surface hover:bg-[#f9f7f2] active:scale-95 transition-all z-20 cursor-pointer shadow-sm"
               >
-                <span className="material-symbols-outlined text-sm font-bold">close</span>
+                <X size={14} strokeWidth={3} />
               </button>
               <div className="absolute bottom-0 w-full h-12 bg-gradient-to-t from-[#fdfcf9] to-transparent pointer-events-none" />
             </div>
@@ -327,11 +335,11 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                   <h2 className="font-serif italic font-bold text-lg text-[#1a1a1a] leading-none truncate">
                     {selectedRestaurant.name}
                     {selectedRestaurant.isVerified && (
-                      <span className="ml-1 align-middle text-[#e2533b] material-symbols-outlined text-[15px] filled select-none">verified</span>
+                      <BadgeCheck size={15} className="ml-1 inline-block fill-[#e2533b] text-white select-none align-middle" />
                     )}
                   </h2>
                   <div className="flex items-center gap-0.5 bg-[#e2533b] text-white px-2 py-0.5 shrink-0 select-none">
-                    <span className="material-symbols-outlined text-[10px] filled text-white">star</span>
+                    <Star size={10} className="fill-white text-white" />
                     <span className="font-mono text-[10px] font-bold">{selectedRestaurant.rating}</span>
                   </div>
                 </div>
@@ -340,7 +348,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                   <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2 py-0.5 font-bold text-[#1a1a1a]">{selectedRestaurant.priceRange}</span>
                   <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2 py-0.5 font-bold text-[#1a1a1a]">{selectedRestaurant.category}</span>
                   <span className="flex items-center gap-0.5 text-[#e2533b] font-bold">
-                    <span className="material-symbols-outlined text-[10px] font-black">location_on</span>
+                    <MapPin size={10} className="text-[#e2533b]" />
                     {selectedRestaurant.distance}
                   </span>
                 </div>
@@ -358,7 +366,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
               {/* Address Card details */}
               <div className="flex flex-col gap-2.5 p-3 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-[11px] text-[#1a1a1a] text-left">
                 <div className="flex items-start gap-2.5">
-                  <span className="material-symbols-outlined text-[#e2533b] text-base select-none mt-0.5">map</span>
+                  <Map size={16} className="text-[#e2533b] mt-0.5 select-none" />
                   <div>
                     <p className="font-bold leading-snug">{selectedRestaurant.address}</p>
                     <p className="text-[#1a1a1a]/60 text-[9px] mt-0.5">{selectedRestaurant.area}</p>
@@ -366,7 +374,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                 </div>
                 <hr className="border-[#1a1a1a]/10" />
                 <div className="flex items-start gap-2.5">
-                  <span className="material-symbols-outlined text-[#e2533b] text-base select-none mt-0.5">schedule</span>
+                  <Clock size={16} className="text-[#e2533b] mt-0.5 select-none" />
                   <p className="font-bold">
                     Open Now <span className="text-[#1a1a1a]/60 font-normal ml-1.5">{selectedRestaurant.openingHours}</span>
                   </p>
@@ -436,9 +444,11 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           <div className="max-w-2xl mx-auto flex gap-2 overflow-x-auto hide-scrollbar pb-2 pointer-events-auto">
             {(['trending', 'seafood', 'bbq', 'snails'] as const).map((filter) => {
               const label = filter.charAt(0).toUpperCase() + filter.slice(1);
-              const icon = filter === 'trending' ? 'local_fire_department' 
-                         : filter === 'seafood' ? 'set_meal'
-                         : filter === 'bbq' ? 'outdoor_grill' : 'water_drop';
+              const IconComponent = filter === 'trending' ? Flame
+                                  : filter === 'snails' ? SlidersHorizontal
+                                  : filter === 'seafood' ? Fish
+                                  : filter === 'bbq' ? Flame
+                                  : Droplet;
               
               return (
                 <button 
@@ -451,7 +461,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                       : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2]'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[15px]">{icon}</span>
+                  <IconComponent size={15} />
                   {label}
                 </button>
               );
@@ -536,7 +546,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
             aria-label="Align camera to current GPS location"
             className="w-12 h-12 bg-white text-[#1a1a1a] hover:text-[#e2533b] rounded-none shadow-xl flex items-center justify-center border-2 border-[#1a1a1a] hover:bg-[#f9f7f2] active:scale-90 transition-all pointer-events-auto cursor-pointer group"
           >
-            <span className="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">my_location</span>
+            <LocateFixed size={24} className="group-hover:scale-110 transition-transform" />
           </button>
 
           <div 
@@ -551,7 +561,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
               <div className="flex items-center gap-1.5 mb-1 text-[9px] select-none font-semibold">
                 <span className="px-1.5 py-0.5 bg-[#e2533b] text-white rounded-none font-mono uppercase tracking-wider text-[8px]">Curated</span>
                 <span className="flex items-center text-[#e2533b] font-mono uppercase tracking-wider text-[8px] font-extrabold">
-                  <span className="material-symbols-outlined text-[11px] mr-1">local_fire_department</span>Hot
+                  <Flame size={11} className="mr-1 inline-block align-middle fill-current" />Hot
                 </span>
               </div>
               <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] mb-0.5 truncate">Vinh Khanh Night Tour</h3>
@@ -561,7 +571,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
               type="button"
               className="w-8 h-8 rounded-none bg-[#1a1a1a] hover:bg-[#e2533b] text-white flex items-center justify-center shrink-0 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
             >
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
+              <ArrowRight size={16} />
             </button>
           </div>
         </div>

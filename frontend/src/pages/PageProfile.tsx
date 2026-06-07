@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/Admin/AdminDashboard';
 import OwnerDashboard from '../components/Owner/OwnerDashboard';
-
 import { Restaurant } from '../types';
+import { UserCircle, BadgeCheck, FileText, Star, Globe, Moon, LogOut, ChevronRight, User, Shield, Store } from 'lucide-react';
 
 interface PageProfileProps {
   userEmail: string;
@@ -51,7 +51,7 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
       <div className="w-full min-h-[calc(100vh-72px)] bg-[#fdfcf9] pb-24 text-[#1a1a1a]">
         <div className="max-w-md mx-auto px-4 py-16 flex flex-col gap-6 text-center animate-in fade-in duration-300">
           <div className="bg-white border-2 border-[#1a1a1a] p-8 shadow-[6px_6px_0px_0px_#1a1a1a] flex flex-col items-center gap-4">
-            <span className="material-symbols-outlined text-5xl text-[#e2533b]">account_circle</span>
+            <UserCircle size={48} className="text-[#e2533b]" />
             <h2 className="font-serif italic font-bold text-2xl uppercase">Yêu cầu Đăng nhập</h2>
             <p className="text-xs text-[#1a1a1a]/60 leading-relaxed max-w-xs">
               Vui lòng đăng nhập tài khoản của bạn để xem thông tin cá nhân hoặc truy cập các công cụ quản trị/chủ quán.
@@ -81,38 +81,38 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
           <div className="flex border-b-2 border-[#1a1a1a] gap-2 font-mono text-[10px] uppercase tracking-wider font-extrabold pb-0.5">
             <button
               onClick={() => setActiveConsole('profile')}
-              className={`px-4 py-2 border-t-2 border-x-2 border-transparent transition-all cursor-pointer ${
+              className={`px-4 py-2 border-t-2 border-x-2 border-transparent transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeConsole === 'profile' 
                   ? 'bg-white border-[#1a1a1a] text-[#e2533b] relative top-[2px] font-black' 
                   : 'text-[#1a1a1a]/60 hover:text-[#1a1a1a]'
               }`}
             >
-              👤 Cá nhân
+              <User size={12} className={activeConsole === 'profile' ? 'fill-current' : ''} /> Cá nhân
             </button>
 
             {isAdmin && (
               <button
                 onClick={() => setActiveConsole('admin')}
-                className={`px-4 py-2 border-t-2 border-x-2 border-transparent transition-all cursor-pointer ${
+                className={`px-4 py-2 border-t-2 border-x-2 border-transparent transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeConsole === 'admin' 
                     ? 'bg-white border-[#1a1a1a] text-[#e2533b] relative top-[2px] font-black' 
                     : 'text-[#1a1a1a]/60 hover:text-[#1a1a1a]'
                 }`}
               >
-                🛡️ Admin Console
+                <Shield size={12} className={activeConsole === 'admin' ? 'fill-current' : ''} /> Admin Console
               </button>
             )}
 
             {isOwner && (
               <button
                 onClick={() => setActiveConsole('owner')}
-                className={`px-4 py-2 border-t-2 border-x-2 border-transparent transition-all cursor-pointer ${
+                className={`px-4 py-2 border-t-2 border-x-2 border-transparent transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeConsole === 'owner' 
                     ? 'bg-white border-[#1a1a1a] text-[#e2533b] relative top-[2px] font-black' 
                     : 'text-[#1a1a1a]/60 hover:text-[#1a1a1a]'
                 }`}
               >
-                🏪 Quản lý Quán
+                <Store size={12} className={activeConsole === 'owner' ? 'fill-current' : ''} /> Quản lý Quán
               </button>
             )}
           </div>
@@ -139,7 +139,7 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
               </div>
 
               <div className="flex gap-1.5 items-center bg-[#e2533b] text-white px-3 py-1 rounded-none text-[10px] font-mono uppercase tracking-wider select-none shadow">
-                <span className="material-symbols-outlined text-[14px] filled">verified</span>
+                <BadgeCheck size={14} className="fill-white text-[#e2533b]" />
                 <span>{user.role} Member</span>
               </div>
             </div>
@@ -147,13 +147,13 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
             {/* Counts indicators bento grid */}
             <div className="grid grid-cols-2 gap-3.5 text-center">
               <div className="bg-white p-4 rounded-none border-2 border-[#1a1a1a] flex flex-col gap-1 items-center shadow">
-                <span className="material-symbols-outlined text-[#e2533b] text-xl">reviews</span>
+                <FileText size={20} className="text-[#e2533b]" />
                 <span className="font-serif italic font-bold text-2xl text-[#1a1a1a]">{postsCount}</span>
                 <span className="font-mono text-[9px] text-[#1a1a1a]/50 uppercase tracking-wider font-extrabold">Posts Published</span>
               </div>
 
               <div className="bg-white p-4 rounded-none border-2 border-[#1a1a1a] flex flex-col gap-1 items-center shadow">
-                <span className="material-symbols-outlined text-[#e2533b] text-xl font-bold">star</span>
+                <Star size={20} className="fill-[#e2533b] text-[#e2533b]" />
                 <span className="font-serif italic font-bold text-2xl text-[#1a1a1a]">5</span>
                 <span className="font-mono text-[9px] text-[#1a1a1a]/50 uppercase tracking-wider font-extrabold">Saved Places</span>
               </div>
@@ -167,7 +167,7 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
                 className="flex items-center justify-between p-4 cursor-pointer hover:bg-[#f9f7f2] transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-[#1a1a1a] text-lg">language</span>
+                  <Globe size={18} className="text-[#1a1a1a]" />
                   <span className="font-mono text-xs text-[#1a1a1a] font-bold uppercase tracking-wider">App Language</span>
                 </div>
                 <span className="text-[10px] font-mono font-bold uppercase text-[#e2533b]">
@@ -183,7 +183,7 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
                 className="flex items-center justify-between p-4 cursor-pointer hover:bg-[#f9f7f2] transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-[#1a1a1a] text-lg">dark_mode</span>
+                  <Moon size={18} className="text-[#1a1a1a]" />
                   <span className="font-mono text-xs text-[#1a1a1a] font-bold uppercase tracking-wider">Active Theme</span>
                 </div>
                 <span className="text-[10px] font-mono text-[#1a1a1a]/45 uppercase font-bold tracking-wider">Light Default</span>
@@ -195,10 +195,10 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
                 className="flex items-center justify-between p-4 cursor-pointer hover:bg-red-50 text-red-600 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-lg">logout</span>
+                  <LogOut size={18} />
                   <span className="font-mono text-xs font-bold uppercase tracking-wider">Đăng xuất tài khoản</span>
                 </div>
-                <span className="material-symbols-outlined text-base">chevron_right</span>
+                <ChevronRight size={16} />
               </div>
             </div>
           </div>

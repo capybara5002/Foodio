@@ -5,6 +5,7 @@
 
 import { useState, FormEvent } from 'react';
 import { PRESET_IMAGES } from '../data';
+import { X, Camera, MapPin, Star, Utensils, Tag, Store } from 'lucide-react';
 
 interface PageCreateProps {
   onAddPost: (newPost: {
@@ -66,7 +67,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
           onClick={onCancel}
           className="text-[#1a1a1a]/60 hover:text-[#e2533b] transition-colors p-2 active:scale-95 duration-150 flex items-center justify-center cursor-pointer"
         >
-          <span className="material-symbols-outlined select-none font-bold">close</span>
+          <X size={14} strokeWidth={3} className="select-none" />
         </button>
         <span className="font-serif italic font-bold text-sm text-[#1a1a1a]">Tạo bài đăng mới // Review</span>
         <button 
@@ -93,14 +94,14 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
           {/* Cycle overlay */}
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-xs">
             <div className="bg-white text-on-surface px-4 py-2 rounded-none flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider font-bold shadow-lg border border-[#1a1a1a]">
-              <span className="material-symbols-outlined text-base">photo_camera</span>
+              <Camera size={16} />
               Thay đổi ảnh ({photoIndex + 1}/{PRESET_IMAGES.length})
             </div>
           </div>
 
           {/* Snail location tag badges matches image */}
           <div className="absolute bottom-4 right-4 bg-white text-[#1a1a1a] px-3 py-1.5 rounded-none flex items-center gap-1.5 shadow border border-[#1a1a1a]/15">
-            <span className="material-symbols-outlined text-[16px] text-[#e2533b]">location_on</span>
+            <MapPin size={16} className="text-[#e2533b]" />
             <span className="font-mono text-[9px] uppercase tracking-wider font-bold">Đang ở gần Bùi Viện</span>
           </div>
 
@@ -120,11 +121,12 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
                 onClick={() => setRating(stars)}
                 className="hover:scale-110 transition-transform cursor-pointer"
               >
-                <span className={`material-symbols-outlined text-3xl select-none ${
-                  stars <= rating ? 'filled text-[#e2533b]' : 'text-[#1a1a1a]/25'
-                }`}>
-                  star
-                </span>
+                <Star 
+                  size={28} 
+                  className={`select-none transition-all ${
+                    stars <= rating ? 'fill-[#e2533b] text-[#e2533b]' : 'text-[#1a1a1a]/25'
+                  }`} 
+                />
               </button>
             ))}
           </div>
@@ -154,7 +156,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
                 }}
                 className="flex items-center gap-1.5 bg-white rounded-none px-2.5 py-1 text-[#1a1a1a] border border-[#1a1a1a]/15 hover:bg-[#f9f7f2] transition-colors shadow-xs cursor-pointer text-[9px] font-mono uppercase tracking-wider font-extrabold"
               >
-                <span className="material-symbols-outlined text-sm text-[#e2533b]">restaurant</span>
+                <Utensils size={14} className="text-[#e2533b]" />
                 <span>Tag Quán</span>
               </button>
 
@@ -166,7 +168,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
                 }}
                 className="flex items-center gap-1.5 bg-white rounded-none px-2.5 py-1 text-[#1a1a1a] border border-[#1a1a1a]/15 hover:bg-[#f9f7f2] transition-colors shadow-xs cursor-pointer text-[9px] font-mono uppercase tracking-wider font-extrabold"
               >
-                <span className="material-symbols-outlined text-sm text-secondary">sell</span>
+                <Tag size={14} className="text-secondary" />
                 <span>Thể loại</span>
               </button>
             </div>
@@ -186,7 +188,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
             
             <div className="flex items-center gap-3 pl-2">
               <div className="w-9 h-9 rounded-sm bg-[#1a1a1a] text-white flex items-center justify-center shrink-0 select-none">
-                <span className="material-symbols-outlined text-sm filled text-white">storefront</span>
+                <Store size={14} className="text-white" />
               </div>
               <div>
                 <h4 className="font-serif italic font-bold text-xs text-[#1a1a1a] leading-tight">Phở Quỳnh</h4>
@@ -199,7 +201,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
               onClick={() => setHasLocation(false)}
               className="text-[#1a1a1a]/60 hover:text-[#e2533b] transition-colors p-1 rounded-full cursor-pointer"
             >
-              <span className="material-symbols-outlined text-base">close</span>
+              <X size={16} />
             </button>
           </div>
         )}

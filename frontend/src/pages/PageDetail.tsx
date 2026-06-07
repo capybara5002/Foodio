@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { Restaurant } from '../types';
+import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2 } from 'lucide-react';
 
 interface PageDetailProps {
   restaurant: Restaurant;
@@ -55,7 +56,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             onClick={onBack}
             className="w-10 h-10 flex items-center justify-center rounded-sm bg-white border border-[#1a1a1a]/25 shadow text-on-surface hover:bg-[#f9f7f2] active:scale-95 transition-transform cursor-pointer"
           >
-            <span className="material-symbols-outlined text-xl">arrow_back</span>
+            <ArrowLeft size={20} />
           </button>
           
           <div className="flex gap-2">
@@ -64,16 +65,18 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
               onClick={handleShare}
               className="w-10 h-10 flex items-center justify-center rounded-sm bg-white border border-[#1a1a1a]/25 shadow text-on-surface hover:bg-[#f9f7f2] active:scale-95 transition-transform cursor-pointer"
             >
-              <span className="material-symbols-outlined text-xl">share</span>
+              <Share2 size={20} />
             </button>
             <button 
               type="button"
               onClick={() => setIsFavorite(!isFavorite)}
               className="w-10 h-10 flex items-center justify-center rounded-sm bg-white border border-[#1a1a1a]/25 shadow hover:bg-[#f9f7f2] active:scale-95 transition-transform cursor-pointer"
             >
-              <span className={`material-symbols-outlined text-xl ${isFavorite ? 'filled text-[#e2533b]' : 'text-on-surface'}`}>
-                {isFavorite ? 'favorite' : 'favorite_border'}
-              </span>
+              {isFavorite ? (
+                <Heart size={20} className="fill-[#e2533b] text-[#e2533b]" />
+              ) : (
+                <Heart size={20} className="text-on-surface" />
+              )}
             </button>
           </div>
         </div>
@@ -93,13 +96,13 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
               <h1 className="font-serif italic font-bold text-headline-lg-mobile md:text-headline-lg text-[#1a1a1a] leading-none">
                 {restaurant.name}
                 {restaurant.isVerified && (
-                  <span className="ml-2 align-middle text-[#e2533b] material-symbols-outlined text-[18px] filled select-none">verified</span>
+                  <BadgeCheck size={18} className="ml-2 inline-block fill-[#e2533b] text-white select-none align-middle" />
                 )}
               </h1>
             </div>
             
             <div className="flex items-center gap-1.5 bg-[#e2533b] text-white px-3 py-1.5 rounded-none shadow-sm shrink-0 select-none">
-              <span className="material-symbols-outlined text-[15px] filled text-white">star</span>
+              <Star size={15} className="fill-white text-white" />
               <span className="font-mono text-xs font-black">{restaurant.rating}</span>
             </div>
           </div>
@@ -109,7 +112,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2.5 py-1 rounded-none font-bold text-[#1a1a1a]">{restaurant.category}</span>
             <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2.5 py-1 rounded-none font-bold text-[#1a1a1a]">Vietnamese</span>
             <span className="flex items-center gap-1 text-[#e2533b] font-bold ml-1">
-              <span className="material-symbols-outlined text-sm font-black">location_on</span>
+              <MapPin size={14} className="text-[#e2533b]" />
               {restaurant.distance}
             </span>
           </div>
@@ -122,7 +125,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             onClick={onStartAudio}
             className="flex-1 flex items-center justify-center gap-1.5 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3.5 px-4 rounded-none shadow-md active:scale-98 transition-all font-mono text-[10px] uppercase tracking-widest cursor-pointer"
           >
-            📚 Play Audio Guide // 🔊
+            <Volume2 size={14} /> Play Audio Guide
           </button>
           
           <button 
@@ -131,7 +134,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             aria-label="Direct message with restaurant owner"
             className="flex items-center justify-center w-12 h-12 bg-white border border-[#1a1a1a]/25 text-on-surface hover:bg-[#f9f7f2] rounded-none shadow-sm active:scale-95 transition-transform cursor-pointer"
           >
-            <span className="material-symbols-outlined text-lg">chat</span>
+            <MessageSquare size={18} />
           </button>
         </section>
 
@@ -139,7 +142,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
         <section className="flex flex-col gap-3 p-4 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-xs text-[#1a1a1a]">
           
           <div className="flex items-start gap-3">
-            <span className="material-symbols-outlined text-[#e2533b] mt-0.5 text-lg select-none">map</span>
+            <Map size={18} className="text-[#e2533b] mt-0.5 select-none" />
             <div>
               <p className="font-bold">{restaurant.address}</p>
               <p className="text-[#1a1a1a]/60 text-[11px] font-sans mt-0.5">{restaurant.area}</p>
@@ -149,7 +152,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
           <hr className="border-[#1a1a1a]/10" />
 
           <div className="flex items-start gap-3">
-            <span className="material-symbols-outlined text-[#e2533b] mt-0.5 text-lg select-none">schedule</span>
+            <Clock size={18} className="text-[#e2533b] mt-0.5 select-none" />
             <div>
               <p className="font-bold">
                 Open Now <span className="text-[#1a1a1a]/60 font-normal ml-2">{restaurant.openingHours}</span>
@@ -199,7 +202,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
                   onClick={() => handleAddDish(dish.name)}
                   className="absolute bottom-3 right-3 w-7 h-7 bg-[#1a1a1a] hover:bg-[#e2533b] text-white rounded-none flex items-center justify-center shadow active:scale-90 transition-all cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[13px] font-bold">add</span>
+                  <Plus size={13} strokeWidth={3} />
                 </button>
               </div>
             ))}
@@ -274,7 +277,11 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
                     {/* Stars indicators */}
                     <div className="flex text-[#e2533b]">
                       {Array.from({ length: 5 }).map((_, st) => (
-                        <span key={st} className={`material-symbols-outlined text-xs select-none ${st < Math.floor(rev.rating) ? 'filled' : ''}`}>star</span>
+                        <Star 
+                          key={st} 
+                          size={12} 
+                          className={`select-none ${st < Math.floor(rev.rating) ? 'fill-[#e2533b] text-[#e2533b]' : 'text-slate-300'}`} 
+                        />
                       ))}
                     </div>
                   </div>

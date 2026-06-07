@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Restaurant, Category } from '../../types';
+import { Trash2, X } from 'lucide-react';
 
 interface OwnerDashboardProps {
   onRestaurantUpdated?: (updated: Restaurant) => void;
@@ -395,7 +396,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                   title="Xóa món ăn"
                   className="absolute bottom-3 right-3 w-7 h-7 bg-[#e2533b]/10 hover:bg-[#e2533b] text-[#e2533b] hover:text-white rounded-none flex items-center justify-center shadow-xs active:scale-90 transition-all cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[13px] font-bold">delete</span>
+                  <Trash2 size={13} strokeWidth={3} />
                 </button>
               </div>
             ))}
@@ -478,7 +479,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               onClick={() => setShowDishModal(false)}
               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center border-2 border-[#1a1a1a] bg-white hover:bg-[#e2533b] hover:text-white transition-colors cursor-pointer"
             >
-              <span className="material-symbols-outlined text-sm font-bold">close</span>
+              <X size={14} strokeWidth={3} />
             </button>
 
             <div className="mb-4">

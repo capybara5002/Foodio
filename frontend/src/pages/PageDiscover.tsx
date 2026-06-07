@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { AudioTour, CommunityPost } from '../types';
+import { Flame, MapPin, Star, Heart, MessageSquare, Bookmark, Volume2, Users } from 'lucide-react';
 
 interface PageDiscoverProps {
   tours: AudioTour[];
@@ -96,22 +97,22 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
           <button
             type="button"
             onClick={() => setSubTab('tours')}
-            className={`flex-1 py-2 text-center rounded font-extrabold text-[10px] uppercase tracking-[0.2em] transition-all cursor-pointer ${subTab === 'tours'
+            className={`flex-grow py-2 rounded font-extrabold text-[10px] uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center justify-center gap-1.5 ${subTab === 'tours'
                 ? 'bg-[#1a1a1a] text-white shadow-md font-black'
                 : 'text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5'
               }`}
           >
-            🔊 Tours
+            <Volume2 size={12} /> Tours
           </button>
           <button
             type="button"
             onClick={() => setSubTab('feed')}
-            className={`flex-1 py-2 text-center rounded font-extrabold text-[10px] uppercase tracking-[0.2em] transition-all cursor-pointer ${subTab === 'feed'
+            className={`flex-grow py-2 rounded font-extrabold text-[10px] uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center justify-center gap-1.5 ${subTab === 'feed'
                 ? 'bg-[#1a1a1a] text-white shadow-md font-black'
                 : 'text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5'
               }`}
           >
-            👥 Feed
+            <Users size={12} /> Feed
           </button>
         </div>
       </div>
@@ -195,7 +196,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
 
                       {tour.isTrending && (
                         <div className="absolute top-5 left-5 bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-sm flex items-center gap-1 shadow border border-transparent">
-                          <span className="material-symbols-outlined text-[12px] text-[#e2533b] filled">local_fire_department</span>
+                          <Flame size={12} className="fill-[#e2533b] text-[#e2533b]" />
                           <span className="text-[9px] font-mono uppercase tracking-widest font-bold">Trending</span>
                         </div>
                       )}
@@ -209,12 +210,12 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                             {tour.title}
                           </h2>
                           <p className="font-sans text-[10px] text-[#1a1a1a]/50 flex items-center gap-1 mt-1 font-medium tracking-wide">
-                            <span className="material-symbols-outlined text-xs">location_on</span>
+                            <MapPin size={12} className="text-[#1a1a1a]/50" />
                             {tour.location}
                           </p>
                         </div>
                         <div className="flex items-center gap-1 bg-[#e2533b] text-white px-2 py-0.5 rounded-sm font-semibold select-none">
-                          <span className="material-symbols-outlined text-[11px] filled">star</span>
+                          <Star size={11} className="fill-white text-white" />
                           <span className="font-mono text-[10px]">{tour.rating}</span>
                         </div>
                       </div>
@@ -249,9 +250,9 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                       <button
                         type="button"
                         onClick={() => onPlayTour(tour)}
-                        className="w-full mt-auto bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest py-3 rounded-none shadow transition-all active:scale-[0.98] cursor-pointer"
+                        className="w-full mt-auto bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest py-3 rounded-none shadow transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
                       >
-                        Start Audio Tour // 🔊
+                        <Volume2 size={12} /> Start Audio Tour
                       </button>
                     </div>
                   </article>
@@ -331,7 +332,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                 </div>
 
                 <div className="flex items-center gap-0.5 bg-[#e2533b] text-white px-2 py-0.5 rounded-xs">
-                  <span className="material-symbols-outlined text-[11px] filled text-white">star</span>
+                  <Star size={11} className="fill-white text-white" />
                   <span className="font-mono text-[10px] font-bold">{post.rating}</span>
                 </div>
               </div>
@@ -342,7 +343,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
 
                 {/* Embedded Floating coordinate chip */}
                 <div className="absolute bottom-3 left-3 bg-[#1a1a1a] text-white px-3 py-1 rounded-sm flex items-center gap-1 border border-white/5 select-none">
-                  <span className="material-symbols-outlined text-xs text-[#e2533b]">location_on</span>
+                  <MapPin size={12} className="text-[#e2533b]" />
                   <span className="font-mono text-[9px] uppercase tracking-wider font-bold">{post.locationName}</span>
                 </div>
               </div>
@@ -364,14 +365,16 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                       className={`flex items-center gap-1 px-1 py-1 rounded transition-colors cursor-pointer ${post.isLiked ? 'text-[#e2533b]' : 'text-[#1a1a1a]/55 hover:text-[#e2533b]'
                         }`}
                     >
-                      <span className={`material-symbols-outlined text-lg ${post.isLiked ? 'filled' : ''}`}>
-                        favorite
-                      </span>
+                      {post.isLiked ? (
+                        <Heart size={18} className="fill-[#e2533b] text-[#e2533b]" />
+                      ) : (
+                        <Heart size={18} />
+                      )}
                       <span className="font-mono text-[10px] font-bold">{post.likesCount}</span>
                     </button>
 
                     <button className="flex items-center gap-1 text-[#1a1a1a]/55 hover:text-[#e2533b] px-1 py-1 cursor-pointer">
-                      <span className="material-symbols-outlined text-lg">mode_comment</span>
+                      <MessageSquare size={18} />
                       <span className="font-mono text-[10px] font-bold">{post.commentsCount}</span>
                     </button>
                   </div>
@@ -382,9 +385,11 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                     className={`p-1 hover:bg-[#1a1a1a]/5 rounded transition-colors cursor-pointer ${post.isSaved ? 'text-[#e2533b]' : 'text-[#1a1a1a]/60'
                       }`}
                   >
-                    <span className={`material-symbols-outlined text-lg ${post.isSaved ? 'filled' : ''}`}>
-                      bookmark
-                    </span>
+                    {post.isSaved ? (
+                      <Bookmark size={18} className="fill-[#e2533b] text-[#e2533b]" />
+                    ) : (
+                      <Bookmark size={18} />
+                    )}
                   </button>
 
                 </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { X, User, Store, Shield } from 'lucide-react';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -57,7 +58,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
           onClick={onClose}
           className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center border-2 border-[#1a1a1a] bg-white hover:bg-[#e2533b] hover:text-white transition-colors cursor-pointer"
         >
-          <span className="material-symbols-outlined text-sm font-bold">close</span>
+          <X size={14} strokeWidth={3} />
         </button>
 
         {/* Header */}
@@ -152,21 +153,21 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
           <div className="grid grid-cols-3 gap-2">
             <button 
               onClick={() => fillQuickLogin('customer@foodio.com', '123456')}
-              className="px-2 py-1.5 bg-white border border-[#1a1a1a]/25 hover:border-[#1a1a1a] text-[9px] font-mono font-bold uppercase transition-all shadow-xs cursor-pointer text-center"
+              className="px-2 py-1.5 bg-white border border-[#1a1a1a]/25 hover:border-[#1a1a1a] text-[9px] font-mono font-bold uppercase transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1"
             >
-              👤 Customer
+              <User size={10} /> Customer
             </button>
             <button 
               onClick={() => fillQuickLogin('owner@foodio.com', '123456')}
-              className="px-2 py-1.5 bg-white border border-[#1a1a1a]/25 hover:border-[#1a1a1a] text-[9px] font-mono font-bold uppercase transition-all shadow-xs cursor-pointer text-center"
+              className="px-2 py-1.5 bg-white border border-[#1a1a1a]/25 hover:border-[#1a1a1a] text-[9px] font-mono font-bold uppercase transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1"
             >
-              🏪 Owner
+              <Store size={10} /> Owner
             </button>
             <button 
               onClick={() => fillQuickLogin('admin@foodio.com', '123456')}
-              className="px-2 py-1.5 bg-white border border-[#1a1a1a]/25 hover:border-[#1a1a1a] text-[9px] font-mono font-bold uppercase transition-all shadow-xs cursor-pointer text-center"
+              className="px-2 py-1.5 bg-white border border-[#1a1a1a]/25 hover:border-[#1a1a1a] text-[9px] font-mono font-bold uppercase transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1"
             >
-              🛡️ Admin
+              <Shield size={10} /> Admin
             </button>
           </div>
         </div>

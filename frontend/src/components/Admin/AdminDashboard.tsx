@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User, Restaurant } from '../../types';
+import { Plus, Pencil, Trash2, X, Shield, Store, User as UserIcon, Ban, Users } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
@@ -155,23 +156,33 @@ export default function AdminDashboard() {
       {/* Bento Grid Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
         <div className="bg-white p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
-          <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold">Tổng tài khoản</span>
+          <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold flex items-center gap-1">
+            <Users size={12} /> Tổng tài khoản
+          </span>
           <span className="font-serif italic font-bold text-3xl text-[#1a1a1a] mt-1">{totalUsers}</span>
         </div>
         <div className="bg-white p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
-          <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold">🛡️ Admin</span>
+          <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold flex items-center gap-1">
+            <Shield size={12} /> Admin
+          </span>
           <span className="font-serif italic font-bold text-3xl text-[#1a1a1a] mt-1">{adminCount}</span>
         </div>
         <div className="bg-white p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
-          <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold">🏪 Chủ quán</span>
+          <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold flex items-center gap-1">
+            <Store size={12} /> Chủ quán
+          </span>
           <span className="font-serif italic font-bold text-3xl text-[#1a1a1a] mt-1">{ownerCount}</span>
         </div>
         <div className="bg-white p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
-          <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold">👤 Thực khách</span>
+          <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold flex items-center gap-1">
+            <UserIcon size={12} /> Thực khách
+          </span>
           <span className="font-serif italic font-bold text-3xl text-[#1a1a1a] mt-1">{customerCount}</span>
         </div>
         <div className="bg-[#fff0f0] p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between col-span-2 md:col-span-1">
-          <span className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b] font-bold">🚫 Đang khóa</span>
+          <span className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b] font-bold flex items-center gap-1">
+            <Ban size={12} /> Đang khóa
+          </span>
           <span className="font-serif italic font-bold text-3xl text-[#e2533b] mt-1">{suspendedCount}</span>
         </div>
       </div>
@@ -187,7 +198,7 @@ export default function AdminDashboard() {
             onClick={handleOpenAdd}
             className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest px-4 py-2.5 shadow border-2 border-[#1a1a1a] transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5"
           >
-            <span className="material-symbols-outlined text-[13px] font-bold">add</span>
+            <Plus size={13} strokeWidth={3} />
             Thêm tài khoản
           </button>
         </div>
@@ -249,14 +260,14 @@ export default function AdminDashboard() {
                         className="w-7 h-7 flex items-center justify-center border border-[#1a1a1a]/20 hover:border-[#1a1a1a] hover:bg-[#f9f7f2] bg-white cursor-pointer transition-colors shadow-xs"
                         title="Chỉnh sửa"
                       >
-                        <span className="material-symbols-outlined text-[15px]">edit</span>
+                        <Pencil size={13} />
                       </button>
                       <button
                         onClick={() => handleDeleteUser(u.id)}
                         className="w-7 h-7 flex items-center justify-center border border-[#1a1a1a]/20 hover:border-red-500 hover:bg-red-50 bg-white cursor-pointer transition-colors text-red-500 shadow-xs"
                         title="Xóa tài khoản"
                       >
-                        <span className="material-symbols-outlined text-[15px]">delete</span>
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </td>
@@ -275,7 +286,7 @@ export default function AdminDashboard() {
               onClick={() => setIsModalOpen(false)}
               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center border-2 border-[#1a1a1a] bg-white hover:bg-[#e2533b] hover:text-white transition-colors cursor-pointer"
             >
-              <span className="material-symbols-outlined text-sm font-bold">close</span>
+              <X size={14} strokeWidth={3} />
             </button>
 
             <div className="mb-4">
