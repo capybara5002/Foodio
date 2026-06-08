@@ -3,21 +3,33 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useRef, useEffect, FormEvent } from 'react';
+import { useState, useRef, useEffect, FormEvent, ChangeEvent } from 'react';
+import * as signalR from '@microsoft/signalr';
 import { ChatThread, ChatMessage } from '../types';
-import { ArrowLeft, BadgeCheck, Phone, MoreVertical, CheckCheck, PlusCircle, Image, Send, PhoneOff } from 'lucide-react';
+import { ensureChatThread } from '../api/cravemapApi';
+import { ArrowLeft, BadgeCheck, Phone, MoreVertical, CheckCheck, Image, Send, PhoneOff } from 'lucide-react';
 
 interface PageInboxProps {
   threads: ChatThread[];
   activeThreadId: string;
+  userId: string;
+  restaurantId?: string;
+  currentUserRole: 'Admin' | 'Owner' | 'User' | 'Guest';
   onSelectThread: (threadId: string) => void;
-  onRefreshThreads?: () => void;
+  onThreadUpdated: (thread: ChatThread) => void;
 }
 
-export default function PageInbox({ threads, activeThreadId, onSelectThread, onRefreshThreads }: PageInboxProps) {
+export default function PageInbox({
+  threads,
+  activeThreadId,
+  userId,
+  restaurantId,
+  currentUserRole,
+  onSelectThread,
+  onThreadUpdated
+}: PageInboxProps) {
   const [inputText, setInputText] = useState('');
   const [mobileView, setMobileView] = useState<'threads' | 'chat'>('threads');
-  const [isTyping, setIsTyping] = useState(false);
   const [mockCallState, setMockCallState] = useState<'idle' | 'calling'>('idle');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -25,16 +37,50 @@ export default function PageInbox({ threads, activeThreadId, onSelectThread, onR
   const [errorMessages, setErrorMessages] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const connectionRef = useRef<signalR.HubConnection | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const activeThread = threads.find((t) => t.id === activeThreadId) || threads[0];
+  const effectiveThreadId = activeThread?.id ?? '';
+  const isOwnerView = currentUserRole === 'Owner';
+  const getThreadIdentity = (thread: ChatThread) => ({
+    name: isOwnerView ? thread.customerName || thread.userId || 'Customer' : thread.name,
+    avatar: isOwnerView ? thread.customerAvatar || thread.avatar : thread.avatar,
+    statusText: isOwnerView ? 'Customer conversation' : thread.statusText
+  });
+  const activeIdentity = activeThread ? getThreadIdentity(activeThread) : null;
+  const getThreadSortTime = (value: string) => {
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? 0 : time;
+  };
+  const formatThreadTime = (value: string) => {
+    const time = new Date(value);
+    if (Number.isNaN(time.getTime())) return value;
+    return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  const sortedThreads = [...threads].sort(
+    (a, b) => getThreadSortTime(b.lastMessageTime) - getThreadSortTime(a.lastMessageTime)
+  );
 
   const fetchMessages = async (threadId: string) => {
-    if (!threadId) return;
+    if (!threadId) {
+      setMessages([]);
+      setErrorMessages(null);
+      return;
+    }
     setLoadingMessages(true);
     setErrorMessages(null);
     try {
       const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const response = await fetch(`${baseUrl}/api/chatthreads/${threadId}/messages`);
+      if (response.status === 404 && !isOwnerView && activeThread?.restaurantId) {
+        const ensuredThread = await ensureChatThread(activeThread.restaurantId, userId);
+        onThreadUpdated(ensuredThread);
+        onSelectThread(ensuredThread.id);
+        setMessages(ensuredThread.messages ?? []);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -48,70 +94,116 @@ export default function PageInbox({ threads, activeThreadId, onSelectThread, onR
     }
   };
 
-  const postMessage = async (sender: string, text: string) => {
-    try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${baseUrl}/api/chatmessages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sender,
-          text,
-          chatThreadId: activeThreadId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      await fetchMessages(activeThreadId);
-      
-      if (onRefreshThreads) {
-        onRefreshThreads();
-      }
-    } catch (err: any) {
-      console.error("Error sending message to backend:", err);
-    }
-  };
-
   useEffect(() => {
-    void fetchMessages(activeThreadId);
-  }, [activeThreadId]);
+    void fetchMessages(effectiveThreadId);
+  }, [effectiveThreadId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  }, [messages]);
+
+  useEffect(() => {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl(`${baseUrl}/hubs/chat`)
+      .withAutomaticReconnect()
+      .build();
+
+    connectionRef.current = connection;
+
+    connection.on('ReceiveMessage', (message: ChatMessage) => {
+      setMessages((prev) => {
+        if (message.chatThreadId !== effectiveThreadId) return prev;
+        if (prev.some((m) => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
+    });
+
+    connection.on('ThreadUpdated', (thread: ChatThread) => {
+      onThreadUpdated(thread);
+    });
+
+    connection
+      .start()
+      .then(async () => {
+        await Promise.all(threads.map((thread) => connection.invoke('JoinThread', thread.id)));
+        if (restaurantId) {
+          await connection.invoke('JoinRestaurant', restaurantId);
+        }
+      })
+      .catch((error) => {
+        console.error('SignalR chat connection failed:', error);
+      });
+
+    return () => {
+      void connection.stop();
+      connectionRef.current = null;
+    };
+    // The handlers use the resolved thread id so stale selections cannot fetch or render the wrong conversation.
+  }, [effectiveThreadId, onThreadUpdated, restaurantId]);
+
+  useEffect(() => {
+    const connection = connectionRef.current;
+    if (!connection || connection.state !== signalR.HubConnectionState.Connected) return;
+
+    void Promise.all(threads.map((thread) => connection.invoke('JoinThread', thread.id))).catch((error) => {
+      console.error('Failed to join chat groups:', error);
+    });
+    if (restaurantId) {
+      void connection.invoke('JoinRestaurant', restaurantId).catch((error) => {
+        console.error('Failed to join restaurant chat group:', error);
+      });
+    }
+  }, [threads, restaurantId]);
 
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
+    if (!effectiveThreadId) {
+      setErrorMessages('Select a conversation before sending a message.');
+      return;
+    }
 
     const query = inputText.trim();
     setInputText('');
 
-    await postMessage('user', query);
+    const connection = connectionRef.current;
+    if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+      setErrorMessages('Chat connection is not ready. Please try again.');
+      return;
+    }
 
-    setIsTyping(true);
-    setTimeout(async () => {
-      let automatedResponse = "Perfect! Let us know if you need any adjustments or recommendations. We'll have your street-side table ready! 🐌🍻";
-      
-      const qLower = query.toLowerCase();
-      if (qLower.includes('menu') || qLower.includes('món') || qLower.includes('ăn')) {
-        automatedResponse = "Our top dishes tonight are Garlic Butter Crab ($15.00) and Scallion Oil Oysters ($12.50). Would you like to add any to your pre-order? 🦀💨";
-      } else if (qLower.includes('vegetarian') || qLower.includes('chay')) {
-        automatedResponse = "We have sautéed morning glory and veggie soft noodles available! Let our staff know upon checking in. 🌱";
-      } else if (qLower.includes('discount') || qLower.includes('giảm') || qLower.includes('khuyến mãi')) {
-        automatedResponse = "Show this chat upon arrival to receive a complimentary dessert! 🎁✨";
-      } else if (qLower.includes('trễ') || qLower.includes('late') || qLower.includes('đến muộn')) {
-        automatedResponse = "No worries, we hold tables up to 15 minutes. Just text us if you will be delayed! 👍";
-      }
+    await connection.invoke('SendMessage', effectiveThreadId, userId, query);
+  };
 
-      setIsTyping(false);
-      await postMessage('restaurant', automatedResponse);
-    }, 2500);
+  const handleImageSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!effectiveThreadId) {
+      setErrorMessages('Select a conversation before sending an image.');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setErrorMessages('Only image files are allowed.');
+      return;
+    }
+
+    const connection = connectionRef.current;
+    if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+      setErrorMessages('Chat connection is not ready. Please try again.');
+      return;
+    }
+
+    const imageData = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
+    await connection.invoke('SendImageMessage', effectiveThreadId, userId, imageData, file.name);
   };
 
   const startMockCall = () => {
@@ -138,8 +230,9 @@ export default function PageInbox({ threads, activeThreadId, onSelectThread, onR
 
         {/* Channels scroll container */}
         <div className="flex-1 overflow-y-auto divide-y divide-outline-variant/15">
-          {threads.map((thread) => {
-            const isSelected = thread.id === activeThreadId;
+          {sortedThreads.map((thread) => {
+            const isSelected = thread.id === effectiveThreadId;
+            const identity = getThreadIdentity(thread);
             return (
               <div
                 key={thread.id}
@@ -153,7 +246,7 @@ export default function PageInbox({ threads, activeThreadId, onSelectThread, onR
               >
                 {/* Channel Avatar badge */}
                 <div className="relative w-11 h-11 rounded-none overflow-hidden shrink-0 border border-[#1a1a1a]/15 bg-white">
-                  <img src={thread.avatar} alt={thread.name} className="w-full h-full object-cover grayscale" />
+                  <img src={identity.avatar} alt={identity.name} className="w-full h-full object-cover grayscale" />
                   {thread.id === 'oc_oanh_thread' && (
                     <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#e2533b] rounded-full border border-white" />
                   )}
@@ -163,10 +256,10 @@ export default function PageInbox({ threads, activeThreadId, onSelectThread, onR
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline mb-0.5">
                     <h3 className="font-serif italic font-bold text-xs text-[#1a1a1a] truncate">
-                      {thread.name}
+                      {identity.name}
                     </h3>
                     <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 shrink-0">
-                      {thread.lastMessageTime}
+                      {formatThreadTime(thread.lastMessageTime)}
                     </span>
                   </div>
                   <p className={`font-sans text-[11px] truncate font-light ${
@@ -205,19 +298,19 @@ export default function PageInbox({ threads, activeThreadId, onSelectThread, onR
 
             {/* User header avatar */}
             <div className="relative w-10 h-10 rounded-none overflow-hidden shrink-0 border border-[#1a1a1a]/15 bg-white">
-              <img src={activeThread.avatar} alt={activeThread.name} className="w-full h-full object-cover grayscale" />
+              <img src={activeIdentity?.avatar} alt={activeIdentity?.name} className="w-full h-full object-cover grayscale" />
             </div>
 
             <div className="min-w-0">
               <h2 className="font-serif italic font-bold text-xs text-[#1a1a1a] flex items-center gap-1.5">
-                {activeThread.name}
-                {activeThread.restaurantId === 'oc_oanh' && (
+                {activeIdentity?.name}
+                {!isOwnerView && activeThread.restaurantId === 'oc_oanh' && (
                   <BadgeCheck size={15} className="fill-[#e2533b] text-white inline-block select-none" />
                 )}
               </h2>
               <p className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b] flex items-center gap-1">
                 <span className="w-1.5 h-1.5 bg-[#e2533b] rounded-full animate-pulse" />
-                {activeThread.statusText}
+                {activeIdentity?.statusText}
               </p>
             </div>
           </div>
@@ -268,52 +361,72 @@ export default function PageInbox({ threads, activeThreadId, onSelectThread, onR
 
           {/* Actual streams rendering */}
           {!loadingMessages && !errorMessages && messages.map((msg) => {
-            const isUser = msg.sender === 'user';
+            const isSystem = msg.isSystemNotification || msg.messageType === 'Booking';
+            const isOwnMessage = msg.senderId === userId || (!msg.senderId && msg.sender === 'user' && !isOwnerView);
+            const isBooking = msg.messageType === 'Booking' && msg.booking;
+            const isImage = msg.messageType === 'Image' && msg.imageData;
             return (
               <div 
                 key={msg.id}
-                className={`flex flex-col group ${isUser ? 'items-end' : 'items-start'}`}
+                className={`flex flex-col group ${isSystem ? 'items-center' : isOwnMessage ? 'items-end' : 'items-start'}`}
               >
-                <div className={`max-w-[85%] md:max-w-[70%] text-xs md:text-sm p-3.5 shadow-xs transition-transform transform origin-bottom rounded-none border ${
-                  isUser 
-                    ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]' 
-                    : 'bg-white text-[#1a1a1a] border-[#1a1a1a]/15'
-                }`}>
-                  <p className="font-sans leading-relaxed font-light">{msg.text}</p>
-                </div>
+                {isBooking ? (
+                  <div className="w-full max-w-[360px] bg-[#fff7ed] text-[#1a1a1a] border-2 border-[#e2533b] p-3.5 shadow-xs rounded-none">
+                    <p className="font-mono text-[9px] uppercase tracking-widest text-[#e2533b] font-black mb-2">
+                      Booking Confirmed
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 font-sans text-xs">
+                      <span className="text-[#1a1a1a]/55">Date</span>
+                      <strong>{msg.booking!.date}</strong>
+                      <span className="text-[#1a1a1a]/55">Time</span>
+                      <strong>{msg.booking!.time}</strong>
+                      <span className="text-[#1a1a1a]/55">Guests</span>
+                      <strong>{msg.booking!.guests}</strong>
+                      <span className="text-[#1a1a1a]/55">Seating</span>
+                      <strong>{msg.booking!.seating}</strong>
+                    </div>
+                    <p className="mt-2 font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60">
+                      Status: {msg.booking!.status} // #{msg.booking!.bookingId}
+                    </p>
+                  </div>
+                ) : isImage ? (
+                  <div className={`max-w-[85%] md:max-w-[70%] p-2 shadow-xs rounded-none border ${
+                    isOwnMessage
+                      ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
+                      : 'bg-white text-[#1a1a1a] border-[#1a1a1a]/15'
+                  }`}>
+                    <img
+                      src={msg.imageData!}
+                      alt={msg.imageFileName || 'Chat attachment'}
+                      className="max-h-[280px] max-w-full object-contain border border-white/10"
+                    />
+                    {msg.imageFileName && (
+                      <p className="mt-2 font-mono text-[9px] uppercase tracking-wider opacity-70 truncate">
+                        {msg.imageFileName}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className={`max-w-[85%] md:max-w-[70%] text-xs md:text-sm p-3.5 shadow-xs transition-transform transform origin-bottom rounded-none border ${
+                    isOwnMessage 
+                      ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]' 
+                      : 'bg-white text-[#1a1a1a] border-[#1a1a1a]/15'
+                  }`}>
+                    <p className="font-sans leading-relaxed font-light">{msg.text}</p>
+                  </div>
+                )}
                 
                 <span className={`font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 mt-1 flex items-center gap-1 ${
-                  isUser ? 'mr-1' : 'ml-1'
+                  isSystem ? '' : isOwnMessage ? 'mr-1' : 'ml-1'
                 }`}>
                   {msg.timestamp}
-                  {isUser && (
+                  {isOwnMessage && !isSystem && (
                     <CheckCheck size={12} className="text-[#e2533b] font-bold" />
                   )}
                 </span>
               </div>
             );
           })}
-
-          {/* Typing dynamic simulator bubble */}
-          {isTyping && (
-            <div className="flex flex-col items-start animate-pulse">
-              <div className="flex items-end gap-2 max-w-[85%]">
-                <div className="bg-white/80 text-on-surface p-3 rounded-2xl rounded-tl-xs shadow-xs border border-outline-variant/15 flex items-center gap-2">
-                  <span className="font-body-sm text-xs text-on-surface-variant flex items-center gap-1.5">
-                    Oc Oanh is typing
-                    <span className="inline-flex gap-0.5">
-                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
-                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
-                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
-                    </span>
-                  </span>
-                </div>
-              </div>
-              <span className="font-label-sm text-[10px] text-on-surface-variant mt-1 ml-1 select-none">
-                Typing...
-              </span>
-            </div>
-          )}
 
           {/* Auto Scroll block */}
           <div ref={messagesEndRef} />
@@ -322,33 +435,29 @@ export default function PageInbox({ threads, activeThreadId, onSelectThread, onR
         {/* Input layout frame text-input box, matches screenshot fully */}
         <div className="p-3 bg-[#fdfcf9] border-t border-[#1a1a1a]/15 shrink-0">
           <form onSubmit={handleSend} className="flex items-center gap-2 bg-white rounded-none border border-[#1a1a1a]/15 pr-2 pl-3 py-1 shadow-xs transition-all">
-            
             <button 
               type="button"
-              onClick={() => {
-                setInputText("Is outdoor seating still available for tonight?");
-              }}
+              onClick={() => imageInputRef.current?.click()}
               className="p-1.5 text-[#1a1a1a]/40 hover:text-[#e2533b] transition-colors flex items-center justify-center rounded-none cursor-pointer"
-            >
-              <PlusCircle size={20} />
-            </button>
-
-            <button 
-              type="button"
-              onClick={() => {
-                setInputText("We will arrive on time around 7 PM sharp. Thanks!");
-              }}
-              className="p-1.5 text-[#1a1a1a]/40 hover:text-[#e2533b] transition-colors flex items-center justify-center rounded-none cursor-pointer"
+              aria-label="Upload image"
             >
               <Image size={20} />
             </button>
+
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageSelected}
+            />
 
             <input 
               type="text" 
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 font-sans text-xs md:text-sm text-[#1a1a1a] placeholder:text-[#1a1a1a]/45 py-1.5 font-light"
-              placeholder={`Message ${activeThread.name}...`}
+              placeholder={`Message ${activeIdentity?.name || 'conversation'}...`}
             />
 
             <button 
@@ -368,11 +477,11 @@ export default function PageInbox({ threads, activeThreadId, onSelectThread, onR
       {mockCallState === 'calling' && (
         <div className="fixed inset-0 bg-[#1a1a1a] z-[99] flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
           <div className="w-24 h-24 rounded-none overflow-hidden border-2 border-[#e2533b] shadow-2xl relative select-none">
-            <img src={activeThread.avatar} alt="Calling recipient" className="w-full h-full object-cover grayscale" />
+            <img src={activeIdentity?.avatar} alt="Calling recipient" className="w-full h-full object-cover grayscale" />
             <div className="absolute inset-0 bg-[#e2533b]/25 animate-ping" />
           </div>
           
-          <h3 className="font-serif italic font-bold text-lg mt-6">{activeThread.name}</h3>
+          <h3 className="font-serif italic font-bold text-lg mt-6">{activeIdentity?.name}</h3>
           <p className="font-mono text-[9px] uppercase tracking-widest text-[#e2533b] mt-2 animate-pulse font-bold">
             Calling via CraveMap Voice...
           </p>
