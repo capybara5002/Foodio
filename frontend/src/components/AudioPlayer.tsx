@@ -15,26 +15,27 @@ interface AudioPlayerProps {
 
 export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(true);
-  const [progress, setProgress] = useState(12); // start with some progress
-  const [durationSec, setDurationSec] = useState(150); // total seconds representation
+  const [progress, setProgress] = useState(0); 
+  const [durationSec, setDurationSec] = useState(150);
   const [narrative, setNarrative] = useState('');
   const [isLoadingNarrative, setIsLoadingNarrative] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (isPlaying && tour) {
+    if (isPlaying && tour && durationSec > 0 && !isDragging) {
       interval = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 100) {
             setIsPlaying(false);
             return 100;
           }
-          return prev + 1;
+          return prev + (100 / durationSec);
         });
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, tour]);
+  }, [isPlaying, tour, durationSec, isDragging]);
 
   useEffect(() => {
     if (!tour) return;
@@ -49,7 +50,18 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
       .then((generatedNarrative) => {
         if (cancelled) return;
         setNarrative(generatedNarrative);
-        setDurationSec(Math.max(60, Math.min(240, Math.ceil(generatedNarrative.length / 12))));
+        // Estimate duration based on text length (~14 characters per second at 0.95 rate)
+        const estimatedDuration = Math.max(10, Math.ceil(generatedNarrative.length / 14));
+        setDurationSec(estimatedDuration);
+        
+        if ('speechSynthesis' in window) {
+           window.speechSynthesis.cancel();
+           const utterance = new SpeechSynthesisUtterance(generatedNarrative);
+           utterance.rate = 0.95;
+           utterance.pitch = 1;
+           utterance.lang = 'en-US';
+           window.speechSynthesis.speak(utterance);
+        }
       })
       .finally(() => {
         if (!cancelled) {
@@ -63,26 +75,46 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     };
   }, [tour]);
 
-  useEffect(() => {
-    if (!tour || !narrative || !('speechSynthesis' in window)) return;
-
+  const handleSeek = (newProgress: number) => {
+    const validProgress = Math.max(0, Math.min(100, newProgress));
+    setProgress(validProgress);
+    
+    if (!('speechSynthesis' in window) || !narrative) return;
+    
     window.speechSynthesis.cancel();
+    
+    if (validProgress >= 100) {
+      setIsPlaying(false);
+      return;
+    }
 
-    if (!isPlaying) return;
-
-    const utterance = new SpeechSynthesisUtterance(narrative);
+    const charIndex = Math.floor((validProgress / 100) * narrative.length);
+    const textToSpeak = narrative.substring(charIndex);
+    
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.rate = 0.95;
     utterance.pitch = 1;
     utterance.lang = 'en-US';
-    utterance.onend = () => {
-      setIsPlaying(false);
-      setProgress(100);
-    };
-
+    
     window.speechSynthesis.speak(utterance);
+    setIsPlaying(true);
+  };
 
-    return () => window.speechSynthesis.cancel();
-  }, [isPlaying, narrative, tour]);
+  const togglePlay = () => {
+    if (!('speechSynthesis' in window)) return;
+    
+    if (isPlaying) {
+      window.speechSynthesis.pause();
+      setIsPlaying(false);
+    } else {
+      if (progress >= 100) {
+        handleSeek(0);
+      } else {
+        window.speechSynthesis.resume();
+        setIsPlaying(true);
+      }
+    }
+  };
 
   if (!tour) return null;
 
@@ -167,6 +199,16 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
               min="0" 
               max="100" 
               value={progress} 
+              onMouseDown={() => setIsDragging(true)}
+              onMouseUp={(e) => {
+                setIsDragging(false);
+                handleSeek(Number(e.currentTarget.value));
+              }}
+              onTouchStart={() => setIsDragging(true)}
+              onTouchEnd={(e) => {
+                setIsDragging(false);
+                handleSeek(Number(e.currentTarget.value));
+              }}
               onChange={(e) => setProgress(Number(e.target.value))}
               className="absolute inset-0 w-full opacity-0 cursor-pointer"
             />
@@ -182,7 +224,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           <button 
             type="button"
             className="text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-95 transition-transform"
-            onClick={() => setProgress(Math.max(0, progress - 10))}
+            onClick={() => handleSeek(progress - 10)}
           >
             <RotateCcw size={20} />
           </button>
@@ -190,7 +232,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           <button
             type="button"
             className="w-10 h-10 bg-[#e2533b] hover:bg-[#1a1a1a] text-white rounded-none flex items-center justify-center shadow active:scale-95 transition-all cursor-pointer"
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={togglePlay}
           >
             {isPlaying ? <Pause size={20} className="fill-current" /> : <Play size={20} className="fill-current" />}
           </button>
@@ -198,7 +240,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           <button 
             type="button"
             className="text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-95 transition-transform"
-            onClick={() => setProgress(Math.min(100, progress + 10))}
+            onClick={() => handleSeek(progress + 10)}
           >
             <RotateCw size={20} />
           </button>
