@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<CommunityPost> CommunityPosts => Set<CommunityPost>();
+    public DbSet<PostComment> PostComments => Set<PostComment>();
     public DbSet<ChatThread> ChatThreads => Set<ChatThread>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<AudioTour> AudioTours => Set<AudioTour>();
@@ -70,6 +71,12 @@ public class AppDbContext : DbContext
             .HasOne(booking => booking.Restaurant)
             .WithMany(restaurant => restaurant.Bookings)
             .HasForeignKey(booking => booking.RestaurantId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PostComment>()
+            .HasOne(comment => comment.CommunityPost)
+            .WithMany()
+            .HasForeignKey(comment => comment.CommunityPostId)
             .OnDelete(DeleteBehavior.Cascade);
 
         Seed(modelBuilder);
@@ -217,6 +224,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<CommunityPost>().HasData(
             new CommunityPost { Id = "post_1", Author = "foodie_explorer", Handle = "@foodie_explorer", Avatar = seafoodImage, TimeAgo = "2 hours ago", Rating = 4.8m, Image = seafoodImage, Content = "A tiny alley stall with bold seafood flavors and a packed local crowd.", LocationName = "Oc Dao", LikesCount = 245, CommentsCount = 18, IsLiked = false, IsSaved = false, CreatedAt = createdAt },
             new CommunityPost { Id = "post_2", Author = "street_bites", Handle = "@street_bites", Avatar = phoImage, TimeAgo = "5 hours ago", Rating = 4.0m, Image = phoImage, Content = "Rich broth, springy noodles, tight seating, and the right late-night energy.", LocationName = "Pho Quynh", LikesCount = 892, CommentsCount = 45, IsLiked = true, IsSaved = false, CreatedAt = createdAt });
+
+        modelBuilder.Entity<PostComment>().HasData(
+            new PostComment { Id = "pcom_1", CommunityPostId = "post_1", Author = "local_guide_jane", Avatar = "https://ui-avatars.com/api/?name=Jane&background=random", Content = "I completely agree! The snails here are to die for.", CreatedAt = createdAt.AddHours(1) },
+            new PostComment { Id = "pcom_2", CommunityPostId = "post_1", Author = "mike_eats_world", Avatar = "https://ui-avatars.com/api/?name=Mike&background=random", Content = "Is it hard to find a table on weekends?", CreatedAt = createdAt.AddHours(1.5) }
+        );
 
         modelBuilder.Entity<ChatThread>().HasData(
             new ChatThread { Id = "oc_oanh_thread", RestaurantId = "oc_oanh", Name = "Oc Oanh", Avatar = seafoodImage, StatusText = "Usually replies in 5m", LastMessageText = "Perfect. We will hold an outdoor table for you.", LastMessageTime = "Now", UnreadCount = 0 },

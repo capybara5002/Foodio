@@ -79,6 +79,17 @@ public record CommunityPostDto(
     bool IsLiked,
     bool IsSaved);
 
+public record PostCommentDto(
+    string Id,
+    string CommunityPostId,
+    string Author,
+    string Avatar,
+    string Content,
+    DateTimeOffset CreatedAt);
+
+public record CreatePostCommentDto(
+    string Content);
+
 public record ChatMessageDto(
     string Id,
     string Sender,

@@ -67,6 +67,15 @@ export interface CommunityPost {
   isSaved: boolean;
 }
 
+export interface PostComment {
+  id: string;
+  communityPostId: string;
+  author: string;
+  avatar: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'restaurant';

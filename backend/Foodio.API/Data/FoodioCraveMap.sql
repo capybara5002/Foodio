@@ -12,8 +12,9 @@ IF OBJECT_ID(N'dbo.ChatMessages', N'U') IS NOT NULL DROP TABLE dbo.ChatMessages;
 IF OBJECT_ID(N'dbo.ChatThreads', N'U') IS NOT NULL DROP TABLE dbo.ChatThreads;
 IF OBJECT_ID(N'dbo.Reviews', N'U') IS NOT NULL DROP TABLE dbo.Reviews;
 IF OBJECT_ID(N'dbo.MenuItems', N'U') IS NOT NULL DROP TABLE dbo.MenuItems;
-IF OBJECT_ID(N'dbo.CommunityPosts', N'U') IS NOT NULL DROP TABLE dbo.CommunityPosts;
 IF OBJECT_ID(N'dbo.AudioTours', N'U') IS NOT NULL DROP TABLE dbo.AudioTours;
+IF OBJECT_ID(N'dbo.PostComments', N'U') IS NOT NULL DROP TABLE dbo.PostComments;
+IF OBJECT_ID(N'dbo.CommunityPosts', N'U') IS NOT NULL DROP TABLE dbo.CommunityPosts;
 IF OBJECT_ID(N'dbo.Restaurants', N'U') IS NOT NULL DROP TABLE dbo.Restaurants;
 IF OBJECT_ID(N'dbo.FoodStreets', N'U') IS NOT NULL DROP TABLE dbo.FoodStreets;
 IF OBJECT_ID(N'dbo.Categories', N'U') IS NOT NULL DROP TABLE dbo.Categories;
@@ -108,6 +109,18 @@ CREATE TABLE dbo.CommunityPosts
     IsLiked BIT NOT NULL,
     IsSaved BIT NOT NULL,
     CreatedAt DATETIMEOFFSET NOT NULL
+);
+GO
+
+CREATE TABLE dbo.PostComments
+(
+    Id NVARCHAR(64) NOT NULL CONSTRAINT PK_PostComments PRIMARY KEY,
+    CommunityPostId NVARCHAR(64) NOT NULL,
+    Author NVARCHAR(80) NOT NULL,
+    Avatar NVARCHAR(1000) NOT NULL,
+    Content NVARCHAR(1000) NOT NULL,
+    CreatedAt DATETIMEOFFSET NOT NULL,
+    CONSTRAINT FK_PostComments_CommunityPosts FOREIGN KEY (CommunityPostId) REFERENCES dbo.CommunityPosts(Id) ON DELETE CASCADE
 );
 GO
 
@@ -215,6 +228,10 @@ INSERT INTO dbo.CommunityPosts
 VALUES
 (N'post_1', N'foodie_explorer', N'@foodie_explorer', @SeafoodImage, N'2 hours ago', 4.80, @SeafoodImage, N'A tiny alley stall with bold seafood flavors and a packed local crowd.', N'Oc Dao', 245, 18, 0, 0, @CreatedAt),
 (N'post_2', N'street_bites', N'@street_bites', @PhoImage, N'5 hours ago', 4.00, @PhoImage, N'Rich broth, springy noodles, tight seating, and the right late-night energy.', N'Pho Quynh', 892, 45, 1, 0, @CreatedAt);
+
+INSERT INTO dbo.PostComments (Id, CommunityPostId, Author, Avatar, Content, CreatedAt) VALUES
+(N'pcom_1', N'post_1', N'local_guide_jane', N'https://ui-avatars.com/api/?name=Jane&background=random', N'I completely agree! The snails here are to die for.', @CreatedAt),
+(N'pcom_2', N'post_1', N'mike_eats_world', N'https://ui-avatars.com/api/?name=Mike&background=random', N'Is it hard to find a table on weekends?', @CreatedAt);
 
 INSERT INTO dbo.ChatThreads
 (Id, RestaurantId, Name, Avatar, StatusText, LastMessageText, LastMessageTime, UnreadCount)

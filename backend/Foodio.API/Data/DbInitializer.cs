@@ -11,6 +11,7 @@ public static class DbInitializer
         try
         {
             await context.Users.AnyAsync();
+            await context.PostComments.AnyAsync();
         }
         catch (Exception)
         {
