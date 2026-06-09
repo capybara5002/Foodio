@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AudioTour } from '../types';
 import { generateAudioTourNarrative } from '../api/cravemapApi';
 import { X, RotateCcw, RotateCw, Play, Pause } from 'lucide-react';
@@ -15,26 +15,30 @@ interface AudioPlayerProps {
 
 export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(true);
-  const [progress, setProgress] = useState(12); // start with some progress
+  const [progress, setProgress] = useState(0); 
   const [durationSec, setDurationSec] = useState(150); // total seconds representation
   const [narrative, setNarrative] = useState('');
   const [isLoadingNarrative, setIsLoadingNarrative] = useState(false);
+  
+  const isSelfUpdating = useRef(false);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (isPlaying && tour) {
+    if (isPlaying && tour && durationSec > 0) {
       interval = setInterval(() => {
+        isSelfUpdating.current = true;
         setProgress((prev) => {
-          if (prev >= 100) {
+          const next = prev + (100 / durationSec);
+          if (next >= 100) {
             setIsPlaying(false);
             return 100;
           }
-          return prev + 1;
+          return next;
         });
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, tour]);
+  }, [isPlaying, tour, durationSec]);
 
   useEffect(() => {
     if (!tour) return;
@@ -49,7 +53,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
       .then((generatedNarrative) => {
         if (cancelled) return;
         setNarrative(generatedNarrative);
-        setDurationSec(Math.max(60, Math.min(240, Math.ceil(generatedNarrative.length / 12))));
+        setDurationSec(Math.max(5, Math.min(240, Math.ceil(generatedNarrative.length / 12))));
       })
       .finally(() => {
         if (!cancelled) {
@@ -66,11 +70,24 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
   useEffect(() => {
     if (!tour || !narrative || !('speechSynthesis' in window)) return;
 
+    if (isSelfUpdating.current) {
+      isSelfUpdating.current = false;
+      return;
+    }
+
     window.speechSynthesis.cancel();
 
     if (!isPlaying) return;
 
-    const utterance = new SpeechSynthesisUtterance(narrative);
+    const startIndex = Math.floor((progress / 100) * narrative.length);
+    const subText = narrative.substring(startIndex);
+    if (!subText.trim()) {
+      setIsPlaying(false);
+      setProgress(100);
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(subText);
     utterance.rate = 0.95;
     utterance.pitch = 1;
     utterance.lang = 'en-US';
@@ -82,7 +99,16 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     window.speechSynthesis.speak(utterance);
 
     return () => window.speechSynthesis.cancel();
-  }, [isPlaying, narrative, tour]);
+  }, [isPlaying, narrative, tour, progress]);
+
+  const handlePlayPause = () => {
+    if (progress >= 100) {
+      setProgress(0);
+      setIsPlaying(true);
+    } else {
+      setIsPlaying(!isPlaying);
+    }
+  };
 
   if (!tour) return null;
 
@@ -167,7 +193,10 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
               min="0" 
               max="100" 
               value={progress} 
-              onChange={(e) => setProgress(Number(e.target.value))}
+              onChange={(e) => {
+                isSelfUpdating.current = false;
+                setProgress(Number(e.target.value));
+              }}
               className="absolute inset-0 w-full opacity-0 cursor-pointer"
             />
           </div>
@@ -190,7 +219,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           <button
             type="button"
             className="w-10 h-10 bg-[#e2533b] hover:bg-[#1a1a1a] text-white rounded-none flex items-center justify-center shadow active:scale-95 transition-all cursor-pointer"
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={handlePlayPause}
           >
             {isPlaying ? <Pause size={20} className="fill-current" /> : <Play size={20} className="fill-current" />}
           </button>
