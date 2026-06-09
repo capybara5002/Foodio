@@ -192,6 +192,80 @@ public class OwnerController : ControllerBase
         return Ok(ToDto(request));
     }
 
+    [HttpGet("restaurant/{restaurantId}/bookings")]
+    public async Task<ActionResult<IReadOnlyList<BookingDto>>> GetBookings(string restaurantId)
+    {
+        var bookings = await _db.Bookings
+            .Where(b => b.RestaurantId == restaurantId)
+            .OrderByDescending(b => b.Date)
+            .ThenByDescending(b => b.Time)
+            .ToListAsync();
+
+        return Ok(bookings.Select(b => b.ToDto()).ToList());
+    }
+
+    [HttpPost("bookings/{bookingId}/status")]
+    public async Task<IActionResult> UpdateBookingStatus(int bookingId, [FromBody] BookingStatusUpdateDto dto)
+    {
+        var booking = await _db.Bookings.FindAsync(bookingId);
+        if (booking == null)
+        {
+            return NotFound("Booking not found.");
+        }
+
+        booking.Status = dto.Status;
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    [HttpGet("restaurant/{restaurantId}/analytics")]
+    public async Task<ActionResult<RestaurantAnalyticsDto>> GetAnalytics(string restaurantId)
+    {
+        var restaurant = await _db.Restaurants
+            .Include(r => r.Reviews)
+            .FirstOrDefaultAsync(r => r.Id == restaurantId);
+
+        if (restaurant == null)
+        {
+            return NotFound("Restaurant not found.");
+        }
+
+        var bookings = await _db.Bookings
+            .Where(b => b.RestaurantId == restaurantId)
+            .ToListAsync();
+
+        int totalBookings = bookings.Count;
+        int pending = bookings.Count(b => b.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase) || b.Status.Equals("Chờ duyệt", StringComparison.OrdinalIgnoreCase));
+        int confirmed = bookings.Count(b => b.Status.Equals("Confirmed", StringComparison.OrdinalIgnoreCase) || b.Status.Equals("Đã nhận", StringComparison.OrdinalIgnoreCase));
+        int completed = bookings.Count(b => b.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) || b.Status.Equals("Hoàn thành", StringComparison.OrdinalIgnoreCase));
+        int cancelled = bookings.Count(b => b.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) || b.Status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) || b.Status.Equals("Đã hủy", StringComparison.OrdinalIgnoreCase));
+
+        int totalReviews = restaurant.Reviews.Count;
+        decimal avgRating = restaurant.Rating;
+
+        return Ok(new RestaurantAnalyticsDto(
+            totalBookings,
+            pending,
+            confirmed,
+            completed,
+            cancelled,
+            totalReviews,
+            avgRating
+        ));
+    }
+
+    public record BookingStatusUpdateDto(string Status);
+    public record RestaurantAnalyticsDto(
+        int TotalBookings,
+        int PendingBookings,
+        int ConfirmedBookings,
+        int CompletedBookings,
+        int CancelledBookings,
+        int TotalReviews,
+        decimal AverageRating
+    );
+
     private static RestaurantRequestDto ToDto(RestaurantRequest r) => new(
         r.Id,
         r.OwnerId,

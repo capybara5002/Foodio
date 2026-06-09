@@ -115,6 +115,7 @@ CREATE TABLE dbo.ChatThreads
 (
     Id NVARCHAR(64) NOT NULL CONSTRAINT PK_ChatThreads PRIMARY KEY,
     RestaurantId NVARCHAR(64) NOT NULL,
+    UserId NVARCHAR(64) NOT NULL,
     Name NVARCHAR(160) NOT NULL,
     Avatar NVARCHAR(1000) NOT NULL,
     StatusText NVARCHAR(80) NOT NULL,
@@ -130,12 +131,22 @@ CREATE TABLE dbo.ChatMessages
     Id NVARCHAR(64) NOT NULL CONSTRAINT PK_ChatMessages PRIMARY KEY,
     ChatThreadId NVARCHAR(64) NOT NULL,
     Sender NVARCHAR(24) NOT NULL,
+    SenderId NVARCHAR(64) NOT NULL,
     Text NVARCHAR(1200) NOT NULL,
     [Timestamp] NVARCHAR(40) NOT NULL,
     Status NVARCHAR(24) NULL,
+    MessageType NVARCHAR(24) NOT NULL CONSTRAINT DF_ChatMessages_MessageType DEFAULT N'Text',
+    IsSystemNotification BIT NOT NULL CONSTRAINT DF_ChatMessages_IsSystemNotification DEFAULT 0,
+    BookingPayloadJson NVARCHAR(2000) NULL,
+    ImageData NVARCHAR(MAX) NULL,
+    ImageFileName NVARCHAR(260) NULL,
     CreatedAt DATETIMEOFFSET NOT NULL,
     CONSTRAINT FK_ChatMessages_ChatThreads FOREIGN KEY (ChatThreadId) REFERENCES dbo.ChatThreads(Id) ON DELETE CASCADE
 );
+GO
+
+CREATE UNIQUE INDEX IX_ChatThreads_RestaurantId_UserId
+ON dbo.ChatThreads(RestaurantId, UserId);
 GO
 
 CREATE TABLE dbo.AudioTours
@@ -217,19 +228,21 @@ VALUES
 (N'post_2', N'street_bites', N'@street_bites', @PhoImage, N'5 hours ago', 4.00, @PhoImage, N'Rich broth, springy noodles, tight seating, and the right late-night energy.', N'Pho Quynh', 892, 45, 1, 0, @CreatedAt);
 
 INSERT INTO dbo.ChatThreads
-(Id, RestaurantId, Name, Avatar, StatusText, LastMessageText, LastMessageTime, UnreadCount)
+(Id, RestaurantId, UserId, Name, Avatar, StatusText, LastMessageText, LastMessageTime, UnreadCount)
 VALUES
-(N'oc_oanh_thread', N'oc_oanh', N'Oc Oanh', @SeafoodImage, N'Usually replies in 5m', N'Perfect. We will hold an outdoor table for you.', N'Now', 0),
-(N'banh_mi_25_thread', N'banh_mi_25', N'Banh Mi 25', @BanhMiImage, N'Replies in 1h', N'We are sold out for today, sorry!', N'Yesterday', 0);
+(N'oc_oanh_thread', N'oc_oanh', N'usr_3', N'Oc Oanh', @SeafoodImage, N'Usually replies in 5m', N'Perfect. We will hold an outdoor table for you.', CONVERT(NVARCHAR(40), @CreatedAt, 127), 0),
+(N'pho_quynh_thread', N'pho_quynh', N'usr_3', N'Pho Quynh', @PhoImage, N'Replies in standard hours', N'Your reservation is confirmed!', CONVERT(NVARCHAR(40), DATEADD(MINUTE, 4, @CreatedAt), 127), 1),
+(N'banh_mi_25_thread', N'banh_mi_25', N'usr_3', N'Banh Mi 25', @BanhMiImage, N'Replies in 1h', N'We are sold out for today, sorry!', CONVERT(NVARCHAR(40), DATEADD(DAY, -1, @CreatedAt), 127), 0);
 
 INSERT INTO dbo.ChatMessages
-(Id, ChatThreadId, Sender, Text, [Timestamp], Status, CreatedAt)
+(Id, ChatThreadId, Sender, SenderId, Text, [Timestamp], Status, MessageType, IsSystemNotification, BookingPayloadJson, ImageData, ImageFileName, CreatedAt)
 VALUES
-(N'msg_1', N'oc_oanh_thread', N'user', N'Hi, do you have a table for 4 tonight around 7 PM?', N'4:30 PM', N'read', @CreatedAt),
-(N'msg_2', N'oc_oanh_thread', N'restaurant', N'Hello! Yes, we have space. Do you prefer indoor or street-side outdoor seating?', N'4:32 PM', NULL, @CreatedAt),
-(N'msg_3', N'oc_oanh_thread', N'restaurant', N'Perfect. We will hold an outdoor table for you.', N'Just now', NULL, @CreatedAt),
-(N'msg_bm25_1', N'banh_mi_25_thread', N'user', N'Do you still have original pate banh mi?', N'Yesterday', N'read', @CreatedAt),
-(N'msg_bm25_2', N'banh_mi_25_thread', N'restaurant', N'We are sold out for today, sorry!', N'Yesterday', NULL, @CreatedAt);
+(N'msg_1', N'oc_oanh_thread', N'user', N'usr_3', N'Hi, do you have a table for 4 tonight around 7 PM?', N'4:30 PM', N'read', N'Text', 0, NULL, NULL, NULL, @CreatedAt),
+(N'msg_2', N'oc_oanh_thread', N'restaurant', N'owner_oc_oanh', N'Hello! Yes, we have space. Do you prefer indoor or street-side outdoor seating?', N'4:32 PM', NULL, N'Text', 0, NULL, NULL, NULL, @CreatedAt),
+(N'msg_3', N'oc_oanh_thread', N'restaurant', N'owner_oc_oanh', N'Perfect. We will hold an outdoor table for you.', N'Just now', NULL, N'Text', 0, NULL, NULL, NULL, @CreatedAt),
+(N'msg_pq_1', N'pho_quynh_thread', N'system', N'system', N'Your reservation is confirmed!', N'10:42 AM', NULL, N'Text', 1, NULL, NULL, NULL, @CreatedAt),
+(N'msg_bm25_1', N'banh_mi_25_thread', N'user', N'usr_3', N'Do you still have original pate banh mi?', N'Yesterday', N'read', N'Text', 0, NULL, NULL, NULL, @CreatedAt),
+(N'msg_bm25_2', N'banh_mi_25_thread', N'restaurant', N'owner_banh_mi_25', N'We are sold out for today, sorry!', N'Yesterday', NULL, N'Text', 0, NULL, NULL, NULL, @CreatedAt);
 
 INSERT INTO dbo.AudioTours
 (Id, Title, Location, Image, MapImage, IsTrending, Rating, Duration, StopsCount, Vibe, Description)

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { X, User, Store, Shield } from 'lucide-react';
+import { X, User, Store, Shield, Eye, EyeOff } from 'lucide-react';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -114,13 +115,22 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
           <div className="flex flex-col gap-1">
             <label className="font-mono text-[10px] uppercase font-bold tracking-wider">Mật khẩu</label>
             <input 
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-2 text-sm focus:outline-none focus:bg-[#f9f7f2]"
+              className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-2 pr-10 text-sm focus:outline-none focus:bg-[#f9f7f2]"
               required
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              className="self-end -mt-9 mr-3 h-8 w-8 flex items-center justify-center text-[#1a1a1a]/55 hover:text-[#e2533b] transition-colors cursor-pointer"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
 
           <button 
