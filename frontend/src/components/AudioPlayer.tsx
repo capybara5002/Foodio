@@ -26,20 +26,20 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     progressRef.current = progress;
   }, [progress]);
 
-  // Interval timer to update the progress bar visually
+  // High-frequency interval timer (every 50ms) to update the progress bar visually with 60fps-like smoothness
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (isPlaying && tour && durationSec > 0) {
       interval = setInterval(() => {
         setProgress((prev) => {
-          const next = prev + (100 / durationSec);
+          const next = prev + (5 / durationSec);
           if (next >= 100) {
             setIsPlaying(false);
             return 100;
           }
           return next;
         });
-      }, 1000);
+      }, 50);
     }
     return () => clearInterval(interval);
   }, [isPlaying, tour, durationSec]);
@@ -153,6 +153,17 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
 
   return (
     <div className="fixed bottom-[72px] md:bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[60] animate-in fade-in slide-in-from-bottom duration-300">
+      <style>{`
+        @keyframes visualizer-bounce {
+          0%, 100% {
+            height: 15%;
+          }
+          50% {
+            height: 95%;
+          }
+        }
+      `}</style>
+
       <div className="bg-[#fdfcf9] border-2 border-[#1a1a1a] rounded-none p-5 shadow-2xl flex flex-col gap-4">
         {/* Header Title Information */}
         <div className="flex items-center gap-3">
@@ -185,15 +196,19 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
         {/* Animated Audio Soundwave Visualizer */}
         <div className="h-8 flex items-end justify-center gap-[3px] py-1 select-none">
           {Array.from({ length: 28 }).map((_, i) => {
-            // dynamic random height based on playing state
-            const rHeight = isPlaying 
-              ? Math.max(15, Math.floor(Math.sin((progress * 0.5) + i) * 60) + 40)
-              : 20;
             return (
               <div
                 key={i}
-                style={{ height: `${Math.min(100, rHeight)}%` }}
-                className={`w-[4px] rounded-none transition-all duration-350 ${
+                style={{
+                  height: isPlaying ? undefined : '20%',
+                  animation: isPlaying 
+                    ? `visualizer-bounce ${(0.4 + (i % 7) * 0.12).toFixed(2)}s ease-in-out infinite` 
+                    : 'none',
+                  animationDelay: isPlaying 
+                    ? `-${((i % 13) * 0.08).toFixed(2)}s` 
+                    : undefined,
+                }}
+                className={`w-[4px] rounded-none transition-all duration-300 ${
                   isPlaying 
                     ? 'bg-[#e2533b]' 
                     : 'bg-[#1a1a1a]/15'
