@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AudioTour } from '../types';
 import { generateAudioTourNarrative } from '../api/cravemapApi';
 import { X, RotateCcw, RotateCw, Play, Pause } from 'lucide-react';
@@ -15,27 +15,36 @@ interface AudioPlayerProps {
 
 export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(true);
-  const [progress, setProgress] = useState(12); // start with some progress
+  const [progress, setProgress] = useState(0); 
   const [durationSec, setDurationSec] = useState(150); // total seconds representation
   const [narrative, setNarrative] = useState('');
   const [isLoadingNarrative, setIsLoadingNarrative] = useState(false);
 
+  // Keep progress in a ref to access the latest value in the useEffect without causing dependency triggers
+  const progressRef = useRef(progress);
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
+
+  // High-frequency interval timer (every 50ms) to update the progress bar visually with 60fps-like smoothness
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (isPlaying && tour) {
+    if (isPlaying && tour && durationSec > 0) {
       interval = setInterval(() => {
         setProgress((prev) => {
-          if (prev >= 100) {
+          const next = prev + (5 / durationSec);
+          if (next >= 100) {
             setIsPlaying(false);
             return 100;
           }
-          return prev + 1;
+          return next;
         });
-      }, 1000);
+      }, 50);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, tour]);
+  }, [isPlaying, tour, durationSec]);
 
+  // Load narrative when tour changes
   useEffect(() => {
     if (!tour) return;
 
@@ -49,7 +58,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
       .then((generatedNarrative) => {
         if (cancelled) return;
         setNarrative(generatedNarrative);
-        setDurationSec(Math.max(60, Math.min(240, Math.ceil(generatedNarrative.length / 12))));
+        setDurationSec(Math.max(5, Math.min(240, Math.ceil(generatedNarrative.length / 12))));
       })
       .finally(() => {
         if (!cancelled) {
@@ -63,26 +72,74 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     };
   }, [tour]);
 
+  // Handle TTS play / pause when state changes (decoupled from progress updates)
   useEffect(() => {
     if (!tour || !narrative || !('speechSynthesis' in window)) return;
 
-    window.speechSynthesis.cancel();
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      const currentProgress = progressRef.current;
+      const startIndex = Math.floor((currentProgress / 100) * narrative.length);
+      const subText = narrative.substring(startIndex);
+      
+      if (!subText.trim()) {
+        setIsPlaying(false);
+        setProgress(100);
+        return;
+      }
 
-    if (!isPlaying) return;
+      const utterance = new SpeechSynthesisUtterance(subText);
+      utterance.rate = 0.95;
+      utterance.pitch = 1;
+      utterance.lang = 'en-US';
+      utterance.onend = () => {
+        setIsPlaying(false);
+        setProgress(100);
+      };
 
-    const utterance = new SpeechSynthesisUtterance(narrative);
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    utterance.lang = 'en-US';
-    utterance.onend = () => {
-      setIsPlaying(false);
-      setProgress(100);
-    };
-
-    window.speechSynthesis.speak(utterance);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      window.speechSynthesis.cancel();
+    }
 
     return () => window.speechSynthesis.cancel();
   }, [isPlaying, narrative, tour]);
+
+  // Seek handler called on user interactions
+  const handleSeek = (newProgress: number) => {
+    const clampedProgress = Math.max(0, Math.min(100, newProgress));
+    setProgress(clampedProgress);
+    
+    if (isPlaying && narrative && ('speechSynthesis' in window)) {
+      window.speechSynthesis.cancel();
+      const startIndex = Math.floor((clampedProgress / 100) * narrative.length);
+      const subText = narrative.substring(startIndex);
+      
+      if (subText.trim()) {
+        const utterance = new SpeechSynthesisUtterance(subText);
+        utterance.rate = 0.95;
+        utterance.pitch = 1;
+        utterance.lang = 'en-US';
+        utterance.onend = () => {
+          setIsPlaying(false);
+          setProgress(100);
+        };
+        window.speechSynthesis.speak(utterance);
+      } else {
+        setIsPlaying(false);
+        setProgress(100);
+      }
+    }
+  };
+
+  const handlePlayPause = () => {
+    if (progress >= 100) {
+      handleSeek(0);
+      setIsPlaying(true);
+    } else {
+      setIsPlaying(!isPlaying);
+    }
+  };
 
   if (!tour) return null;
 
@@ -96,6 +153,17 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
 
   return (
     <div className="fixed bottom-[72px] md:bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[60] animate-in fade-in slide-in-from-bottom duration-300">
+      <style>{`
+        @keyframes visualizer-bounce {
+          0%, 100% {
+            height: 15%;
+          }
+          50% {
+            height: 95%;
+          }
+        }
+      `}</style>
+
       <div className="bg-[#fdfcf9] border-2 border-[#1a1a1a] rounded-none p-5 shadow-2xl flex flex-col gap-4">
         {/* Header Title Information */}
         <div className="flex items-center gap-3">
@@ -128,15 +196,19 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
         {/* Animated Audio Soundwave Visualizer */}
         <div className="h-8 flex items-end justify-center gap-[3px] py-1 select-none">
           {Array.from({ length: 28 }).map((_, i) => {
-            // dynamic random height based on playing state
-            const rHeight = isPlaying 
-              ? Math.max(15, Math.floor(Math.sin((progress * 0.5) + i) * 60) + 40)
-              : 20;
             return (
               <div
                 key={i}
-                style={{ height: `${Math.min(100, rHeight)}%` }}
-                className={`w-[4px] rounded-none transition-all duration-350 ${
+                style={{
+                  height: isPlaying ? undefined : '20%',
+                  animation: isPlaying 
+                    ? `visualizer-bounce ${(0.4 + (i % 7) * 0.12).toFixed(2)}s ease-in-out infinite` 
+                    : 'none',
+                  animationDelay: isPlaying 
+                    ? `-${((i % 13) * 0.08).toFixed(2)}s` 
+                    : undefined,
+                }}
+                className={`w-[4px] rounded-none transition-all duration-300 ${
                   isPlaying 
                     ? 'bg-[#e2533b]' 
                     : 'bg-[#1a1a1a]/15'
@@ -167,7 +239,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
               min="0" 
               max="100" 
               value={progress} 
-              onChange={(e) => setProgress(Number(e.target.value))}
+              onChange={(e) => handleSeek(Number(e.target.value))}
               className="absolute inset-0 w-full opacity-0 cursor-pointer"
             />
           </div>
@@ -182,7 +254,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           <button 
             type="button"
             className="text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-95 transition-transform"
-            onClick={() => setProgress(Math.max(0, progress - 10))}
+            onClick={() => handleSeek(progress - 10)}
           >
             <RotateCcw size={20} />
           </button>
@@ -190,7 +262,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           <button
             type="button"
             className="w-10 h-10 bg-[#e2533b] hover:bg-[#1a1a1a] text-white rounded-none flex items-center justify-center shadow active:scale-95 transition-all cursor-pointer"
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={handlePlayPause}
           >
             {isPlaying ? <Pause size={20} className="fill-current" /> : <Play size={20} className="fill-current" />}
           </button>
@@ -198,7 +270,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           <button 
             type="button"
             className="text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-95 transition-transform"
-            onClick={() => setProgress(Math.min(100, progress + 10))}
+            onClick={() => handleSeek(progress + 10)}
           >
             <RotateCw size={20} />
           </button>

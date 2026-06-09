@@ -1,21 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Restaurant, Category, RestaurantRequest } from '../../types';
-import { Trash2, X, Clock, AlertCircle } from 'lucide-react';
+import { Restaurant, Category, BookingMessagePayload } from '../../types';
+import { Trash2, X, Plus, Store, Users, Calendar, Ban, QrCode, TrendingUp, Settings, Check, Clock, MapPin, Star, CheckCircle2, XCircle, FileText } from 'lucide-react';
 
 interface OwnerDashboardProps {
   onRestaurantUpdated?: (updated: Restaurant) => void;
 }
 
+interface BookingDto {
+  id: number;
+  restaurantId: string;
+  date: string;
+  time: string;
+  guests: number;
+  seating: string;
+  status: string;
+}
+
+interface AnalyticsDto {
+  totalBookings: number;
+  pendingBookings: number;
+  confirmedBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+  totalReviews: number;
+  averageRating: number;
+}
+
 export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardProps) {
-  const { user, updateUserRestaurantId } = useAuth();
+  const { user } = useAuth();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
-  const [restaurantRequest, setRestaurantRequest] = useState<RestaurantRequest | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [foodStreets, setFoodStreets] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<BookingDto[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsDto | null>(null);
+  const [activeTab, setActiveTab] = useState<'analytics' | 'bookings' | 'dishes' | 'settings' | 'qr'>('analytics');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [requestStatus, setRequestStatus] = useState<{ status: string; note?: string } | null>(null);
 
   // Edit Restaurant Form state
   const [restForm, setRestForm] = useState({
@@ -45,8 +68,6 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     area: 'Quận 4',
     openingHours: '16:00 - 23:00',
     image: '',
-    isVerified: true,
-    replySpeed: 'Usually replies in 5m',
     latitude: 10.759031,
     longitude: 106.706962
   });
@@ -66,13 +87,13 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   const [qrLoading, setQrLoading] = useState(false);
 
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  
   const activeRestaurantId = user?.restaurantId;
 
   const fetchRestaurant = async () => {
     setIsLoading(true);
     setError(null);
     try {
+      // Fetch categories and streets first
       const [catRes, streetRes] = await Promise.all([
         fetch(`${baseUrl}/api/cravemap/categories`),
         fetch(`${baseUrl}/api/food-streets`)
@@ -88,10 +109,25 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       }
 
       if (activeRestaurantId) {
-        const restRes = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`);
+        const [restRes, bookingsRes, analyticsRes] = await Promise.all([
+          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`),
+          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/bookings`),
+          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/analytics`)
+        ]);
+
         if (!restRes.ok) throw new Error('Failed to load restaurant details.');
         const restData: Restaurant = await restRes.json();
         setRestaurant(restData);
+
+        if (bookingsRes.ok) {
+          const bookingsData = await bookingsRes.json();
+          setBookings(bookingsData);
+        }
+
+        if (analyticsRes.ok) {
+          const analyticsData = await analyticsRes.json();
+          setAnalytics(analyticsData);
+        }
 
         setRestForm({
           name: restData.name,
@@ -108,12 +144,12 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
           latitude: restData.latitude || 10.759031,
           longitude: restData.longitude || 106.706962
         });
-      } else if (user?.id) {
-        // Fetch pending request if no restaurant is linked
-        const reqRes = await fetch(`${baseUrl}/api/owner/restaurant-request/${user.id}`);
-        if (reqRes.ok) {
-          const reqData = await reqRes.json();
-          setRestaurantRequest(reqData);
+      } else if (user) {
+        // Fetch current owner request if any
+        const requestRes = await fetch(`${baseUrl}/api/owner/restaurant-request/${user.id}`);
+        if (requestRes.ok) {
+          const requestData = await requestRes.json();
+          setRequestStatus({ status: requestData.status, note: requestData.adminNote });
         }
       }
     } catch (err: any) {
@@ -125,9 +161,9 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
   useEffect(() => {
     void fetchRestaurant();
-  }, [activeRestaurantId, user?.id]);
+  }, [activeRestaurantId, user]);
 
-  const handleCreateRestaurant = async (e: React.FormEvent) => {
+  const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setIsLoading(true);
@@ -146,8 +182,8 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
         throw new Error(text || 'Failed to submit request.');
       }
 
-      const newRequest: RestaurantRequest = await res.json();
-      setRestaurantRequest(newRequest);
+      const requestData = await res.json();
+      setRequestStatus({ status: requestData.status, note: requestData.adminNote });
     } catch (err: any) {
       setError(err.message || 'Error submitting request.');
     } finally {
@@ -190,7 +226,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          id: '', // Generated on server
+          id: '',
           name: dishForm.name,
           price: Number(dishForm.price),
           description: dishForm.description,
@@ -198,7 +234,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
         })
       });
 
-      if (!res.ok) throw new Error('Failed to add signature dish.');
+      if (!res.ok) throw new Error('Failed to add dish.');
       const updatedRest = await res.json();
       setRestaurant(updatedRest);
       onRestaurantUpdated?.(updatedRest);
@@ -210,7 +246,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   };
 
   const handleDeleteDish = async (dishId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa món ăn này khỏi danh sách đặc trưng?')) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa món ăn này?')) return;
     try {
       const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/dishes/${dishId}`, {
         method: 'DELETE'
@@ -250,213 +286,250 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     }
   };
 
+  const handleUpdateBookingStatus = async (bookingId: number, status: string) => {
+    const actionLabel = status === 'Confirmed' ? 'duyệt' : status === 'Completed' ? 'hoàn thành' : 'từ chối';
+    if (!window.confirm(`Bạn có chắc chắn muốn ${actionLabel} đơn đặt bàn này?`)) return;
+
+    try {
+      const res = await fetch(`${baseUrl}/api/owner/bookings/${bookingId}/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status })
+      });
+
+      if (!res.ok) throw new Error('Failed to update booking status.');
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b));
+
+      // Refresh analytics
+      const analyticsRes = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/analytics`);
+      if (analyticsRes.ok) {
+        const analyticsData = await analyticsRes.json();
+        setAnalytics(analyticsData);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error updating status.');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-[#1a1a1a]/60">
         <span className="animate-spin text-3xl">⏳</span>
-        <span className="font-mono text-xs mt-2 uppercase tracking-widest font-bold">Loading restaurant details...</span>
+        <span className="font-mono text-xs mt-2 uppercase tracking-widest font-bold">Loading owner dashboard...</span>
       </div>
     );
   }
 
+  // View when no restaurant linked to owner
   if (!activeRestaurantId) {
-    if (restaurantRequest && restaurantRequest.status !== 'Rejected') {
-      return (
-        <div className="max-w-md mx-auto w-full px-4 py-6">
-          <div className="bg-white border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a] text-center">
-            <Clock size={40} className="mx-auto text-[#1a1a1a] mb-4" strokeWidth={1.5} />
-            <h2 className="font-serif italic font-bold text-2xl uppercase mb-2">
-              Đang chờ duyệt
-            </h2>
-            <p className="text-sm text-[#1a1a1a]/70 font-sans mb-4">
-              Yêu cầu đăng ký quán ăn <strong>{restaurantRequest.name}</strong> của bạn đã được gửi thành công. Vui lòng chờ Admin phê duyệt.
-            </p>
-            <div className="bg-[#f9f7f2] border-2 border-[#1a1a1a] p-3 text-left">
-              <p className="text-[10px] font-mono uppercase font-bold text-[#1a1a1a]/50 mb-1">Mã yêu cầu</p>
-              <p className="font-mono text-xs">{restaurantRequest.id}</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="max-w-md mx-auto w-full px-4 py-6">
-        <div className="bg-white border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a]">
-          <div className="mb-6 border-b-2 border-dashed border-[#1a1a1a]/20 pb-4">
-            <span className="text-[9px] tracking-[0.3em] uppercase text-[#e2533b] font-mono font-bold block mb-1">
-              CHỦ QUÁN MỚI
-            </span>
-            <h2 className="font-serif italic font-bold text-2xl uppercase">
-              Đăng ký quán ăn
-            </h2>
-            <p className="text-xs text-[#1a1a1a]/60 mt-1 font-sans">
-              Điền thông tin bên dưới để gửi yêu cầu mở quán trên CraveMap. Yêu cầu của bạn sẽ được Admin xét duyệt.
-            </p>
+        {requestStatus ? (
+          <div className="bg-white border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a]">
+            <div className="border-b-2 border-dashed border-[#1a1a1a]/20 pb-4 mb-4">
+              <span className="text-[9px] tracking-[0.3em] uppercase text-[#e2533b] font-mono font-bold block mb-1">
+                YÊU CẦU MỞ QUÁN
+              </span>
+              <h2 className="font-serif italic font-bold text-2xl uppercase">Trạng thái yêu cầu</h2>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <div className="p-4 border-2 border-[#1a1a1a] bg-[#fdfcf9]">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] uppercase font-bold text-[#1a1a1a]/60">Trạng thái:</span>
+                  <span className={`px-2 py-0.5 font-mono text-[10px] uppercase font-bold border ${
+                    requestStatus.status === 'Pending' ? 'bg-yellow-100 border-yellow-400 text-yellow-800' :
+                    requestStatus.status === 'Approved' ? 'bg-green-100 border-green-400 text-green-800' :
+                    'bg-red-100 border-red-400 text-red-800'
+                  }`}>
+                    {requestStatus.status === 'Pending' ? 'Đang chờ duyệt' :
+                     requestStatus.status === 'Approved' ? 'Đã duyệt' : 'Bị từ chối'}
+                  </span>
+                </div>
+                {requestStatus.note && (
+                  <div className="mt-3 pt-3 border-t border-dashed border-[#1a1a1a]/15">
+                    <span className="font-mono text-[9px] uppercase font-bold text-[#1a1a1a]/60 block">Ghi chú từ admin:</span>
+                    <p className="text-xs italic mt-1 text-[#1a1a1a]/85">{requestStatus.note}</p>
+                  </div>
+                )}
+              </div>
+
+              {requestStatus.status === 'Rejected' && (
+                <button
+                  onClick={() => setRequestStatus(null)}
+                  className="w-full bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-2.5 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md"
+                >
+                  Gửi yêu cầu mới
+                </button>
+              )}
+
+              {requestStatus.status === 'Pending' && (
+                <p className="text-center font-sans text-xs text-[#1a1a1a]/60 italic">
+                  Yêu cầu của bạn đã được ghi nhận. Vui lòng liên hệ Admin để duyệt hồ sơ.
+                </p>
+              )}
+            </div>
           </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-300 text-xs font-mono font-bold text-[#e2533b] p-3 mb-4">
-              Error: {error}
+        ) : (
+          <div className="bg-white border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a]">
+            <div className="mb-6 border-b-2 border-dashed border-[#1a1a1a]/20 pb-4">
+              <span className="text-[9px] tracking-[0.3em] uppercase text-[#e2533b] font-mono font-bold block mb-1">
+                CHỦ QUÁN MỚI
+              </span>
+              <h2 className="font-serif italic font-bold text-2xl uppercase">
+                Yêu cầu đăng ký quán ăn
+              </h2>
+              <p className="text-xs text-[#1a1a1a]/60 mt-1 font-sans">
+                Bạn chưa liên kết với quán ăn nào. Vui lòng điền thông tin đăng ký bên dưới để gửi yêu cầu phê duyệt tới Admin!
+              </p>
             </div>
-          )}
 
-          {restaurantRequest?.status === 'Rejected' && (
-            <div className="bg-red-50 border-2 border-[#e2533b] p-4 mb-6 flex gap-3 items-start">
-              <AlertCircle className="text-[#e2533b] shrink-0" size={20} />
-              <div>
-                <p className="font-mono text-[10px] uppercase font-bold text-[#e2533b] mb-1">Yêu cầu bị từ chối</p>
-                <p className="text-xs text-[#1a1a1a]/80">{restaurantRequest.adminNote || 'Không có lý do cụ thể.'}</p>
-                <p className="text-[10px] text-[#1a1a1a]/50 mt-2 italic">Vui lòng chỉnh sửa thông tin và gửi lại yêu cầu.</p>
+            {error && (
+              <div className="bg-red-50 border border-red-300 text-xs font-mono font-bold text-[#e2533b] p-3 mb-4">
+                Lỗi: {error}
               </div>
-            </div>
-          )}
+            )}
 
-          <form onSubmit={handleCreateRestaurant} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Tên quán ăn</label>
-              <input 
-                type="text"
-                value={createForm.name}
-                onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Ví dụ: Ốc Oanh Vinh Khánh"
-                className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none focus:bg-[#f9f7f2]"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleCreateRequest} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
-                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Mức giá</label>
-                <select
-                  value={createForm.priceRange}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, priceRange: e.target.value }))}
-                  className="w-full bg-white border-2 border-[#1a1a1a] px-2.5 py-1.5 text-sm focus:outline-none"
-                >
-                  <option value="$">$ (Rẻ)</option>
-                  <option value="$$">$$ (Trung bình)</option>
-                  <option value="$$$">$$$ (Sang chảnh)</option>
-                </select>
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Tên quán ăn</label>
+                <input
+                  type="text"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Ví dụ: Ốc Oanh Vinh Khánh"
+                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none focus:bg-[#f9f7f2]"
+                  required
+                />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Mức giá</label>
+                  <select
+                    value={createForm.priceRange}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, priceRange: e.target.value }))}
+                    className="w-full bg-white border-2 border-[#1a1a1a] px-2.5 py-1.5 text-sm focus:outline-none"
+                  >
+                    <option value="$">$ (Rẻ)</option>
+                    <option value="$$">$$ (Trung bình)</option>
+                    <option value="$$$">$$$ (Sang chảnh)</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Thể loại ẩm thực</label>
+                  <select
+                    value={createForm.categoryId}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, categoryId: parseInt(e.target.value) }))}
+                    className="w-full bg-white border-2 border-[#1a1a1a] px-2.5 py-1.5 text-sm focus:outline-none"
+                  >
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="flex flex-col gap-1">
-                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Thể loại ẩm thực</label>
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Phố ẩm thực</label>
                 <select
-                  value={createForm.categoryId}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, categoryId: parseInt(e.target.value) }))}
+                  value={createForm.foodStreetId}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, foodStreetId: parseInt(e.target.value) }))}
                   className="w-full bg-white border-2 border-[#1a1a1a] px-2.5 py-1.5 text-sm focus:outline-none"
                 >
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  {foodStreets.map(st => (
+                    <option key={st.id} value={st.id}>{st.name} ({st.district})</option>
                   ))}
                 </select>
               </div>
-            </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Phố ẩm thực</label>
-              <select
-                value={createForm.foodStreetId}
-                onChange={(e) => setCreateForm(prev => ({ ...prev, foodStreetId: parseInt(e.target.value) }))}
-                className="w-full bg-white border-2 border-[#1a1a1a] px-2.5 py-1.5 text-sm focus:outline-none"
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Địa chỉ chi tiết</label>
+                <input
+                  type="text"
+                  value={createForm.address}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, address: e.target.value }))}
+                  placeholder="Ví dụ: 530 Vĩnh Khánh, Phường 10"
+                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Khu vực (Quận)</label>
+                  <input
+                    type="text"
+                    value={createForm.area}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, area: e.target.value }))}
+                    placeholder="Ví dụ: Quận 4"
+                    className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Giờ mở cửa</label>
+                  <input
+                    type="text"
+                    value={createForm.openingHours}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, openingHours: e.target.value }))}
+                    placeholder="Ví dụ: 16:00 - 23:00"
+                    className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Link ảnh quán ăn</label>
+                <input
+                  type="text"
+                  value={createForm.image}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, image: e.target.value }))}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-xs focus:outline-none font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Vĩ độ (Latitude)</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    value={createForm.latitude}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, latitude: parseFloat(e.target.value) }))}
+                    className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Kinh độ (Longitude)</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    value={createForm.longitude}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, longitude: parseFloat(e.target.value) }))}
+                    className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full mt-4 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md"
               >
-                {foodStreets.map(st => (
-                  <option key={st.id} value={st.id}>{st.name} ({st.district})</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Địa chỉ chi tiết</label>
-              <input 
-                type="text"
-                value={createForm.address}
-                onChange={(e) => setCreateForm(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="Ví dụ: 530 Vĩnh Khánh, Phường 10"
-                className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Khu vực (Quận)</label>
-                <input 
-                  type="text"
-                  value={createForm.area}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, area: e.target.value }))}
-                  placeholder="Ví dụ: Quận 4"
-                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Giờ mở cửa</label>
-                <input 
-                  type="text"
-                  value={createForm.openingHours}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, openingHours: e.target.value }))}
-                  placeholder="Ví dụ: 16:00 - 23:00"
-                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Link ảnh quán ăn</label>
-              <input 
-                type="text"
-                value={createForm.image}
-                onChange={(e) => setCreateForm(prev => ({ ...prev, image: e.target.value }))}
-                placeholder="https://images.unsplash.com/..."
-                className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-xs focus:outline-none font-mono"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Vĩ độ (Latitude)</label>
-                <input 
-                  type="number"
-                  step="0.000001"
-                  value={createForm.latitude}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, latitude: parseFloat(e.target.value) }))}
-                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono"
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Kinh độ (Longitude)</label>
-                <input 
-                  type="number"
-                  step="0.000001"
-                  value={createForm.longitude}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, longitude: parseFloat(e.target.value) }))}
-                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono"
-                  required
-                />
-              </div>
-            </div>
-
-            <button 
-              type="submit"
-              className="w-full mt-4 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-xs active:scale-[0.98]"
-            >
-              Gửi yêu cầu đăng ký quán
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !restaurant) {
-    return (
-      <div className="text-center py-20 text-[#e2533b] font-mono text-xs uppercase font-bold">
-        ⚠️ {error || 'Restaurant details could not be loaded.'}
+                Gửi yêu cầu phê duyệt
+              </button>
+            </form>
+          </div>
+        )}
       </div>
     );
   }
@@ -464,17 +537,274 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   const simulateScanUrl = `${window.location.origin}/?qr=${generatedQrToken}`;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 text-[#1a1a1a]">
-      
-      {/* Left: Info Update Form */}
-      <div className="flex-1 flex flex-col gap-6">
-        <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5">
+    <div className="flex flex-col gap-6 text-[#1a1a1a]">
+      {/* Title Header */}
+      <div className="bg-[#1a1a1a] text-white p-6 border-3 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#e2533b] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <span className="font-mono text-[9px] text-[#e2533b] uppercase tracking-[0.3em] font-extrabold block mb-1">
+            MANAGEMENT PANEL
+          </span>
+          <h2 className="font-serif italic font-bold text-3xl flex items-center gap-2">
+            <Store size={26} className="text-[#e2533b]" />
+            {restaurant.name}
+          </h2>
+          <p className="text-xs font-mono text-white/60 mt-1 flex items-center gap-3">
+            <span className="flex items-center gap-1"><MapPin size={12} /> {restaurant.area}</span>
+            <span className="flex items-center gap-1"><Clock size={12} /> {restaurant.openingHours}</span>
+          </p>
+        </div>
+
+        {/* Tab Headers */}
+        <div className="flex flex-wrap gap-2">
+          {(['analytics', 'bookings', 'dishes', 'settings', 'qr'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-3 py-2 font-mono text-[10px] uppercase tracking-widest border-2 border-white transition-all cursor-pointer font-bold ${
+                activeTab === tab 
+                  ? 'bg-[#e2533b] text-white border-[#e2533b]' 
+                  : 'bg-white text-[#1a1a1a] border-white hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {tab === 'analytics' ? 'Thống kê' :
+               tab === 'bookings' ? 'Đặt bàn' :
+               tab === 'dishes' ? 'Món ăn' :
+               tab === 'settings' ? 'Cấu hình' : 'Mã QR'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab Contents */}
+      {activeTab === 'analytics' && (
+        <div className="flex flex-col gap-6 animate-in fade-in duration-200">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="bg-white p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
+              <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold flex items-center gap-1">
+                <Calendar size={12} /> Tổng đặt bàn
+              </span>
+              <span className="font-serif italic font-bold text-3xl mt-1 text-[#1a1a1a]">
+                {analytics?.totalBookings ?? 0}
+              </span>
+            </div>
+
+            <div className="bg-[#fef8e7] p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
+              <span className="font-mono text-[9px] uppercase tracking-wider text-amber-600 font-bold flex items-center gap-1">
+                <Clock size={12} /> Chờ duyệt
+              </span>
+              <span className="font-serif italic font-bold text-3xl mt-1 text-amber-700">
+                {analytics?.pendingBookings ?? 0}
+              </span>
+            </div>
+
+            <div className="bg-[#e8fbf0] p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
+              <span className="font-mono text-[9px] uppercase tracking-wider text-green-600 font-bold flex items-center gap-1">
+                <CheckCircle2 size={12} /> Đã duyệt
+              </span>
+              <span className="font-serif italic font-bold text-3xl mt-1 text-green-700">
+                {analytics?.confirmedBookings ?? 0}
+              </span>
+            </div>
+
+            <div className="bg-[#edf6ff] p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
+              <span className="font-mono text-[9px] uppercase tracking-wider text-blue-600 font-bold flex items-center gap-1">
+                <TrendingUp size={12} /> Hoàn thành
+              </span>
+              <span className="font-serif italic font-bold text-3xl mt-1 text-blue-700">
+                {analytics?.completedBookings ?? 0}
+              </span>
+            </div>
+
+            <div className="bg-[#fff0f0] p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
+              <span className="font-mono text-[9px] uppercase tracking-wider text-red-600 font-bold flex items-center gap-1">
+                <XCircle size={12} /> Đã hủy / Từ chối
+              </span>
+              <span className="font-serif italic font-bold text-3xl mt-1 text-red-700">
+                {analytics?.cancelledBookings ?? 0}
+              </span>
+            </div>
+
+            <div className="bg-[#fdfaf2] p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between col-span-2 md:col-span-1">
+              <span className="font-mono text-[9px] uppercase tracking-wider text-amber-500 font-bold flex items-center gap-1">
+                <Star size={12} /> Đánh giá TB
+              </span>
+              <span className="font-serif italic font-bold text-3xl mt-1 text-amber-600 flex items-center gap-1">
+                {analytics?.averageRating.toFixed(1) ?? '0.0'}
+                <span className="text-xs font-sans text-[#1a1a1a]/55 font-light">({analytics?.totalReviews ?? 0} reviews)</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Info Box */}
+          <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5">
+            <h3 className="font-serif italic font-bold text-lg">Chào mừng quay trở lại, {user?.username}!</h3>
+            <p className="text-xs text-[#1a1a1a]/70 mt-1 leading-relaxed">
+              Đây là hệ thống quản lý quán ăn của bạn. Bạn có thể theo dõi thống kê đặt bàn, phê duyệt lịch hẹn, quản lý món ăn đặc trưng của quán, cập nhật địa chỉ/giờ mở cửa và tạo mã QR thông minh cho thực khách quét ngay tại bàn.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'bookings' && (
+        <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5 animate-in fade-in duration-200">
+          <div className="border-b border-[#1a1a1a]/15 pb-4 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div>
+              <h3 className="font-serif italic font-bold text-lg">Danh sách đặt bàn</h3>
+              <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">RESERVATION LIST MANAGER</p>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left font-sans text-xs border-collapse">
+              <thead>
+                <tr className="border-b-2 border-[#1a1a1a] bg-[#f9f7f2] font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60">
+                  <th className="py-2.5 px-3">Mã đơn</th>
+                  <th className="py-2.5 px-3">Ngày đặt</th>
+                  <th className="py-2.5 px-3">Giờ</th>
+                  <th className="py-2.5 px-3">Số khách</th>
+                  <th className="py-2.5 px-3">Vị trí ngồi</th>
+                  <th className="py-2.5 px-3">Trạng thái</th>
+                  <th className="py-2.5 px-3 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#1a1a1a]/10">
+                {bookings.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center font-mono text-xs text-[#1a1a1a]/40 uppercase">
+                      Chưa có đơn đặt bàn nào.
+                    </td>
+                  </tr>
+                ) : (
+                  bookings.map(b => (
+                    <tr key={b.id} className="hover:bg-[#fcfbfa]/50 transition-colors">
+                      <td className="py-3 px-3 font-mono font-bold">#BK-{b.id}</td>
+                      <td className="py-3 px-3 font-semibold">{b.date}</td>
+                      <td className="py-3 px-3 font-mono">{b.time}</td>
+                      <td className="py-3 px-3 font-bold text-sm">{b.guests}</td>
+                      <td className="py-3 px-3 font-serif italic">{b.seating}</td>
+                      <td className="py-3 px-3">
+                        <span className={`px-2 py-0.5 text-[9px] font-mono uppercase font-extrabold tracking-wider border shadow-xs ${
+                          b.status.toLowerCase() === 'confirmed' || b.status === 'Đã nhận' ? 'bg-green-100 text-green-800 border-green-300' :
+                          b.status.toLowerCase() === 'pending' || b.status === 'Chờ duyệt' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                          b.status.toLowerCase() === 'completed' || b.status === 'Hoàn thành' ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                          'bg-red-100 text-red-800 border-red-300'
+                        }`}>
+                          {b.status === 'Pending' ? 'Chờ duyệt' :
+                           b.status === 'Confirmed' ? 'Đã nhận' :
+                           b.status === 'Completed' ? 'Hoàn thành' :
+                           b.status === 'Rejected' ? 'Bị từ chối' : b.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <div className="inline-flex gap-2">
+                          {(b.status.toLowerCase() === 'pending' || b.status === 'Chờ duyệt') && (
+                            <>
+                              <button
+                                onClick={() => handleUpdateBookingStatus(b.id, 'Confirmed')}
+                                className="px-2 py-1 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-green-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5"
+                                title="Nhận đơn đặt bàn"
+                              >
+                                <Check size={11} strokeWidth={3} className="text-green-600" /> Nhận
+                              </button>
+                              <button
+                                onClick={() => handleUpdateBookingStatus(b.id, 'Rejected')}
+                                className="px-2 py-1 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-red-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5 text-red-500"
+                                title="Từ chối đơn"
+                              >
+                                <X size={11} strokeWidth={3} className="text-red-500" /> Từ chối
+                              </button>
+                            </>
+                          )}
+                          {(b.status.toLowerCase() === 'confirmed' || b.status === 'Đã nhận') && (
+                            <button
+                              onClick={() => handleUpdateBookingStatus(b.id, 'Completed')}
+                              className="px-2 py-1 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-blue-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5"
+                              title="Hoàn thành phục vụ"
+                            >
+                              <CheckCircle2 size={11} strokeWidth={3} className="text-blue-600" /> Hoàn thành
+                            </button>
+                          )}
+                          {(b.status.toLowerCase() === 'completed' || b.status.toLowerCase() === 'rejected' || b.status.toLowerCase() === 'cancelled' || b.status === 'Hoàn thành' || b.status === 'Bị từ chối' || b.status === 'Đã hủy') && (
+                            <span className="text-[10px] italic text-[#1a1a1a]/40 font-serif">Không có thao tác</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'dishes' && (
+        <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5 animate-in fade-in duration-200">
           <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4 flex justify-between items-center">
             <div>
-              <h3 className="font-serif italic font-bold text-lg">Chỉnh sửa Thông tin Quán ăn</h3>
-              <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">OWNER TERMINAL</p>
+              <h3 className="font-serif italic font-bold text-lg">Món ăn đặc trưng</h3>
+              <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">SIGNATURE MENU MANAGEMENT</p>
             </div>
-            
+
+            <button
+              onClick={() => setShowDishModal(true)}
+              className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest px-4 py-2 border-2 border-[#1a1a1a] transition-all cursor-pointer shadow flex items-center gap-1.5 active:translate-y-0.5 font-bold"
+            >
+              <Plus size={13} strokeWidth={3} /> Thêm món ăn
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {restaurant.dishes.length === 0 ? (
+              <div className="col-span-full py-12 text-center font-mono text-xs text-[#1a1a1a]/40 uppercase">
+                Chưa có món ăn nào được thêm vào thực đơn đặc trưng.
+              </div>
+            ) : (
+              restaurant.dishes.map(d => (
+                <div
+                  key={d.id}
+                  className="bg-white border-2 border-[#1a1a1a] rounded-none overflow-hidden shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col relative group hover:border-[#e2533b] transition-all"
+                >
+                  <div
+                    className="h-40 w-full bg-cover bg-center filter grayscale group-hover:grayscale-0 transition-all duration-300 border-b-2 border-[#1a1a1a]"
+                    style={{ backgroundImage: `url('${d.image}')` }}
+                  />
+
+                  <div className="p-4 flex flex-col justify-between flex-1 gap-2">
+                    <div>
+                      <h3 className="font-serif italic font-bold text-base text-[#1a1a1a] truncate">{d.name}</h3>
+                      <p className="font-sans text-xs text-[#1a1a1a]/60 line-clamp-2 mt-1 leading-normal font-light">{d.description || 'Không có mô tả món ăn.'}</p>
+                    </div>
+                    
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-[#1a1a1a]/10">
+                      <p className="font-mono font-bold text-[#e2533b] text-sm">${d.price.toFixed(2)}</p>
+                      
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteDish(d.id)}
+                        title="Xóa món ăn"
+                        className="w-8 h-8 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white border border-[#1a1a1a]/15 hover:border-red-500 flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'settings' && (
+        <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5 animate-in fade-in duration-200">
+          <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4 flex justify-between items-center">
+            <div>
+              <h3 className="font-serif italic font-bold text-lg">Cấu hình Quán ăn</h3>
+              <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">OWNER PROFILE EDITOR</p>
+            </div>
+
             {saveSuccess && (
               <span className="bg-[#cbf3d2] text-green-900 border border-green-400 font-mono text-[9px] uppercase tracking-wider font-extrabold px-3 py-1">
                 💾 Đã lưu thành công!
@@ -486,7 +816,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Tên quán ăn</label>
-                <input 
+                <input
                   type="text"
                   value={restForm.name}
                   onChange={(e) => setRestForm(prev => ({ ...prev, name: e.target.value }))}
@@ -497,7 +827,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Ảnh biểu diễn (URL)</label>
-                <input 
+                <input
                   type="text"
                   value={restForm.image}
                   onChange={(e) => setRestForm(prev => ({ ...prev, image: e.target.value }))}
@@ -536,12 +866,11 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Giờ mở cửa</label>
-                <input 
+                <input
                   type="text"
                   value={restForm.openingHours}
                   onChange={(e) => setRestForm(prev => ({ ...prev, openingHours: e.target.value }))}
                   className="bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
-                  placeholder="Ex: 10:00 AM - 11:00 PM"
                   required
                 />
               </div>
@@ -550,7 +879,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Địa chỉ chính xác</label>
-                <input 
+                <input
                   type="text"
                   value={restForm.address}
                   onChange={(e) => setRestForm(prev => ({ ...prev, address: e.target.value }))}
@@ -561,7 +890,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Khu vực (Quận / Huyện)</label>
-                <input 
+                <input
                   type="text"
                   value={restForm.area}
                   onChange={(e) => setRestForm(prev => ({ ...prev, area: e.target.value }))}
@@ -574,7 +903,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-dashed border-[#1a1a1a]/15 pt-3">
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Vĩ độ (Latitude)</label>
-                <input 
+                <input
                   type="number"
                   step="0.000001"
                   value={restForm.latitude}
@@ -586,7 +915,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Kinh độ (Longitude)</label>
-                <input 
+                <input
                   type="number"
                   step="0.000001"
                   value={restForm.longitude}
@@ -597,7 +926,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               </div>
             </div>
 
-            <button 
+            <button
               type="submit"
               className="w-full bg-[#1a1a1a] text-white hover:bg-[#e2533b] py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md active:translate-y-0.5"
             >
@@ -605,130 +934,80 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             </button>
           </form>
         </div>
+      )}
 
-        {/* Signature Dishes List Box */}
-        <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5">
-          <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4 flex justify-between items-center">
-            <div>
-              <h3 className="font-serif italic font-bold text-lg">Món ăn đặc trưng</h3>
-              <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">SIGNATURE MENU MANAGEMENT</p>
-            </div>
-            
-            <button
-              onClick={() => setShowDishModal(true)}
-              className="bg-white hover:bg-[#f9f7f2] font-mono text-[9px] uppercase tracking-widest px-3 py-2 border-2 border-[#1a1a1a] transition-all cursor-pointer shadow flex items-center gap-1 active:translate-y-0.5 font-bold"
-            >
-              Thêm món ăn
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {restaurant.dishes.map(d => (
-              <div 
-                key={d.id}
-                className="bg-white border border-[#1a1a1a]/15 rounded-none overflow-hidden shadow-xs flex flex-col relative group hover:border-[#e2533b]/45 transition-colors"
-              >
-                {/* Image panel */}
-                <div 
-                  className="h-28 w-full bg-cover bg-center filter grayscale group-hover:grayscale-0 transition-all duration-300"
-                  style={{ backgroundImage: `url('${d.image}')` }}
-                />
-                
-                <div className="p-3.5 flex flex-col justify-between flex-1 gap-1">
-                  <div>
-                    <h3 className="font-serif italic font-bold text-xs md:text-sm text-[#1a1a1a] truncate">{d.name}</h3>
-                    <p className="font-sans text-[10px] text-[#1a1a1a]/55 line-clamp-1 mt-1 font-light leading-tight">{d.description}</p>
-                  </div>
-                  <p className="font-mono font-bold text-[#e2533b] text-xs mt-1.5">${d.price.toFixed(2)}</p>
-                </div>
-
-                {/* Delete button (floating red trash icon instead of + button) */}
-                <button
-                  type="button"
-                  onClick={() => handleDeleteDish(d.id)}
-                  title="Xóa món ăn"
-                  className="absolute bottom-3 right-3 w-7 h-7 bg-[#e2533b]/10 hover:bg-[#e2533b] text-[#e2533b] hover:text-white rounded-none flex items-center justify-center shadow-xs active:scale-90 transition-all cursor-pointer"
-                >
-                  <Trash2 size={13} strokeWidth={3} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Right: QR Code Generator Card */}
-      <div className="w-full lg:w-[360px] flex flex-col gap-6">
-        <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5 text-center flex flex-col items-center gap-4">
-          <div className="w-full border-b border-[#1a1a1a]/15 pb-3 text-left">
+      {activeTab === 'qr' && (
+        <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5 animate-in fade-in duration-200">
+          <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4">
             <h3 className="font-serif italic font-bold text-lg leading-tight">Tạo QR Code bàn ăn</h3>
             <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">ENCRYPTED SCAN ACCESS</p>
           </div>
 
-          <p className="text-left font-sans text-xs text-[#1a1a1a]/60 leading-relaxed font-light">
-            Nhập số bàn để tạo mã QR chứa token mã hóa AES. Khách hàng quét mã này sẽ được tự động đăng nhập vào ứng dụng và nghe audio tour không giới hạn.
-          </p>
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            <div className="flex-1 flex flex-col gap-4">
+              <p className="font-sans text-xs text-[#1a1a1a]/60 leading-relaxed font-light">
+                Mỗi bàn ăn tại quán cần có một mã QR riêng. Khi thực khách quét mã này tại bàn ăn, họ sẽ được đăng nhập nhanh vào Foodio, kiểm tra thông tin thực đơn chuẩn và bắt đầu đặt bàn/tour trực tiếp tại bàn.
+              </p>
 
-          <div className="w-full flex items-center border-2 border-[#1a1a1a] bg-white px-3 py-1.5 shadow-[2px_2px_0px_0px_#1a1a1a] mt-2">
-            <span className="font-mono text-xs font-bold uppercase tracking-wider mr-2 text-[#1a1a1a]/50">Số bàn ăn</span>
-            <input 
-              type="number"
-              value={tableNumber}
-              onChange={(e) => setTableNumber(Number(e.target.value))}
-              className="bg-transparent text-sm font-mono font-bold outline-none flex-1 text-right"
-              min="1"
-            />
-          </div>
-
-          <button
-            onClick={handleGenerateQr}
-            disabled={qrLoading}
-            className="w-full bg-[#1a1a1a] text-white hover:bg-[#e2533b] py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md active:translate-y-0.5 disabled:opacity-50"
-          >
-            {qrLoading ? 'Đang tạo mã...' : 'Tạo mã QR bàn ăn // 🔑'}
-          </button>
-
-          {/* Render Mock QR Code and Simulation Link */}
-          {generatedQrToken && (
-            <div className="w-full border-2 border-[#1a1a1a] p-4 bg-[#f9f7f2] flex flex-col items-center gap-3 mt-4 animate-in zoom-in-95 duration-200">
-              <div className="w-40 h-40 bg-white border-2 border-[#1a1a1a] p-2 flex items-center justify-center relative shadow-xs">
-                {/* Simulated QR Visual Design */}
-                <div 
-                  className="w-full h-full bg-cover" 
-                  style={{ 
-                    backgroundImage: `url('https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(simulateScanUrl)}&color=1a1a1a&bgcolor=ffffff')`,
-                    backgroundPosition: 'center',
-                    backgroundSize: 'contain'
-                  }} 
+              <div className="flex items-center border-2 border-[#1a1a1a] bg-white px-3 py-2 shadow-[2px_2px_0px_0px_#1a1a1a] max-w-xs">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider mr-2 text-[#1a1a1a]/50">Số bàn ăn</span>
+                <input
+                  type="number"
+                  value={tableNumber}
+                  onChange={(e) => setTableNumber(Number(e.target.value))}
+                  className="bg-transparent text-sm font-mono font-bold outline-none flex-1 text-right"
+                  min="1"
                 />
               </div>
 
-              <div className="text-left w-full">
-                <span className="text-[8px] font-mono font-bold uppercase text-[#1a1a1a]/40 tracking-wider">Mã token mã hóa</span>
-                <p className="text-[9px] font-mono text-slate-500 break-all select-all line-clamp-2 bg-white border border-[#1a1a1a]/10 p-1 mt-0.5">
-                  {generatedQrToken}
-                </p>
-              </div>
-
-              {/* Simulation scanning CTA link */}
-              <a 
-                href={simulateScanUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full text-center bg-[#e2533b] text-white border-2 border-[#1a1a1a] shadow-[2px_2px_0px_0px_#1a1a1a] hover:shadow-none transition-all py-2 font-mono text-[10px] uppercase font-bold tracking-wider cursor-pointer"
+              <button
+                onClick={handleGenerateQr}
+                disabled={qrLoading}
+                className="bg-[#1a1a1a] text-white hover:bg-[#e2533b] px-4 py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md active:translate-y-0.5 disabled:opacity-50 max-w-xs"
               >
-                📲 Giả lập quét mã QR // Link
-              </a>
+                {qrLoading ? 'Đang tạo mã...' : 'Tạo mã QR bàn ăn // 🔑'}
+              </button>
             </div>
-          )}
+
+            {generatedQrToken && (
+              <div className="w-full md:w-[280px] border-2 border-[#1a1a1a] p-4 bg-[#f9f7f2] flex flex-col items-center gap-3 animate-in zoom-in-95 duration-200">
+                <div className="w-40 h-40 bg-white border-2 border-[#1a1a1a] p-2 flex items-center justify-center relative shadow-xs">
+                  <div
+                    className="w-full h-full bg-cover"
+                    style={{
+                      backgroundImage: `url('https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(simulateScanUrl)}&color=1a1a1a&bgcolor=ffffff')`,
+                      backgroundPosition: 'center',
+                      backgroundSize: 'contain'
+                    }}
+                  />
+                </div>
+
+                <div className="text-left w-full">
+                  <span className="text-[8px] font-mono font-bold uppercase text-[#1a1a1a]/40 tracking-wider">Mã token mã hóa</span>
+                  <p className="text-[9px] font-mono text-slate-500 break-all select-all line-clamp-2 bg-white border border-[#1a1a1a]/10 p-1 mt-0.5">
+                    {generatedQrToken}
+                  </p>
+                </div>
+
+                <a
+                  href={simulateScanUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full text-center bg-[#e2533b] text-white border-2 border-[#1a1a1a] shadow-[2px_2px_0px_0px_#1a1a1a] hover:shadow-none transition-all py-2 font-mono text-[10px] uppercase font-bold tracking-wider cursor-pointer"
+                >
+                  📲 Giả lập quét mã QR
+                </a>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Signature Dish Addition Modal */}
       {showDishModal && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-md bg-[#fdfcf9] border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a] relative animate-in zoom-in-95 duration-200">
-            <button 
+            <button
               onClick={() => setShowDishModal(false)}
               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center border-2 border-[#1a1a1a] bg-white hover:bg-[#e2533b] hover:text-white transition-colors cursor-pointer"
             >
@@ -745,7 +1024,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             <form onSubmit={handleAddDish} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Tên món ăn</label>
-                <input 
+                <input
                   type="text"
                   value={dishForm.name}
                   onChange={(e) => setDishForm(prev => ({ ...prev, name: e.target.value }))}
@@ -757,7 +1036,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Giá tiền ($)</label>
-                <input 
+                <input
                   type="number"
                   step="0.01"
                   value={dishForm.price}
@@ -770,7 +1049,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Mô tả ngắn</label>
-                <textarea 
+                <textarea
                   value={dishForm.description}
                   onChange={(e) => setDishForm(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Mô tả tóm tắt món ăn..."
@@ -780,7 +1059,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Ảnh món ăn (URL)</label>
-                <input 
+                <input
                   type="text"
                   value={dishForm.image}
                   onChange={(e) => setDishForm(prev => ({ ...prev, image: e.target.value }))}
@@ -789,7 +1068,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                 />
               </div>
 
-              <button 
+              <button
                 type="submit"
                 className="w-full mt-2 bg-[#1a1a1a] text-white hover:bg-[#e2533b] py-2.5 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md active:translate-y-0.5"
               >
@@ -799,7 +1078,6 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
           </div>
         </div>
       )}
-
     </div>
   );
 }
