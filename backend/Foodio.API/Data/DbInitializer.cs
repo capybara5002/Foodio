@@ -10,17 +10,14 @@ public static class DbInitializer
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         try
         {
-            await context.Users.AnyAsync();
+            await context.Database.EnsureCreatedAsync();
             await EnsureChatSchemaAsync(context);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            try
-            {
-                await context.Database.EnsureDeletedAsync();
-            }
-            catch (Exception) { }
-            await context.Database.EnsureCreatedAsync();
+            throw new InvalidOperationException(
+                "Could not initialize the SQL Server database. Check ConnectionStrings:DefaultConnection in appsettings.Development.json or appsettings.json.",
+                ex);
         }
     }
 
