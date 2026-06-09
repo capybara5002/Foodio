@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { initialRestaurants, initialChatThreads, initialAudioTours } from './data';
-import { Restaurant, ChatThread, AudioTour, ChatMessage } from './types';
+import { Restaurant, ChatThread, AudioTour } from './types';
 import {
   createBooking,
   createCommunityPost,
+  ensureChatThread,
   getAudioTours,
   getChatThreads,
   getRestaurants
@@ -28,15 +29,14 @@ function AppContent() {
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [activeAudioTour, setActiveAudioTour] = useState<AudioTour | null>(null);
+  const [mapSearchQuery, setMapSearchQuery] = useState('');
+  const [mapSearchSelection, setMapSearchSelection] = useState<{ restaurantId: string; requestId: number } | null>(null);
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>(initialRestaurants);
   const [chatThreads, setChatThreads] = useState<ChatThread[]>(initialChatThreads);
   const [audioTours, setAudioTours] = useState<AudioTour[]>(initialAudioTours);
 
   const [activeThreadId, setActiveThreadId] = useState<string>('oc_oanh_thread');
-
-  // Search filter state
-  const [searchText, setSearchText] = useState('');
 
   // Authentication interception states
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -47,6 +47,33 @@ function AppContent() {
   const [qrStatus, setQrStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const userEmail = user ? user.email : 'Chưa đăng nhập';
+  const activeChatUserId = user?.id ?? 'usr_3';
+  const activeChatRestaurantId = user?.role === 'Owner' ? user.restaurantId : undefined;
+
+  const getThreadSortTime = (value: string) => {
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? 0 : time;
+  };
+
+  const sortThreads = (items: ChatThread[]) =>
+    [...items].sort((a, b) => getThreadSortTime(b.lastMessageTime) - getThreadSortTime(a.lastMessageTime));
+
+  const replaceChatThreads = (items: ChatThread[]) => {
+    const sorted = sortThreads(items);
+    setChatThreads(sorted);
+    setActiveThreadId((prev) => (sorted.some((thread) => thread.id === prev) ? prev : sorted[0]?.id ?? ''));
+  };
+
+  const upsertThread = useCallback((incoming: ChatThread) => {
+    setChatThreads((prev) => {
+      const exists = prev.some((thread) => thread.id === incoming.id);
+      const next = exists
+        ? prev.map((thread) => (thread.id === incoming.id ? { ...thread, ...incoming } : thread))
+        : [incoming, ...prev];
+
+      return sortThreads(next);
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,14 +82,18 @@ function AppContent() {
       try {
         const [remoteRestaurants, remoteThreads, remoteTours] = await Promise.all([
           getRestaurants(),
-          getChatThreads(),
+          getChatThreads(
+            activeChatRestaurantId
+              ? { restaurantId: activeChatRestaurantId }
+              : { userId: activeChatUserId }
+          ),
           getAudioTours()
         ]);
 
         if (cancelled) return;
 
         if (remoteRestaurants.length > 0) setRestaurants(remoteRestaurants);
-        if (remoteThreads.length > 0) setChatThreads(remoteThreads);
+        replaceChatThreads(remoteThreads);
         if (remoteTours.length > 0) setAudioTours(remoteTours);
       } catch (error) {
         console.warn('CraveMap API unavailable, using local seed data.', error);
@@ -74,7 +105,7 @@ function AppContent() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [activeChatRestaurantId, activeChatUserId]);
 
   // Detect QR Token inside URL on load
   useEffect(() => {
@@ -131,15 +162,37 @@ function AppContent() {
     }
   };
 
+  const handleMapSearchSelect = (restaurantId: string) => {
+    setSelectedRestaurantId(null);
+    setCurrentTab('map');
+    setMapSearchSelection({ restaurantId, requestId: Date.now() });
+  };
+
   const handleRefreshThreads = async () => {
     try {
-      const remoteThreads = await getChatThreads();
-      if (remoteThreads.length > 0) {
-        setChatThreads(remoteThreads);
-      }
+      const remoteThreads = await getChatThreads(
+        activeChatRestaurantId
+          ? { restaurantId: activeChatRestaurantId }
+          : { userId: activeChatUserId }
+      );
+      replaceChatThreads(remoteThreads);
     } catch (error) {
       console.warn('Failed to refresh chat threads:', error);
     }
+  };
+
+  const handleContactRestaurant = async (restaurantId: string) => {
+    requireAuth('Bạn cần đăng nhập bằng tài khoản để chat với quán ăn.', async () => {
+      try {
+        const thread = await ensureChatThread(restaurantId, activeChatUserId);
+        upsertThread(thread);
+        setActiveThreadId(thread.id);
+        setSelectedRestaurantId(null);
+        setCurrentTab('inbox');
+      } catch (error) {
+        console.error('Failed to open restaurant chat:', error);
+      }
+    });
   };
 
   const handleAddPost = async (newPost: { content: string; image: string; rating: number; locationName: string }) => {
@@ -177,33 +230,11 @@ function AppContent() {
       date: bookingDetails.date,
       time: bookingDetails.time,
       guests: bookingDetails.guests,
-      seating: bookingDetails.seating
-    }).catch(() => undefined);
-
-    const bookingMessageText = `📅 BOOKING CONFIRMED: Table for ${bookingDetails.guests} on ${bookingDetails.date} at ${bookingDetails.time} (${bookingDetails.seating} choice)`;
-
-    setTimeout(() => {
-      setChatThreads((prevThreads) =>
-        prevThreads.map((thread) => {
-          if (thread.restaurantId === 'oc_oanh') {
-            const bookingMsg: ChatMessage = {
-              id: `booking_notif_${Date.now()}`,
-              sender: 'restaurant',
-              text: bookingMessageText,
-              timestamp: 'Just now'
-            };
-            return {
-              ...thread,
-              lastMessageText: bookingMessageText,
-              lastMessageTime: 'Now',
-              unreadCount: thread.unreadCount + 1,
-              messages: [...thread.messages, bookingMsg]
-            };
-          }
-          return thread;
-        })
-      );
-    }, 1200);
+      seating: bookingDetails.seating,
+      userId: activeChatUserId
+    })
+      .then(() => handleRefreshThreads())
+      .catch(() => undefined);
   };
 
   const handleRestaurantUpdated = (updated: Restaurant) => {
@@ -228,16 +259,7 @@ function AppContent() {
             const relevantTour = audioTours.find((t) => t.title.toLowerCase().includes('seafood')) || audioTours[0];
             setActiveAudioTour(relevantTour);
           }}
-          onGoToChat={() => {
-            requireAuth('Bạn cần đăng nhập bằng tài khoản để chat với quán ăn.', () => {
-              const matchOanh = chatThreads.find((t) => t.restaurantId === 'oc_oanh');
-              if (matchOanh) {
-                setActiveThreadId(matchOanh.id);
-              }
-              setSelectedRestaurantId(null);
-              setCurrentTab('inbox');
-            });
-          }}
+          onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
           requireAuth={requireAuth}
         />
       );
@@ -250,7 +272,8 @@ function AppContent() {
             restaurants={restaurants}
             onSelectRestaurant={handleSelectRestaurant}
             onSelectTour={handleSelectTour}
-            searchText={searchText}
+            onContactRestaurant={handleContactRestaurant}
+            searchSelection={mapSearchSelection}
           />
         );
       case 'discover':
@@ -258,7 +281,7 @@ function AppContent() {
           <PageDiscover
             tours={audioTours}
             onPlayTour={(tour) => setActiveAudioTour(tour)}
-            searchText={searchText}
+            searchText=""
           />
         );
       case 'create':
@@ -268,11 +291,14 @@ function AppContent() {
           <PageInbox
             threads={chatThreads}
             activeThreadId={activeThreadId}
+            userId={activeChatUserId}
+            restaurantId={activeChatRestaurantId}
+            currentUserRole={user?.role ?? 'User'}
             onSelectThread={(tid) => {
               setActiveThreadId(tid);
-              setChatThreads((prev) => prev.map((t) => (t.id === tid ? { ...t, unreadCount: 0 } : t)));
+              setChatThreads((prev) => sortThreads(prev.map((t) => (t.id === tid ? { ...t, unreadCount: 0 } : t))));
             }}
-            onRefreshThreads={handleRefreshThreads}
+            onThreadUpdated={upsertThread}
           />
         );
       case 'profile':
@@ -293,7 +319,8 @@ function AppContent() {
             restaurants={restaurants}
             onSelectRestaurant={handleSelectRestaurant}
             onSelectTour={handleSelectTour}
-            searchText={searchText}
+            onContactRestaurant={handleContactRestaurant}
+            searchSelection={mapSearchSelection}
           />
         );
     }
@@ -319,8 +346,10 @@ function AppContent() {
           }
         }}
         unreadInboxCount={unreadInboxCount}
-        searchText={searchText}
-        onSearchChange={setSearchText}
+        restaurants={restaurants}
+        searchQuery={mapSearchQuery}
+        onSearchQueryChange={setMapSearchQuery}
+        onSearchRestaurantSelect={handleMapSearchSelect}
       />
 
       {/* Floating QR scan notification banner */}

@@ -70,3 +70,6 @@ desktop.ini
 *.temp
 *.swp
 *.swo
+
+# User configuration
+backend/Foodio.API/appsettings.json

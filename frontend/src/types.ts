@@ -69,22 +69,42 @@ export interface CommunityPost {
 
 export interface ChatMessage {
   id: string;
-  sender: 'user' | 'restaurant';
+  chatThreadId?: string;
+  sender: 'user' | 'restaurant' | 'system';
+  senderId?: string;
   text: string;
   timestamp: string;
   status?: 'sent' | 'delivered' | 'read';
+  messageType?: 'Text' | 'Booking' | 'Image';
+  isSystemNotification?: boolean;
+  booking?: BookingMessagePayload | null;
+  imageData?: string | null;
+  imageFileName?: string | null;
+  createdAt?: string;
 }
 
 export interface ChatThread {
   id: string;
   restaurantId: string;
+  userId?: string;
   name: string;
   avatar: string;
+  customerName?: string;
+  customerAvatar?: string;
   statusText: string;
   lastMessageText: string;
   lastMessageTime: string;
   unreadCount: number;
   messages: ChatMessage[];
+}
+
+export interface BookingMessagePayload {
+  bookingId: number;
+  date: string;
+  time: string;
+  guests: number;
+  seating: string;
+  status: string;
 }
 
 export interface AudioTour {

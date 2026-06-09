@@ -4,18 +4,51 @@
  */
 
 import { useState } from 'react';
-import { Search, X, SlidersHorizontal, Map, Compass, PlusCircle, Mail, User } from 'lucide-react';
+import { Search, X, MapPin, Star, Map, Compass, PlusCircle, Mail, User } from 'lucide-react';
+import { Restaurant } from '../types';
 
 interface NavBarProps {
   currentTab: 'map' | 'discover' | 'create' | 'inbox' | 'profile';
   onChangeTab: (tab: 'map' | 'discover' | 'create' | 'inbox' | 'profile') => void;
   unreadInboxCount: number;
-  searchText: string;
-  onSearchChange: (text: string) => void;
+  restaurants: Restaurant[];
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
+  onSearchRestaurantSelect: (restaurantId: string) => void;
 }
 
-export default function NavBar({ currentTab, onChangeTab, unreadInboxCount, searchText, onSearchChange }: NavBarProps) {
-  const [showSearchInput, setShowSearchInput] = useState(false);
+// Strip Vietnamese diacritics so searches like "oc", "Óc", and "Ốc" match the same restaurants.
+const normalizeString = (str: string) =>
+  str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/đ/g, 'd');
+
+export default function NavBar({
+  currentTab,
+  onChangeTab,
+  unreadInboxCount,
+  restaurants,
+  searchQuery,
+  onSearchQueryChange,
+  onSearchRestaurantSelect
+}: NavBarProps) {
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  const normalizedSearchQuery = normalizeString(searchQuery.trim());
+  const searchSuggestions = normalizedSearchQuery
+    ? restaurants
+        .filter((restaurant) => {
+          const searchableText = normalizeString(
+            `${restaurant.name} ${restaurant.category} ${restaurant.address} ${restaurant.area}`
+          );
+          return searchableText.includes(normalizedSearchQuery);
+        })
+        .slice(0, 8)
+    : [];
+
+  const showSearchSuggestions = currentTab === 'map' && isSearchFocused && normalizedSearchQuery.length > 0;
 
   return (
     <>
@@ -82,47 +115,74 @@ export default function NavBar({ currentTab, onChangeTab, unreadInboxCount, sear
           </button>
         </div>
 
-        {/* Right Search & Filter Action Bar */}
-        <div className="flex items-center gap-2">
-          {showSearchInput ? (
-            <div className="flex items-center border-2 border-[#1a1a1a] bg-white px-2 py-1 shadow-[2px_2px_0px_0px_#1a1a1a] transition-all duration-200">
-              <Search size={14} className="text-[#1a1a1a]/60 mr-1" />
-              <input 
-                type="text" 
-                value={searchText} 
-                onChange={(e) => onSearchChange(e.target.value)} 
-                placeholder="Tìm món ăn, địa điểm..." 
-                className="text-xs font-mono bg-transparent outline-none w-36 sm:w-56"
-                autoFocus
-              />
-              <button 
-                onClick={() => {
-                  onSearchChange('');
-                  setShowSearchInput(false);
+        {currentTab === 'map' ? (
+          <div className="relative w-[52vw] max-w-[390px] min-w-[180px] z-[9999]">
+            <div className="flex items-center gap-2 bg-white border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] px-3 py-2">
+              <Search size={17} className="text-[#e2533b] shrink-0" strokeWidth={2.5} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  onSearchQueryChange(e.target.value);
+                  setIsSearchFocused(true);
                 }}
-                className="hover:text-[#e2533b] cursor-pointer ml-1 select-none font-bold"
-              >
-                <X size={14} strokeWidth={3} />
-              </button>
+                onFocus={() => setIsSearchFocused(true)}
+                placeholder="Search Vinh Khanh..."
+                className="min-w-0 flex-1 bg-transparent outline-none font-mono text-[10px] sm:text-[11px] text-[#1a1a1a] placeholder:text-[#1a1a1a]/45"
+                aria-label="Search restaurants on the map"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => onSearchQueryChange('')}
+                  aria-label="Clear map search text"
+                  className="w-7 h-7 flex items-center justify-center text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-90 transition-all cursor-pointer"
+                >
+                  <X size={16} strokeWidth={3} />
+                </button>
+              )}
             </div>
-          ) : (
-            <button 
-              onClick={() => setShowSearchInput(true)}
-              aria-label="Search food locations"
-              className="text-[#e2533b] hover:bg-[#1a1a1a]/5 transition-colors p-2 rounded-full flex items-center justify-center cursor-pointer"
-            >
-              <Search size={20} className="font-semibold" />
-            </button>
-          )}
 
-          <button 
-            onClick={() => setShowSearchInput(!showSearchInput)}
-            aria-label="Filter category types"
-            className="text-[#e2533b] hover:bg-[#1a1a1a]/5 transition-colors p-2 rounded-full flex items-center justify-center cursor-pointer"
-          >
-            <SlidersHorizontal size={20} />
-          </button>
-        </div>
+            {showSearchSuggestions && (
+              <div className="absolute top-[calc(100%+10px)] right-0 left-0 bg-white border-2 border-[#1a1a1a] shadow-[4px_4px_0px_0px_#1a1a1a] max-h-[320px] overflow-y-auto z-[9999] hide-scrollbar">
+                {searchSuggestions.length > 0 ? (
+                  searchSuggestions.map((restaurant) => (
+                    <button
+                      key={restaurant.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        onSearchRestaurantSelect(restaurant.id);
+                        setIsSearchFocused(false);
+                      }}
+                      className="w-full p-3 text-left border-b border-[#1a1a1a]/10 last:border-b-0 hover:bg-[#f9f7f2] active:bg-[#f2eee6] transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <MapPin size={16} className="mt-0.5 text-[#e2533b] shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-serif italic font-bold text-sm text-[#1a1a1a] truncate">{restaurant.name}</p>
+                          <p className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 truncate">
+                            {restaurant.category} // {restaurant.area}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-0.5 bg-[#e2533b] text-white px-1.5 py-0.5 shrink-0">
+                          <Star size={9} className="fill-white text-white" />
+                          <span className="font-mono text-[9px] font-bold">{restaurant.rating}</span>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-3 font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/50">
+                    No restaurants found
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="w-[92px]" aria-hidden="true" />
+        )}
       </header>
 
       {/* Bottom Layout Menu Tab Navigation (Mobile only, visible on < md breakpoint, centered on full width) */}

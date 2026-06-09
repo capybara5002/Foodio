@@ -36,8 +36,17 @@ export function getCommunityPosts() {
   return getJson<CommunityPost[]>('/api/cravemap/community-posts');
 }
 
-export function getChatThreads() {
-  return getJson<ChatThread[]>('/api/cravemap/chat-threads');
+export function getChatThreads(params?: { userId?: string; restaurantId?: string } | string) {
+  const searchParams = new URLSearchParams();
+  if (typeof params === 'string') {
+    searchParams.set('userId', params);
+  } else if (params) {
+    if (params.userId) searchParams.set('userId', params.userId);
+    if (params.restaurantId) searchParams.set('restaurantId', params.restaurantId);
+  }
+
+  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  return getJson<ChatThread[]>(`/api/cravemap/chat-threads${query}`);
 }
 
 export function getAudioTours() {
@@ -52,12 +61,17 @@ export function sendChatMessage(threadId: string, message: ChatMessage) {
   return postJson<ChatMessage>(`/api/cravemap/chat-threads/${threadId}/messages`, message);
 }
 
+export function ensureChatThread(restaurantId: string, userId: string) {
+  return postJson<ChatThread>('/api/cravemap/chat-threads/ensure', { restaurantId, userId });
+}
+
 export function createBooking(booking: {
   restaurantId: string;
   date: string;
   time: string;
   guests: number;
   seating: string;
+  userId?: string;
 }) {
   return postJson('/api/cravemap/bookings', booking);
 }
