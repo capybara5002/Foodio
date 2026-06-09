@@ -82,4 +82,7 @@ public static class MappingExtensions
 
     public static AudioTourDto ToDto(this AudioTour tour) =>
         new(tour.Id, tour.Title, tour.Location, tour.Image, tour.MapImage, tour.IsTrending, tour.Rating, tour.Duration, tour.StopsCount, tour.Vibe, tour.Description);
+
+    public static BookingDto ToDto(this Booking booking) =>
+        new(booking.Id, booking.RestaurantId, booking.Date, booking.Time, booking.Guests, booking.Seating, booking.Status);
 }
