@@ -19,14 +19,18 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
   const [durationSec, setDurationSec] = useState(150); // total seconds representation
   const [narrative, setNarrative] = useState('');
   const [isLoadingNarrative, setIsLoadingNarrative] = useState(false);
-  
-  const isSelfUpdating = useRef(false);
 
+  // Keep progress in a ref to access the latest value in the useEffect without causing dependency triggers
+  const progressRef = useRef(progress);
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
+
+  // Interval timer to update the progress bar visually
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (isPlaying && tour && durationSec > 0) {
       interval = setInterval(() => {
-        isSelfUpdating.current = true;
         setProgress((prev) => {
           const next = prev + (100 / durationSec);
           if (next >= 100) {
@@ -40,6 +44,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     return () => clearInterval(interval);
   }, [isPlaying, tour, durationSec]);
 
+  // Load narrative when tour changes
   useEffect(() => {
     if (!tour) return;
 
@@ -67,43 +72,69 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     };
   }, [tour]);
 
+  // Handle TTS play / pause when state changes (decoupled from progress updates)
   useEffect(() => {
     if (!tour || !narrative || !('speechSynthesis' in window)) return;
 
-    if (isSelfUpdating.current) {
-      isSelfUpdating.current = false;
-      return;
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      const currentProgress = progressRef.current;
+      const startIndex = Math.floor((currentProgress / 100) * narrative.length);
+      const subText = narrative.substring(startIndex);
+      
+      if (!subText.trim()) {
+        setIsPlaying(false);
+        setProgress(100);
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(subText);
+      utterance.rate = 0.95;
+      utterance.pitch = 1;
+      utterance.lang = 'en-US';
+      utterance.onend = () => {
+        setIsPlaying(false);
+        setProgress(100);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } else {
+      window.speechSynthesis.cancel();
     }
-
-    window.speechSynthesis.cancel();
-
-    if (!isPlaying) return;
-
-    const startIndex = Math.floor((progress / 100) * narrative.length);
-    const subText = narrative.substring(startIndex);
-    if (!subText.trim()) {
-      setIsPlaying(false);
-      setProgress(100);
-      return;
-    }
-
-    const utterance = new SpeechSynthesisUtterance(subText);
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    utterance.lang = 'en-US';
-    utterance.onend = () => {
-      setIsPlaying(false);
-      setProgress(100);
-    };
-
-    window.speechSynthesis.speak(utterance);
 
     return () => window.speechSynthesis.cancel();
-  }, [isPlaying, narrative, tour, progress]);
+  }, [isPlaying, narrative, tour]);
+
+  // Seek handler called on user interactions
+  const handleSeek = (newProgress: number) => {
+    const clampedProgress = Math.max(0, Math.min(100, newProgress));
+    setProgress(clampedProgress);
+    
+    if (isPlaying && narrative && ('speechSynthesis' in window)) {
+      window.speechSynthesis.cancel();
+      const startIndex = Math.floor((clampedProgress / 100) * narrative.length);
+      const subText = narrative.substring(startIndex);
+      
+      if (subText.trim()) {
+        const utterance = new SpeechSynthesisUtterance(subText);
+        utterance.rate = 0.95;
+        utterance.pitch = 1;
+        utterance.lang = 'en-US';
+        utterance.onend = () => {
+          setIsPlaying(false);
+          setProgress(100);
+        };
+        window.speechSynthesis.speak(utterance);
+      } else {
+        setIsPlaying(false);
+        setProgress(100);
+      }
+    }
+  };
 
   const handlePlayPause = () => {
     if (progress >= 100) {
-      setProgress(0);
+      handleSeek(0);
       setIsPlaying(true);
     } else {
       setIsPlaying(!isPlaying);
@@ -193,10 +224,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
               min="0" 
               max="100" 
               value={progress} 
-              onChange={(e) => {
-                isSelfUpdating.current = false;
-                setProgress(Number(e.target.value));
-              }}
+              onChange={(e) => handleSeek(Number(e.target.value))}
               className="absolute inset-0 w-full opacity-0 cursor-pointer"
             />
           </div>
@@ -211,7 +239,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           <button 
             type="button"
             className="text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-95 transition-transform"
-            onClick={() => setProgress(Math.max(0, progress - 10))}
+            onClick={() => handleSeek(progress - 10)}
           >
             <RotateCcw size={20} />
           </button>
@@ -227,7 +255,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           <button 
             type="button"
             className="text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-95 transition-transform"
-            onClick={() => setProgress(Math.min(100, progress + 10))}
+            onClick={() => handleSeek(progress + 10)}
           >
             <RotateCw size={20} />
           </button>
