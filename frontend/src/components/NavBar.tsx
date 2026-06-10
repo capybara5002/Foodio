@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Search, X, MapPin, Star, Map, Compass, PlusCircle, Mail, User, Globe } from 'lucide-react';
+import { Search, X, MapPin, Star, Map, Compass, Mail, User, Globe } from 'lucide-react';
 import { Restaurant } from '../types';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
@@ -90,13 +90,6 @@ export default function NavBar({
             className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 flex items-center gap-1.5 ${currentTab === 'discover' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
           >
             <Compass size={14} className={currentTab === 'discover' ? 'fill-current' : ''} /> {t('nav.discover')}
-          </button>
-          <button 
-            type="button"
-            onClick={() => onChangeTab('create')}
-            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 flex items-center gap-1.5 ${currentTab === 'create' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
-          >
-            <PlusCircle size={14} className={currentTab === 'create' ? 'fill-current' : ''} /> {t('nav.review')}
           </button>
           <button 
             type="button"
@@ -236,25 +229,6 @@ export default function NavBar({
           )}
           <span className={`font-label-sm text-[9px] uppercase tracking-wider mt-0.5 ${currentTab === 'discover' ? 'font-black text-[#e2533b]' : 'text-[#1a1a1a]/60'}`}>
             {t('nav.discover')}
-          </span>
-        </button>
- 
-        {/* Create Tab */}
-        <button 
-          onClick={() => onChangeTab('create')}
-          className={`flex flex-col items-center justify-center py-1 flex-1 relative cursor-pointer group`}
-        >
-          {currentTab === 'create' ? (
-            <div className="bg-[#e2533b] text-white rounded px-4 py-1 flex items-center justify-center shadow-md select-none">
-              <PlusCircle size={18} className="fill-current" />
-            </div>
-          ) : (
-            <div className="p-1 rounded text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5 transition-colors duration-150 select-none">
-              <PlusCircle size={18} />
-            </div>
-          )}
-          <span className={`font-label-sm text-[9px] uppercase tracking-wider mt-0.5 ${currentTab === 'create' ? 'font-black text-[#e2533b]' : 'text-[#1a1a1a]/60'}`}>
-            {t('nav.review')}
           </span>
         </button>
  

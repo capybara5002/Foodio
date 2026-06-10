@@ -125,42 +125,6 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     }
   };
 
-  // Seek handler called on user interactions
-  const handleSeek = (newProgress: number) => {
-    const clampedProgress = Math.max(0, Math.min(100, newProgress));
-    setProgress(clampedProgress);
-    
-    if (isPlaying && narrative && ('speechSynthesis' in window)) {
-      window.speechSynthesis.cancel();
-      const startIndex = Math.floor((clampedProgress / 100) * narrative.length);
-      const subText = narrative.substring(startIndex);
-      
-      if (subText.trim()) {
-        const utterance = new SpeechSynthesisUtterance(subText);
-        utterance.rate = 0.95;
-        utterance.pitch = 1;
-        utterance.lang = 'en-US';
-        utterance.onend = () => {
-          setIsPlaying(false);
-          setProgress(100);
-        };
-        window.speechSynthesis.speak(utterance);
-      } else {
-        setIsPlaying(false);
-        setProgress(100);
-      }
-    }
-  };
-
-  const handlePlayPause = () => {
-    if (progress >= 100) {
-      handleSeek(0);
-      setIsPlaying(true);
-    } else {
-      setIsPlaying(!isPlaying);
-    }
-  };
-
   if (!tour) return null;
 
   // Format progression text
