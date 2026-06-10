@@ -93,7 +93,6 @@ public class AdminController : ControllerBase
             return NotFound("User not found.");
         }
 
-        // Soft delete
         user.IsActive = false;
         await _db.SaveChangesAsync();
 
@@ -232,6 +231,155 @@ public class AdminController : ControllerBase
         r.AdminNote,
         r.CreatedAt,
         r.ReviewedAt);
+
+    // ── Audio Tour Management ──
+
+    [HttpGet("audio-tours")]
+    public async Task<ActionResult<IReadOnlyList<AudioTourDto>>> GetAudioTours()
+    {
+        var tours = await _db.AudioTours
+            .OrderBy(t => t.Title)
+            .ToListAsync();
+        return Ok(tours.Select(t => t.ToDto()).ToList());
+    }
+
+    [HttpPost("audio-tours")]
+    public async Task<ActionResult<AudioTourDto>> CreateAudioTour(AudioTourDto dto)
+    {
+        var tour = new AudioTour
+        {
+            Id = $"tour_{Guid.NewGuid():N}"[..Math.Min(20, 64)],
+            Title = dto.Title,
+            Location = dto.Location,
+            Image = string.IsNullOrWhiteSpace(dto.Image) ? "https://images.unsplash.com/photo-1559737558-2f5a35f4523b" : dto.Image,
+            MapImage = string.IsNullOrWhiteSpace(dto.MapImage) ? "https://images.unsplash.com/photo-1559737558-2f5a35f4523b" : dto.MapImage,
+            IsTrending = dto.IsTrending,
+            Rating = dto.Rating,
+            Duration = dto.Duration,
+            StopsCount = dto.StopsCount,
+            Vibe = dto.Vibe,
+            Description = dto.Description
+        };
+
+        _db.AudioTours.Add(tour);
+        await _db.SaveChangesAsync();
+
+        return Ok(tour.ToDto());
+    }
+
+    [HttpPut("audio-tours/{id}")]
+    public async Task<ActionResult<AudioTourDto>> UpdateAudioTour(string id, AudioTourDto dto)
+    {
+        var tour = await _db.AudioTours.FindAsync(id);
+        if (tour == null)
+        {
+            return NotFound("Audio tour not found.");
+        }
+
+        tour.Title = dto.Title;
+        tour.Location = dto.Location;
+        tour.Image = dto.Image;
+        tour.MapImage = dto.MapImage;
+        tour.IsTrending = dto.IsTrending;
+        tour.Rating = dto.Rating;
+        tour.Duration = dto.Duration;
+        tour.StopsCount = dto.StopsCount;
+        tour.Vibe = dto.Vibe;
+        tour.Description = dto.Description;
+
+        await _db.SaveChangesAsync();
+
+        return Ok(tour.ToDto());
+    }
+
+    [HttpDelete("audio-tours/{id}")]
+    public async Task<IActionResult> DeleteAudioTour(string id)
+    {
+        var tour = await _db.AudioTours.FindAsync(id);
+        if (tour == null)
+        {
+            return NotFound("Audio tour not found.");
+        }
+
+        _db.AudioTours.Remove(tour);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    // ── Moderation System ──
+
+    [HttpGet("posts")]
+    public async Task<ActionResult<IReadOnlyList<CommunityPostDto>>> GetPosts()
+    {
+        var posts = await _db.CommunityPosts
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync();
+        return Ok(posts.Select(p => p.ToDto()).ToList());
+    }
+
+    [HttpDelete("posts/{id}")]
+    public async Task<IActionResult> DeletePost(string id)
+    {
+        var post = await _db.CommunityPosts.FindAsync(id);
+        if (post == null)
+        {
+            return NotFound("Post not found.");
+        }
+
+        _db.CommunityPosts.Remove(post);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    [HttpGet("reviews")]
+    public async Task<ActionResult<IReadOnlyList<AdminReviewDto>>> GetReviews()
+    {
+        var reviews = await _db.Reviews
+            .Include(r => r.Restaurant)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+
+        var dtos = reviews.Select(r => new AdminReviewDto(
+            r.Id,
+            r.RestaurantId,
+            r.Restaurant?.Name ?? "",
+            r.Author,
+            r.Role,
+            r.Rating,
+            r.Comment,
+            r.CreatedAt
+        )).ToList();
+
+        return Ok(dtos);
+    }
+
+    [HttpDelete("reviews/{id}")]
+    public async Task<IActionResult> DeleteReview(string id)
+    {
+        var review = await _db.Reviews.FindAsync(id);
+        if (review == null)
+        {
+            return NotFound("Review not found.");
+        }
+
+        _db.Reviews.Remove(review);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    public record AdminReviewDto(
+        string Id,
+        string RestaurantId,
+        string RestaurantName,
+        string Author,
+        string Role,
+        decimal Rating,
+        string Comment,
+        DateTimeOffset CreatedAt
+    );
 
     private static string CreateSlugId(string name)
     {

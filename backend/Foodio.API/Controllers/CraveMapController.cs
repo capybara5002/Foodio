@@ -1,7 +1,11 @@
 using Foodio.API.Data;
 using Foodio.API.DTOs;
+using Foodio.API.Hubs;
 using Foodio.API.Models;
+using Foodio.API.Services;
+using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Foodio.API.Controllers;
@@ -11,10 +15,14 @@ namespace Foodio.API.Controllers;
 public class CraveMapController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IChatService _chatService;
+    private readonly IHubContext<ChatHub> _chatHub;
 
-    public CraveMapController(AppDbContext db)
+    public CraveMapController(AppDbContext db, IChatService chatService, IHubContext<ChatHub> chatHub)
     {
         _db = db;
+        _chatService = chatService;
+        _chatHub = chatHub;
     }
 
     [HttpGet("restaurants")]
@@ -157,94 +165,109 @@ public class CraveMapController : ControllerBase
     }
 
     [HttpGet("chat-threads")]
-    public async Task<ActionResult<IReadOnlyList<ChatThreadDto>>> GetChatThreads()
+    [HttpGet("/api/chatthreads")]
+    public async Task<ActionResult<IReadOnlyList<ChatThreadDto>>> GetChatThreads([FromQuery] string? userId, [FromQuery] string? restaurantId)
     {
-        var threads = await _db.ChatThreads
-            .AsNoTracking()
-            .Include(thread => thread.Messages)
-            .OrderBy(thread => thread.Name)
-            .ToListAsync();
+        var threads = await _chatService.GetThreadsAsync(userId, restaurantId);
+        return Ok(threads);
+    }
 
-        return Ok(threads.Select(thread => thread.ToDto()).ToList());
+    [HttpGet("/api/chatthreads/restaurant/{restaurantId}")]
+    public async Task<ActionResult<IReadOnlyList<ChatThreadDto>>> GetRestaurantChatThreads(string restaurantId)
+    {
+        if (string.IsNullOrWhiteSpace(restaurantId))
+        {
+            return BadRequest("RestaurantId is required.");
+        }
+
+        var threads = await _chatService.GetThreadsAsync(restaurantId: restaurantId);
+        return Ok(threads);
+    }
+
+    [HttpPost("chat-threads/ensure")]
+    public async Task<ActionResult<ChatThreadDto>> EnsureChatThread([FromBody] EnsureChatThreadDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.RestaurantId))
+        {
+            return BadRequest("RestaurantId is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.UserId))
+        {
+            return BadRequest("UserId is required.");
+        }
+
+        try
+        {
+            var thread = await _chatService.EnsureThreadAsync(dto.RestaurantId, dto.UserId);
+            await _chatHub.Clients.Group($"restaurant:{thread.RestaurantId}").SendAsync("ThreadUpdated", thread);
+            return Ok(thread);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (DbUpdateException ex)
+        {
+            return BadRequest($"Could not create chat thread: {ex.GetBaseException().Message}");
+        }
+        catch (Exception ex)
+        {
+            return BadRequest($"Could not create chat thread: {ex.Message}");
+        }
     }
 
     [HttpPost("chat-threads/{threadId}/messages")]
-    public async Task<ActionResult<ChatMessageDto>> SendChatMessage(string threadId, ChatMessageDto dto)
+    public async Task<ActionResult<ChatMessageDto>> SendChatMessage(string threadId, [FromBody] ChatMessageDto dto)
     {
-        var thread = await _db.ChatThreads.FindAsync(threadId);
-        if (thread is null)
+        var senderId = string.IsNullOrWhiteSpace(dto.SenderId) ? dto.Sender : dto.SenderId;
+        var message = await _chatService.CreateTextMessageAsync(threadId, senderId, dto.Text);
+        if (message is null)
         {
             return NotFound();
         }
 
-        var message = new ChatMessage
+        await _chatHub.Clients.Group(threadId).SendAsync("ReceiveMessage", message);
+        var thread = await _chatService.GetThreadAsync(threadId);
+        if (thread is not null)
         {
-            Id = string.IsNullOrWhiteSpace(dto.Id) ? $"msg_{Guid.NewGuid():N}" : dto.Id,
-            ChatThreadId = threadId,
-            Sender = dto.Sender,
-            Text = dto.Text,
-            Timestamp = string.IsNullOrWhiteSpace(dto.Timestamp) ? "Just now" : dto.Timestamp,
-            Status = dto.Status,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
+            await _chatHub.Clients.Group(threadId).SendAsync("ThreadUpdated", thread);
+            await _chatHub.Clients.Group($"restaurant:{thread.RestaurantId}").SendAsync("ThreadUpdated", thread);
+        }
 
-        thread.LastMessageText = message.Text;
-        thread.LastMessageTime = message.Timestamp;
-
-        _db.ChatMessages.Add(message);
-        await _db.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetChatThreads), message.ToDto());
+        return CreatedAtAction(nameof(GetChatThreads), message);
     }
 
     [HttpGet("/api/chatthreads/{threadId}/messages")]
     public async Task<ActionResult<IReadOnlyList<ChatMessageDto>>> GetChatThreadMessages(string threadId)
     {
-        var thread = await _db.ChatThreads
-            .AsNoTracking()
-            .Include(t => t.Messages)
-            .FirstOrDefaultAsync(t => t.Id == threadId);
-
-        if (thread is null)
+        var messages = await _chatService.GetMessagesAsync(threadId);
+        if (messages is null)
         {
             return NotFound();
         }
 
-        var messagesDto = thread.Messages
-            .OrderBy(m => m.CreatedAt)
-            .Select(m => m.ToDto())
-            .ToList();
-
-        return Ok(messagesDto);
+        return Ok(messages);
     }
 
     [HttpPost("/api/chatmessages")]
-    public async Task<ActionResult<ChatMessageDto>> CreateChatMessageDirect(ChatMessageCreationDto dto)
+    public async Task<ActionResult<ChatMessageDto>> CreateChatMessageDirect([FromBody] ChatMessageCreationDto dto)
     {
-        var thread = await _db.ChatThreads.FindAsync(dto.ChatThreadId);
-        if (thread is null)
+        var message = await _chatService.CreateDirectMessageAsync(dto);
+        if (message is null)
         {
             return NotFound("Chat thread not found.");
         }
 
-        var message = new ChatMessage
+        await _chatHub.Clients.Group(dto.ChatThreadId).SendAsync("ReceiveMessage", message);
+        var thread = await _chatService.GetThreadAsync(dto.ChatThreadId);
+        if (thread is not null)
         {
-            Id = $"msg_{Guid.NewGuid():N}",
-            ChatThreadId = dto.ChatThreadId,
-            Sender = dto.Sender,
-            Text = dto.Text,
-            Timestamp = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7)).ToString("h:mm tt"),
-            Status = "sent",
-            CreatedAt = DateTimeOffset.UtcNow
-        };
+            await _chatHub.Clients.Group(dto.ChatThreadId).SendAsync("ThreadUpdated", thread);
+            await _chatHub.Clients.Group($"restaurant:{thread.RestaurantId}").SendAsync("ThreadUpdated", thread);
+        }
 
-        thread.LastMessageText = message.Text;
-        thread.LastMessageTime = message.Timestamp;
-
-        _db.ChatMessages.Add(message);
-        await _db.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetChatThreads), message.ToDto());
+        return CreatedAtAction(nameof(GetChatThreads), message);
     }
 
     [HttpGet("audio-tours")]
@@ -260,9 +283,25 @@ public class CraveMapController : ControllerBase
     }
 
     [HttpPost("bookings")]
-    public async Task<ActionResult<BookingDto>> CreateBooking(BookingRequestDto dto)
+    public async Task<ActionResult<BookingDto>> CreateBooking([FromBody] BookingRequestDto dto)
     {
-        if (!DateOnly.TryParse(dto.Date, out var date) || !TimeOnly.TryParse(dto.Time, out var time))
+        if (string.IsNullOrWhiteSpace(dto.RestaurantId))
+        {
+            return BadRequest("RestaurantId is required.");
+        }
+
+        if (dto.Guests <= 0)
+        {
+            return BadRequest("Guests must be greater than zero.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Seating))
+        {
+            return BadRequest("Seating is required.");
+        }
+
+        if (!DateOnly.TryParseExact(dto.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ||
+            !TimeOnly.TryParseExact(dto.Time, new[] { "h:mm tt", "hh:mm tt", "HH:mm" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time))
         {
             return BadRequest("Date and time must be valid ISO-compatible values.");
         }
@@ -286,6 +325,21 @@ public class CraveMapController : ControllerBase
 
         _db.Bookings.Add(booking);
         await _db.SaveChangesAsync();
+
+        var threadDto = await _chatService.EnsureThreadAsync(dto.RestaurantId, dto.UserId ?? "usr_3");
+        var thread = await _db.ChatThreads.FindAsync(threadDto.Id);
+        if (thread is not null)
+        {
+            var bookingMessage = await _chatService.CreateBookingMessageAsync(thread, booking);
+            await _chatHub.Clients.Group(thread.Id).SendAsync("ReceiveMessage", bookingMessage);
+
+            var updatedThread = await _chatService.GetThreadAsync(thread.Id);
+            if (updatedThread is not null)
+            {
+                await _chatHub.Clients.Group(thread.Id).SendAsync("ThreadUpdated", updatedThread);
+                await _chatHub.Clients.Group($"restaurant:{updatedThread.RestaurantId}").SendAsync("ThreadUpdated", updatedThread);
+            }
+        }
 
         var response = new BookingDto(booking.Id, booking.RestaurantId, booking.Date, booking.Time, booking.Guests, booking.Seating, booking.Status);
         return CreatedAtAction(nameof(CreateBooking), response);

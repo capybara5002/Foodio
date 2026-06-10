@@ -13,6 +13,10 @@ public class ChatThread
     public string RestaurantId { get; set; } = string.Empty;
 
     [Required]
+    [MaxLength(64)]
+    public string UserId { get; set; } = "shared_user";
+
+    [Required]
     [MaxLength(160)]
     public string Name { get; set; } = string.Empty;
 

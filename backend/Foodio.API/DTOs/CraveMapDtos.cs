@@ -92,26 +92,51 @@ public record CreatePostCommentDto(
 
 public record ChatMessageDto(
     string Id,
+    string ChatThreadId,
     string Sender,
+    string SenderId,
     string Text,
     string Timestamp,
-    string? Status);
+    string? Status,
+    string MessageType,
+    bool IsSystemNotification,
+    BookingMessageDto? Booking,
+    string? ImageData,
+    string? ImageFileName,
+    DateTimeOffset CreatedAt);
 
 public record ChatMessageCreationDto(
     string Sender,
     string Text,
-    string ChatThreadId);
+    string ChatThreadId,
+    string? SenderId = null,
+    string? MessageType = null,
+    string? ImageData = null,
+    string? ImageFileName = null);
 
 public record ChatThreadDto(
     string Id,
     string RestaurantId,
+    string UserId,
     string Name,
     string Avatar,
+    string CustomerName,
+    string CustomerAvatar,
     string StatusText,
     string LastMessageText,
     string LastMessageTime,
     int UnreadCount,
     IReadOnlyList<ChatMessageDto> Messages);
+
+public record EnsureChatThreadDto(string RestaurantId, string UserId);
+
+public record BookingMessageDto(
+    int BookingId,
+    string Date,
+    string Time,
+    int Guests,
+    string Seating,
+    string Status);
 
 public record AudioTourDto(
     string Id,
@@ -131,7 +156,8 @@ public record BookingRequestDto(
     string Date,
     string Time,
     int Guests,
-    string Seating);
+    string Seating,
+    string? UserId = null);
 
 public record BookingDto(
     int Id,

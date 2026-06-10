@@ -10,7 +10,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 
 import { Restaurant } from '../types';
-import { X, BadgeCheck, Star, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight } from 'lucide-react';
+import { X, BadgeCheck, Star, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, MessageSquare } from 'lucide-react';
 
 // Standard Leaflet asset fixes for Vite builds to prevent broken image references
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -28,6 +28,7 @@ interface PageMapProps {
   restaurants: Restaurant[];
   onSelectRestaurant: (id: string) => void;
   onSelectTour: () => void;
+  onContactRestaurant: (restaurantId: string) => void;
   searchSelection: { restaurantId: string; requestId: number } | null;
 }
 
@@ -229,7 +230,7 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
   return null;
 }
 
-export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, searchSelection }: PageMapProps) {
+export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, onContactRestaurant, searchSelection }: PageMapProps) {
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [locateTrigger, setLocateTrigger] = useState(false);
   const [gpsNotification, setGpsNotification] = useState(false);
@@ -497,6 +498,15 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                   className="w-full flex items-center justify-center gap-1 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3 px-4 rounded-none shadow-md active:scale-98 transition-all font-mono text-[9px] uppercase tracking-widest cursor-pointer"
                 >
                   View Full Info & Book // 🔗
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onContactRestaurant(activeRestaurant.id)}
+                  className="w-full flex items-center justify-center gap-2 bg-white hover:bg-[#f9f7f2] text-[#1a1a1a] py-3 px-4 rounded-none shadow-sm border-2 border-[#1a1a1a] active:scale-98 transition-all font-mono text-[9px] uppercase tracking-widest cursor-pointer"
+                >
+                  <MessageSquare size={15} />
+                  Liên hệ quán
                 </button>
 
                 {/* Address Card details */}

@@ -187,9 +187,9 @@ export const initialChatThreads: ChatThread[] = [
     ]
   },
   {
-    id: 'pho_bm_thread',
-    restaurantId: 'pho_binh_minh',
-    name: 'Pho Binh Minh',
+    id: 'pho_quynh_thread',
+    restaurantId: 'pho_quynh',
+    name: 'Phở Quỳnh',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCZqCeNm5IsfZ_YY8-efaFSVUlbd6SKoh3qY9iqvhm2Hn7i6XE9rWmaFZPDVdihMVTxP7nxzu7V2oPo0PzVksJLUQVY05wdqQ0tNCYHgesFLmXBRDpfpKyC0Ewx4JVqce3Fd3S4yroIC5_crsaMAxily8GUG5f3V2QWL7IHReqtGN2yVglHN28nhF3td8MBiS4Gj1WZmXa-GxGfUZ7wYvqsmfB_XNjyDUg-rhsG86tki7sdZTK09smSx5Yu2IClx28t4hrWF14Kyg',
     statusText: 'Replies in few hours',
     lastMessageText: 'Your reservation is confirmed!',

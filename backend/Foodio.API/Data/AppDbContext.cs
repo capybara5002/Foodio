@@ -61,6 +61,10 @@ public class AppDbContext : DbContext
             .HasForeignKey(thread => thread.RestaurantId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<ChatThread>()
+            .HasIndex(thread => new { thread.RestaurantId, thread.UserId })
+            .IsUnique();
+
         modelBuilder.Entity<ChatMessage>()
             .HasOne(message => message.ChatThread)
             .WithMany(thread => thread.Messages)
@@ -231,15 +235,17 @@ public class AppDbContext : DbContext
         );
 
         modelBuilder.Entity<ChatThread>().HasData(
-            new ChatThread { Id = "oc_oanh_thread", RestaurantId = "oc_oanh", Name = "Oc Oanh", Avatar = seafoodImage, StatusText = "Usually replies in 5m", LastMessageText = "Perfect. We will hold an outdoor table for you.", LastMessageTime = "Now", UnreadCount = 0 },
-            new ChatThread { Id = "banh_mi_25_thread", RestaurantId = "banh_mi_25", Name = "Banh Mi 25", Avatar = banhMiImage, StatusText = "Replies in 1h", LastMessageText = "We are sold out for today, sorry!", LastMessageTime = "Yesterday", UnreadCount = 0 });
+            new ChatThread { Id = "oc_oanh_thread", RestaurantId = "oc_oanh", UserId = "usr_3", Name = "Oc Oanh", Avatar = seafoodImage, StatusText = "Usually replies in 5m", LastMessageText = "Perfect. We will hold an outdoor table for you.", LastMessageTime = createdAt.AddMinutes(3).ToString("O"), UnreadCount = 0 },
+            new ChatThread { Id = "pho_quynh_thread", RestaurantId = "pho_quynh", UserId = "usr_3", Name = "Pho Quynh", Avatar = phoImage, StatusText = "Replies in standard hours", LastMessageText = "Your reservation is confirmed!", LastMessageTime = createdAt.AddMinutes(4).ToString("O"), UnreadCount = 1 },
+            new ChatThread { Id = "banh_mi_25_thread", RestaurantId = "banh_mi_25", UserId = "usr_3", Name = "Banh Mi 25", Avatar = banhMiImage, StatusText = "Replies in 1h", LastMessageText = "We are sold out for today, sorry!", LastMessageTime = createdAt.AddDays(-1).ToString("O"), UnreadCount = 0 });
 
         modelBuilder.Entity<ChatMessage>().HasData(
-            new ChatMessage { Id = "msg_1", ChatThreadId = "oc_oanh_thread", Sender = "user", Text = "Hi, do you have a table for 4 tonight around 7 PM?", Timestamp = "4:30 PM", Status = "read", CreatedAt = createdAt },
-            new ChatMessage { Id = "msg_2", ChatThreadId = "oc_oanh_thread", Sender = "restaurant", Text = "Hello! Yes, we have space. Do you prefer indoor or street-side outdoor seating?", Timestamp = "4:32 PM", Status = null, CreatedAt = createdAt },
-            new ChatMessage { Id = "msg_3", ChatThreadId = "oc_oanh_thread", Sender = "restaurant", Text = "Perfect. We will hold an outdoor table for you.", Timestamp = "Just now", Status = null, CreatedAt = createdAt },
-            new ChatMessage { Id = "msg_bm25_1", ChatThreadId = "banh_mi_25_thread", Sender = "user", Text = "Do you still have original pate banh mi?", Timestamp = "Yesterday", Status = "read", CreatedAt = createdAt },
-            new ChatMessage { Id = "msg_bm25_2", ChatThreadId = "banh_mi_25_thread", Sender = "restaurant", Text = "We are sold out for today, sorry!", Timestamp = "Yesterday", Status = null, CreatedAt = createdAt });
+            new ChatMessage { Id = "msg_1", ChatThreadId = "oc_oanh_thread", Sender = "user", SenderId = "usr_3", Text = "Hi, do you have a table for 4 tonight around 7 PM?", Timestamp = "4:30 PM", Status = "read", MessageType = "Text", CreatedAt = createdAt },
+            new ChatMessage { Id = "msg_2", ChatThreadId = "oc_oanh_thread", Sender = "restaurant", SenderId = "owner_oc_oanh", Text = "Hello! Yes, we have space. Do you prefer indoor or street-side outdoor seating?", Timestamp = "4:32 PM", Status = null, MessageType = "Text", CreatedAt = createdAt.AddMinutes(2) },
+            new ChatMessage { Id = "msg_3", ChatThreadId = "oc_oanh_thread", Sender = "restaurant", SenderId = "owner_oc_oanh", Text = "Perfect. We will hold an outdoor table for you.", Timestamp = "Just now", Status = null, MessageType = "Text", CreatedAt = createdAt.AddMinutes(3) },
+            new ChatMessage { Id = "msg_pq_1", ChatThreadId = "pho_quynh_thread", Sender = "system", SenderId = "system", Text = "Your reservation is confirmed!", Timestamp = "10:42 AM", Status = null, MessageType = "Text", IsSystemNotification = true, CreatedAt = createdAt.AddMinutes(4) },
+            new ChatMessage { Id = "msg_bm25_1", ChatThreadId = "banh_mi_25_thread", Sender = "user", SenderId = "usr_3", Text = "Do you still have original pate banh mi?", Timestamp = "Yesterday", Status = "read", MessageType = "Text", CreatedAt = createdAt.AddDays(-1) },
+            new ChatMessage { Id = "msg_bm25_2", ChatThreadId = "banh_mi_25_thread", Sender = "restaurant", SenderId = "owner_banh_mi_25", Text = "We are sold out for today, sorry!", Timestamp = "Yesterday", Status = null, MessageType = "Text", CreatedAt = createdAt.AddDays(-1).AddMinutes(2) });
 
         modelBuilder.Entity<AudioTour>().HasData(
             new AudioTour { Id = "tour_1", Title = "Midnight Snacking", Location = "District 1 and District 4 alleys", Image = seafoodImage, MapImage = seafoodImage, IsTrending = true, Rating = 4.9m, Duration = "2.5 hrs", StopsCount = 6, Vibe = "Energetic", Description = "A vibrant nighttime walk through seafood alleys, noodle counters, and quick snack stops." },

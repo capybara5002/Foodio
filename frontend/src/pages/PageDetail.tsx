@@ -199,9 +199,10 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             type="button"
             onClick={onGoToChat}
             aria-label="Direct message with restaurant owner"
-            className="flex items-center justify-center w-12 h-12 bg-white border border-[#1a1a1a]/25 text-on-surface hover:bg-[#f9f7f2] rounded-none shadow-sm active:scale-95 transition-transform cursor-pointer"
+            className="flex items-center justify-center gap-2 bg-white border border-[#1a1a1a]/25 text-on-surface hover:bg-[#f9f7f2] rounded-none shadow-sm active:scale-95 transition-transform cursor-pointer px-4 h-12 font-mono text-[10px] uppercase tracking-widest font-bold"
           >
             <MessageSquare size={18} />
+            Liên hệ quán
           </button>
         </section>
 
