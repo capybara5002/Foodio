@@ -314,7 +314,11 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
           {!loading && !error && posts.map((post) => (
             <article
               key={post.id}
-              className="bg-white rounded-none border border-[#1a1a1a]/15 shadow-sm overflow-hidden flex flex-col"
+              className={`bg-white rounded-none border-2 shadow-sm overflow-hidden flex flex-col transition-all duration-300 ${
+                post.isRestaurantPost
+                  ? 'border-[#e2533b] shadow-[4px_4px_0px_0px_rgba(226,83,59,0.15)] bg-amber-50/5'
+                  : 'border-[#1a1a1a]/15'
+              }`}
             >
               {/* User profile header badge row */}
               <div className="p-4 flex items-center gap-3 border-b border-[#1a1a1a]/5">
@@ -325,8 +329,13 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                 />
 
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-mono text-xs font-bold text-[#1a1a1a] truncate">
-                    {post.handle}
+                  <h3 className="font-mono text-xs font-bold text-[#1a1a1a] truncate flex items-center gap-1.5 flex-wrap">
+                    <span>{post.handle}</span>
+                    {post.isRestaurantPost && (
+                      <span className="bg-[#e2533b] text-white text-[8px] font-mono uppercase px-1 py-0.5 font-black tracking-wider flex items-center gap-0.5 select-none shrink-0 rounded-xs">
+                        👑 {t('owner.official_badge', 'CHÍNH THỨC')}
+                      </span>
+                    )}
                   </h3>
                   <p className="font-sans text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 mt-0.5">
                     {post.timeAgo}

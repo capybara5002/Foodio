@@ -141,6 +141,12 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
           </button>
         </section>
 
+        {restaurant.description && (
+          <section className="text-xs md:text-sm text-[#1a1a1a]/80 leading-relaxed font-sans border-l-3 border-[#e2533b] pl-3.5 italic py-1 bg-[#fdfcf9] border border-[#1a1a1a]/10 rounded-sm">
+            {restaurant.description}
+          </section>
+        )}
+
         {/* Contact and address specification box */}
         <section className="flex flex-col gap-3 p-4 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-xs text-[#1a1a1a]">
           

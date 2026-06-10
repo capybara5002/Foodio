@@ -66,6 +66,21 @@ IF COL_LENGTH('dbo.ChatMessages', 'ImageFileName') IS NULL
 BEGIN
     ALTER TABLE dbo.ChatMessages ADD ImageFileName NVARCHAR(260) NULL;
 END
+
+IF COL_LENGTH('dbo.Restaurants', 'Description') IS NULL
+BEGIN
+    ALTER TABLE dbo.Restaurants ADD Description NVARCHAR(MAX) NOT NULL DEFAULT '';
+END
+
+IF COL_LENGTH('dbo.Restaurants', 'TableStatuses') IS NULL
+BEGIN
+    ALTER TABLE dbo.Restaurants ADD TableStatuses NVARCHAR(MAX) NULL;
+END
+
+IF COL_LENGTH('dbo.CommunityPosts', 'IsRestaurantPost') IS NULL
+BEGIN
+    ALTER TABLE dbo.CommunityPosts ADD IsRestaurantPost BIT NOT NULL CONSTRAINT DF_CommunityPosts_IsRestaurantPost DEFAULT 0;
+END
 ");
     }
 }

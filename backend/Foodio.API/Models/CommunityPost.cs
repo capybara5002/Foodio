@@ -43,5 +43,6 @@ public class CommunityPost
     public int CommentsCount { get; set; }
     public bool IsLiked { get; set; }
     public bool IsSaved { get; set; }
+    public bool IsRestaurantPost { get; set; } = false;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

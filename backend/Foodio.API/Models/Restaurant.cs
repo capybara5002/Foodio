@@ -35,6 +35,11 @@ public class Restaurant
     [MaxLength(80)]
     public string OpeningHours { get; set; } = string.Empty;
 
+    [MaxLength(2000)]
+    public string Description { get; set; } = string.Empty;
+
+    public string? TableStatuses { get; set; }
+
     [Required]
     [MaxLength(1000)]
     public string Image { get; set; } = string.Empty;

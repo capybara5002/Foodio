@@ -221,5 +221,33 @@
       "delete": "Xóa",
       "saving": "Đang tải dữ liệu..."
     }
+  },
+  "owner": {
+    "description": "Mô tả quán ăn",
+    "description_placeholder": "Nhập mô tả chi tiết của quán ăn...",
+    "table_map": "Sơ đồ bàn",
+    "table_layout": "SƠ ĐỒ BÀN ĂN CHI TIẾT",
+    "table_legend": "Trạng thái bàn",
+    "table_vacant": "Bàn trống",
+    "table_reserved": "Đã đặt",
+    "table_occupied": "Đã có người",
+    "add_table": "Thêm bàn ăn",
+    "table_number": "Số bàn",
+    "capacity": "Sức chứa",
+    "edit_table": "Chỉnh sửa bàn",
+    "seats": "chỗ ngồi",
+    "save_layout": "Lưu sơ đồ bàn",
+    "layout_saved_success": "Đã lưu sơ đồ bàn thành công!",
+    "no_tables": "Chưa thiết lập sơ đồ bàn. Nhấp 'Thêm bàn ăn' để bắt đầu thiết kế!",
+    "status_updated": "Đã cập nhật trạng thái bàn ăn!",
+    "posts": "Bài đăng",
+    "create_post": "Đăng bài viết mới",
+    "post_content": "Nội dung bài viết",
+    "post_content_placeholder": "Nhập thông báo, khuyến mãi hoặc tin tức từ quán của bạn...",
+    "post_image": "Link ảnh đính kèm (URL)",
+    "post_image_placeholder": "Nhập link hình ảnh món ăn hoặc khuyến mãi (URL)...",
+    "publish_btn": "Đăng lên bảng tin // 📢",
+    "publish_success": "Đăng bài viết lên bảng tin thành công!",
+    "official_badge": "CHÍNH THỨC"
   }
 }

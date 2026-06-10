@@ -37,6 +37,8 @@ public record RestaurantDto(
     string Address,
     string Area,
     string OpeningHours,
+    string Description,
+    string? TableStatuses,
     string Image,
     bool IsVerified,
     string ReplySpeed,
@@ -57,6 +59,8 @@ public record RestaurantUpsertDto(
     string Address,
     string Area,
     string OpeningHours,
+    string Description,
+    string? TableStatuses,
     string Image,
     bool IsVerified,
     string ReplySpeed,
@@ -77,7 +81,8 @@ public record CommunityPostDto(
     int LikesCount,
     int CommentsCount,
     bool IsLiked,
-    bool IsSaved);
+    bool IsSaved,
+    bool IsRestaurantPost = false);
 
 public record ChatMessageDto(
     string Id,

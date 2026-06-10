@@ -221,5 +221,33 @@
       "delete": "Delete",
       "saving": "Loading dashboard data..."
     }
+  },
+  "owner": {
+    "description": "Restaurant Description",
+    "description_placeholder": "Enter detailed description of your restaurant...",
+    "table_map": "Table Map",
+    "table_layout": "DETAILED TABLE MAP",
+    "table_legend": "Table Status",
+    "table_vacant": "Vacant",
+    "table_reserved": "Reserved",
+    "table_occupied": "Occupied",
+    "add_table": "Add Table",
+    "table_number": "Table Number",
+    "capacity": "Capacity",
+    "edit_table": "Edit Table",
+    "seats": "seats",
+    "save_layout": "Save Table Map",
+    "layout_saved_success": "Table map saved successfully!",
+    "no_tables": "No table map set up. Click 'Add Table' to start designing!",
+    "status_updated": "Table status updated!",
+    "posts": "Posts",
+    "create_post": "Create Official Post",
+    "post_content": "Post Content",
+    "post_content_placeholder": "Enter announcement, promotion or news from your restaurant...",
+    "post_image": "Attached Image Link (URL)",
+    "post_image_placeholder": "Enter promotional or dish image link (URL)...",
+    "publish_btn": "Publish to Feed // 📢",
+    "publish_success": "Successfully published announcement to feed!",
+    "official_badge": "OFFICIAL"
   }
 }

@@ -43,6 +43,8 @@ export interface Restaurant {
   address: string;
   area: string;
   openingHours: string;
+  description?: string;
+  tableStatuses?: string;
   image: string;
   isVerified: boolean;
   replySpeed: string;
@@ -66,6 +68,7 @@ export interface CommunityPost {
   commentsCount: number;
   isLiked: boolean;
   isSaved: boolean;
+  isRestaurantPost?: boolean;
 }
 
 export interface ChatMessage {
