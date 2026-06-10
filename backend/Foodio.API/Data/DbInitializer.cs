@@ -11,16 +11,13 @@ public static class DbInitializer
         try
         {
             await context.Users.AnyAsync();
-            await EnsureChatSchemaAsync(context);
+            await context.PostComments.AnyAsync();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            try
-            {
-                await context.Database.EnsureDeletedAsync();
-            }
-            catch (Exception) { }
-            await context.Database.EnsureCreatedAsync();
+            throw new InvalidOperationException(
+                "Could not initialize the SQL Server database. Check ConnectionStrings:DefaultConnection in appsettings.Development.json or appsettings.json.",
+                ex);
         }
     }
 
