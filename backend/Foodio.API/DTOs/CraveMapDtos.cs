@@ -37,6 +37,8 @@ public record RestaurantDto(
     string Address,
     string Area,
     string OpeningHours,
+    string Description,
+    string? TableStatuses,
     string Image,
     bool IsVerified,
     string ReplySpeed,
@@ -57,6 +59,8 @@ public record RestaurantUpsertDto(
     string Address,
     string Area,
     string OpeningHours,
+    string Description,
+    string? TableStatuses,
     string Image,
     bool IsVerified,
     string ReplySpeed,
@@ -77,7 +81,8 @@ public record CommunityPostDto(
     int LikesCount,
     int CommentsCount,
     bool IsLiked,
-    bool IsSaved);
+    bool IsSaved,
+    bool IsRestaurantPost = false);
 
 public record PostCommentDto(
     string Id,
@@ -175,11 +180,16 @@ public record UserDto(
     string Role,
     string? RestaurantId,
     bool IsActive,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? Avatar);
 
 public record UserLoginRequestDto(string Email, string Password);
 
 public record UserRegisterRequestDto(string Username, string Email, string Password);
+
+public record UpdatePasswordRequestDto(string Email, string CurrentPassword, string NewPassword);
+
+public record UpdateAvatarRequestDto(string Email, string Avatar);
 
 public record UserCreateUpdateDto(
     string Username,

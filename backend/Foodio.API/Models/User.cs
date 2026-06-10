@@ -28,6 +28,9 @@ public class User
     [MaxLength(64)]
     public string? RestaurantId { get; set; }
 
+    [MaxLength(2000)]
+    public string? Avatar { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

@@ -30,6 +30,7 @@ export interface User {
   tableNumber?: number;
   isActive: boolean;
   createdAt?: string;
+  avatar?: string;
 }
 
 export interface Restaurant {
@@ -42,6 +43,8 @@ export interface Restaurant {
   address: string;
   area: string;
   openingHours: string;
+  description?: string;
+  tableStatuses?: string;
   image: string;
   isVerified: boolean;
   replySpeed: string;
@@ -65,6 +68,7 @@ export interface CommunityPost {
   commentsCount: number;
   isLiked: boolean;
   isSaved: boolean;
+  isRestaurantPost?: boolean;
 }
 
 export interface PostComment {
@@ -133,6 +137,18 @@ export interface AudioTour {
 export interface Category {
   id: number;
   name: string;
+  slug?: string;
+  icon?: string;
+}
+
+export interface FoodStreet {
+  id: number;
+  name: string;
+  district: string;
+  description: string;
+  centerLatitude: number;
+  centerLongitude: number;
+  openingWindow: string;
 }
 
 export interface RestaurantRequest {

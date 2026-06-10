@@ -6,6 +6,7 @@
 import { useState, FormEvent } from 'react';
 import { Restaurant } from '../types';
 import { BadgeCheck, X, Calendar, Flame, Store, CheckCircle2, Ticket } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface BookingModalProps {
   restaurant: Restaurant | null;
@@ -20,6 +21,7 @@ interface BookingModalProps {
 }
 
 export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }: BookingModalProps) {
+  const { t } = useTranslation();
   const [date, setDate] = useState('2026-05-27');
   const [selectedTime, setSelectedTime] = useState('7:00 PM');
   const [guests, setGuests] = useState(4);
@@ -62,10 +64,10 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
             {/* Header */}
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="font-serif italic font-bold text-lg text-[#1a1a1a]">Book a Table</h3>
+                <h3 className="font-serif italic font-bold text-lg text-[#1a1a1a]">{t('booking.title')}</h3>
                 <p className="font-sans text-[11px] text-[#1a1a1a]/60 flex items-center gap-1.5 mt-1 font-light">
                   <BadgeCheck size={14} className="fill-[#e2533b] text-white" />
-                  At {restaurant.name}
+                  {t('booking.at_restaurant', { name: restaurant.name })}
                 </p>
               </div>
               <button 
@@ -82,7 +84,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
             {/* Date Input */}
             <div className="flex flex-col gap-1">
               <label className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold">
-                Select Date
+                {t('booking.select_date')}
               </label>
               <div className="relative flex items-center bg-white border border-[#1a1a1a]/15 rounded-none px-3 py-1.5">
                 <Calendar size={16} className="text-[#e2533b] mr-2" />
@@ -99,7 +101,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
             {/* Time Slot Picker */}
             <div className="flex flex-col gap-1.5">
               <label className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold">
-                Select Time Slot
+                {t('booking.select_time')}
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {timeSlots.map((time) => (
@@ -122,7 +124,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
             {/* Capacity Options */}
             <div className="flex flex-col gap-1.5">
               <label className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold">
-                Number of Guests
+                {t('booking.guests_count')}
               </label>
               <div className="grid grid-cols-6 gap-1">
                 {capacities.map((capacity) => (
@@ -145,7 +147,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
             {/* Seating Preference Toggle */}
             <div className="flex flex-col gap-1.5">
               <label className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold">
-                Seating Choice
+                {t('booking.seating_choice')}
               </label>
               <div className="grid grid-cols-2 gap-2.5">
                 <button
@@ -158,7 +160,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                   }`}
                 >
                   <Flame size={16} />
-                  <span className="font-mono text-[9px] uppercase tracking-wider">Street outdoor</span>
+                  <span className="font-mono text-[9px] uppercase tracking-wider">{t('booking.street_outdoor')}</span>
                 </button>
                 <button
                   type="button"
@@ -170,7 +172,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                   }`}
                 >
                   <Store size={16} />
-                  <span className="font-mono text-[9px] uppercase tracking-wider">Indoor Room</span>
+                  <span className="font-mono text-[9px] uppercase tracking-wider">{t('booking.indoor_room')}</span>
                 </button>
               </div>
             </div>
@@ -180,7 +182,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
               type="submit"
               className="mt-2 w-full bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest py-3 rounded-none shadow-md active:scale-[0.98] transition-all cursor-pointer"
             >
-              Confirm Reservation // 📝
+              {t('booking.confirm_button')}
             </button>
           </form>
         ) : (
@@ -192,9 +194,9 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
             </div>
 
             <div className="flex flex-col gap-1 mt-2">
-              <h3 className="font-headline-lg font-bold text-xl text-on-surface">Đặt bàn thành công!</h3>
+              <h3 className="font-headline-lg font-bold text-xl text-on-surface">{t('booking.success_title')}</h3>
               <p className="font-body-md text-sm text-on-surface-variant max-w-xs">
-                {restaurant.name} is waiting for you! We have secured an outdoor spot at our street-side tables on <strong>{date} at {selectedTime}</strong> for <strong>{guests} guests</strong>.
+                {t('booking.success_message', { name: restaurant.name, date, time: selectedTime, guests })}
               </p>
             </div>
 
@@ -202,8 +204,8 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
             <div className="bg-surface-container-low border border-outline-variant/40 rounded-xl p-3 w-full text-left flex gap-3 items-center mt-2">
               <Ticket size={20} className="text-[#1a1a1a]/70" />
               <div>
-                <p className="font-label-lg text-[13px] text-on-surface font-bold">Booking Reference: #CM-79352</p>
-                <p className="font-body-sm text-[11px] text-on-surface-variant">Present this ticket when checking in</p>
+                <p className="font-label-lg text-[13px] text-on-surface font-bold">{t('booking.reference', { ref: '#CM-79352' })}</p>
+                <p className="font-body-sm text-[11px] text-on-surface-variant">{t('booking.ticket_desc')}</p>
               </div>
             </div>
 
@@ -211,7 +213,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
               onClick={handleDone}
               className="mt-3 w-full bg-primary hover:bg-primary-container text-on-primary font-label-lg text-sm uppercase py-3 rounded-full shadow-md active:scale-95 transition-all text-center"
             >
-              Cám ơn rùi!
+              {t('booking.done_button')}
             </button>
           </div>
         )}

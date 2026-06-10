@@ -57,6 +57,8 @@ public class OwnerController : ControllerBase
         restaurant.Address = dto.Address;
         restaurant.Area = dto.Area;
         restaurant.OpeningHours = dto.OpeningHours;
+        restaurant.Description = dto.Description ?? string.Empty;
+        restaurant.TableStatuses = dto.TableStatuses;
         restaurant.Image = dto.Image;
         restaurant.IsVerified = dto.IsVerified;
         restaurant.ReplySpeed = dto.ReplySpeed;

@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
@@ -231,6 +232,7 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
 }
 
 export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, onContactRestaurant, searchSelection }: PageMapProps) {
+  const { t } = useTranslation();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [locateTrigger, setLocateTrigger] = useState(false);
   const [gpsNotification, setGpsNotification] = useState(false);
@@ -497,7 +499,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                   onClick={() => onSelectRestaurant(activeRestaurant.id)}
                   className="w-full flex items-center justify-center gap-1 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3 px-4 rounded-none shadow-md active:scale-98 transition-all font-mono text-[9px] uppercase tracking-widest cursor-pointer"
                 >
-                  View Full Info & Book // 🔗
+                  {t('map.view_full_info')}
                 </button>
 
                 <button
@@ -506,7 +508,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                   className="w-full flex items-center justify-center gap-2 bg-white hover:bg-[#f9f7f2] text-[#1a1a1a] py-3 px-4 rounded-none shadow-sm border-2 border-[#1a1a1a] active:scale-98 transition-all font-mono text-[9px] uppercase tracking-widest cursor-pointer"
                 >
                   <MessageSquare size={15} />
-                  Liên hệ quán
+                  {t('map.contact_restaurant')}
                 </button>
 
                 {/* Address Card details */}
@@ -605,8 +607,8 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           <Marker position={userLocation} icon={userIcon}>
             <Popup>
               <div className="font-mono text-[10px] text-center uppercase tracking-wider">
-                <strong>Your Position</strong><br />
-                Walk with Arrow Keys
+                <strong>{t('map.your_position')}</strong><br />
+                {t('map.walk_instruction')}
               </div>
             </Popup>
           </Marker>
@@ -652,7 +654,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
         {/* Live GPS Tracker Notification Popup */}
         {gpsNotification && (
           <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-[#e2533b] text-white font-mono text-[9px] uppercase tracking-wider px-3.5 py-2.5 rounded-none shadow-lg z-[1000] border border-white/15 animate-bounce">
-            🎯 Recycled tracking on Vinh Khanh street...
+            {t('map.gps_toast')}
           </div>
         )}
 
@@ -677,9 +679,9 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
             />
             <div className="flex-1 min-w-0 text-left">
               <div className="flex items-center gap-1.5 mb-1 text-[9px] select-none font-semibold">
-                <span className="px-1.5 py-0.5 bg-[#e2533b] text-white rounded-none font-mono uppercase tracking-wider text-[8px]">Curated</span>
+                <span className="px-1.5 py-0.5 bg-[#e2533b] text-white rounded-none font-mono uppercase tracking-wider text-[8px]">{t('map.curated')}</span>
                 <span className="flex items-center text-[#e2533b] font-mono uppercase tracking-wider text-[8px] font-extrabold">
-                  <Flame size={11} className="mr-1 inline-block align-middle fill-current" />Hot
+                  <Flame size={11} className="mr-1 inline-block align-middle fill-current" />{t('map.hot')}
                 </span>
               </div>
               <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] mb-0.5 truncate">Vinh Khanh Night Tour</h3>

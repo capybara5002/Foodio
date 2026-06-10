@@ -143,6 +143,62 @@ public class AuthController : ControllerBase
         }
     }
 
+    [HttpPost("update-password")]
+    public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequestDto request)
+    {
+        var user = await _db.Users
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
+
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        bool isValid = false;
+        if (user.PasswordHash.StartsWith("$2a$") || user.PasswordHash.StartsWith("$2b$") || user.PasswordHash.StartsWith("$2y$"))
+        {
+            try
+            {
+                isValid = BC.Verify(request.CurrentPassword, user.PasswordHash);
+            }
+            catch
+            {
+                isValid = false;
+            }
+        }
+        else
+        {
+            isValid = user.PasswordHash == request.CurrentPassword;
+        }
+
+        if (!isValid)
+        {
+            return BadRequest("Mật khẩu hiện tại không chính xác.");
+        }
+
+        user.PasswordHash = BC.HashPassword(request.NewPassword);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Password updated successfully." });
+    }
+
+    [HttpPost("update-avatar")]
+    public async Task<ActionResult<UserDto>> UpdateAvatar([FromBody] UpdateAvatarRequestDto request)
+    {
+        var user = await _db.Users
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
+
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        user.Avatar = request.Avatar;
+        await _db.SaveChangesAsync();
+
+        return Ok(user.ToDto());
+    }
+
     private class QrPayload
     {
         public string RestaurantId { get; set; } = string.Empty;

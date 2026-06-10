@@ -1,0 +1,253 @@
+{
+  "nav": {
+    "food_map": "Bản đồ ẩm thực",
+    "discover": "Khám phá",
+    "review": "Đánh giá",
+    "inbox": "Hộp thư",
+    "profile": "Cá nhân",
+    "contact": "Liên hệ quán"
+  },
+  "search": {
+    "placeholder": "Tìm kiếm Vĩnh Khánh...",
+    "no_results": "Không tìm thấy quán ăn nào"
+  },
+  "auth": {
+    "not_logged_in": "Chưa đăng nhập",
+    "require_login_booking": "Bạn cần đăng nhập bằng tài khoản để đặt bàn ăn.",
+    "require_login_chat": "Bạn cần đăng nhập bằng tài khoản để chat với quán ăn.",
+    "require_login_post": "Bạn cần đăng nhập bằng tài khoản để tạo bài viết hoặc đánh giá.",
+    "login_title": "Đăng nhập hệ thống Foodio",
+    "guest_mode": "Bàn {{table}} (Chế độ Khách)",
+    "login": "Đăng nhập",
+    "active_user": "Người dùng"
+  },
+  "qr": {
+    "verify_success": "🎯 Quét mã QR thành công! Chào mừng bạn đến bàn {{table}}.",
+    "verify_error": "❌ Không thể xác thực QR: {{error}}"
+  },
+  "footer": {
+    "copyright": "© 2026 Hệ thống khám phá ẩm thực CraveMap. Thiết kế chuẩn giao diện mẫu."
+  },
+  "profile": {
+    "login_required": "Yêu cầu Đăng nhập",
+    "login_required_desc": "Vui lòng đăng nhập tài khoản của bạn để xem thông tin cá nhân hoặc truy cập các công cụ quản trị/chủ quán.",
+    "login_now": "Đăng nhập ngay // 🔑",
+    "personal": "Cá nhân",
+    "admin_console": "Bảng điều khiển Admin",
+    "owner_console": "Quản lý Quán",
+    "member_suffix": "Thành viên",
+    "posts_count": "Bài viết đã đăng",
+    "saved_places": "Địa điểm đã lưu",
+    "app_language": "Ngôn ngữ ứng dụng",
+    "logout": "Đăng xuất tài khoản",
+    "change_avatar": "Thay đổi ảnh đại diện",
+    "preset_avatars": "Chọn ảnh mẫu có sẵn",
+    "custom_avatar_url": "Đường dẫn ảnh tùy chọn (URL)",
+    "update_avatar_success": "Đổi ảnh đại diện thành công!",
+    "update_password": "Đổi mật khẩu",
+    "current_password": "Mật khẩu hiện tại",
+    "new_password": "Mật khẩu mới",
+    "confirm_new_password": "Xác nhận mật khẩu mới",
+    "change_password_btn": "Cập nhật mật khẩu",
+    "password_mismatch": "Mật khẩu xác nhận không trùng khớp!",
+    "password_length_error": "Mật khẩu mới phải từ 6 ký tự trở lên!",
+    "update_password_success": "Đổi mật khẩu thành công!",
+    "update_password_error": "Mật khẩu hiện tại không đúng hoặc xảy ra lỗi!",
+    "saving": "Đang lưu...",
+    "save": "Lưu thay đổi",
+    "cancel": "Hủy"
+  },
+  "map": {
+    "your_position": "Vị trí của bạn",
+    "walk_instruction": "Di chuyển bằng phím mũi tên",
+    "contact_restaurant": "Liên hệ quán",
+    "gps_toast": "🎯 Đang cập nhật định vị trên đường Vĩnh Khánh...",
+    "curated": "Gợi ý",
+    "hot": "HOT",
+    "view_full_info": "Xem chi tiết & Đặt bàn // 🔗"
+  },
+  "discover": {
+    "collection": "Bộ sưu tập",
+    "audio_tours_title": "Audio Tours Ẩm Thực",
+    "audio_tours_desc": "Hành trình ẩm thực sống động được hướng dẫn bởi các chuyên gia bản địa. Hãy cắm tai nghe và khám phá các món ăn đường phố độc đáo.",
+    "all_tours": "Tất cả Tours",
+    "trending": "Thịnh hành",
+    "duration": "Thời lượng",
+    "stops": "Điểm dừng",
+    "atmos": "Không khí",
+    "stops_suffix": "Điểm",
+    "start_audio": "Bắt đầu Audio Tour",
+    "for_you": "Dành cho bạn",
+    "following": "Đang theo dõi",
+    "loading_feed": "Đang tải bảng tin...",
+    "error_feed": "Không thể tải bảng tin. Vui lòng thử lại sau.",
+    "no_posts": "Không tìm thấy bài đăng nào."
+  },
+  "detail": {
+    "share_copied": "🔗 Đã sao chép liên kết! Hãy chia sẻ địa điểm ẩm thực này.",
+    "added_dish": "😋 Đã thêm {{name}} vào danh sách nếm thử của bạn!",
+    "play_audio": "Nghe Audio Hướng dẫn",
+    "signature_dishes": "Món ăn nổi bật",
+    "show_less": "Thu gọn",
+    "see_all": "Xem tất cả",
+    "foodie_reviews": "Đánh giá từ thực khách",
+    "stars_filter": "Số sao:",
+    "all_stars": "Tất cả",
+    "reviews_with_images": "Đánh giá có hình ảnh",
+    "no_reviews": "Không có đánh giá phù hợp bộ lọc.",
+    "book_table": "Đặt bàn ăn // Reserve"
+  },
+  "create": {
+    "rating_label_1": "Tệ quá 😞",
+    "rating_label_2": "Tạm được 😐",
+    "rating_label_3": "Bình thường 😏",
+    "rating_label_4": "Rất ngon! 😋",
+    "rating_label_5": "Tuyệt vời! 😍",
+    "select_stars": "Chọn số sao",
+    "toast_photo_changed": "📸 Đã thay đổi mẫu món ăn khác ngon tuyệt!",
+    "toast_write_experience": "⚠️ Vui lòng viết trải nghiệm của bạn!",
+    "new_post_title": "Tạo bài đăng mới // Review",
+    "post_button": "Đăng",
+    "alt_food": "Món ăn đường phố hấp dẫn",
+    "change_photo": "Thay đổi ảnh ({{current}}/{{total}})",
+    "near_bui_vien": "Đang ở gần Bùi Viện",
+    "rating_question": "Bạn đánh giá món này thế nào?",
+    "placeholder": "Chia sẻ trải nghiệm của bạn về món ăn này... Mùi vị thế nào? Không gian ra sao?",
+    "toast_tag_restaurant": "🏷️ Chọn nhãn quán ăn ở Vinh Khánh!",
+    "tag_restaurant_btn": "Tag Quán",
+    "toast_select_category": "🏷️ Chọn thể loại ẩm thực của món ăn!",
+    "category_btn": "Thể loại",
+    "re_tag_location": "+ Gắn thẻ lại Phở Quỳnh gần Bui Vien"
+  },
+  "booking": {
+    "title": "Đặt bàn ăn",
+    "at_restaurant": "Tại quán {{name}}",
+    "select_date": "Chọn ngày",
+    "select_time": "Chọn khung giờ",
+    "guests_count": "Số lượng khách",
+    "seating_choice": "Vị trí ngồi",
+    "street_outdoor": "Ngoài trời",
+    "indoor_room": "Trong nhà",
+    "confirm_button": "Xác nhận đặt bàn // 📝",
+    "success_title": "Đặt bàn thành công!",
+    "success_message": "{{name}} đang chờ bạn! Chúng tôi đã giữ chỗ ngoài trời tại các bàn cạnh đường phố vào ngày {{date}} lúc {{time}} cho {{guests}} khách.",
+    "reference": "Mã đặt bàn: {{ref}}",
+    "ticket_desc": "Xuất trình vé này khi đến quán ăn",
+    "done_button": "Cám ơn rùi!"
+  },
+  "login": {
+    "error_username": "Vui lòng nhập tên người dùng.",
+    "error_general": "Có lỗi xảy ra, vui lòng thử lại.",
+    "register_title": "Đăng ký Tài khoản",
+    "login_title": "Đăng nhập App",
+    "username": "Tên người dùng",
+    "email": "Địa chỉ Email",
+    "password": "Mật khẩu",
+    "register_button": "Tạo tài khoản",
+    "login_button": "Đăng nhập",
+    "switch_login": "Đã có tài khoản? Đăng nhập ngay",
+    "switch_register": "Chưa có tài khoản? Đăng ký ngay"
+  },
+  "admin": {
+    "dashboard": "Bảng điều khiển Admin",
+    "control_center": "TRUNG TÂM ĐIỀU KHIỂN",
+    "tabs": {
+      "accounts": "Tài khoản",
+      "requests": "Yêu cầu mở quán",
+      "categories": "Danh mục",
+      "streets": "Phố ẩm thực",
+      "tours": "Audio Tours",
+      "moderation": "Kiểm duyệt"
+    },
+    "stats": {
+      "total_accounts": "Tổng tài khoản",
+      "admin": "Admin",
+      "owner": "Chủ quán",
+      "customer": "Thực khách",
+      "suspended": "Đang khóa"
+    },
+    "accounts": {
+      "list_title": "Danh sách Tài khoản",
+      "add_btn": "Thêm tài khoản",
+      "username": "Tên đăng nhập",
+      "email": "Địa chỉ Email",
+      "role": "Vai trò",
+      "linked_restaurant": "Liên kết quán",
+      "status": "Trạng thái",
+      "actions": "Thao tác",
+      "active": "Hoạt động",
+      "locked": "Đã khóa",
+      "unassigned": "Chưa liên kết"
+    },
+    "requests": {
+      "title": "Yêu cầu đăng ký quán ăn",
+      "restaurant": "Quán ăn",
+      "owner": "Chủ sở hữu",
+      "area": "Khu vực",
+      "price": "Mức giá",
+      "street": "Phố ẩm thực",
+      "status": "Trạng thái",
+      "actions": "Thao tác",
+      "approve": "Duyệt",
+      "reject": "Từ chối",
+      "pending": "Đang chờ",
+      "approved": "Đã duyệt",
+      "rejected": "Từ chối",
+      "no_requests": "Chưa có yêu cầu nào."
+    },
+    "categories": {
+      "title": "Danh mục món ăn",
+      "add_btn": "Thêm danh mục"
+    },
+    "streets": {
+      "title": "Khu phố ẩm thực",
+      "add_btn": "Thêm tuyến phố"
+    },
+    "tours": {
+      "title": "Audio Tours khám phá",
+      "add_btn": "Thêm Audio Tour"
+    },
+    "moderation": {
+      "title": "Kiểm duyệt Nội dung",
+      "posts": "Bài viết cộng đồng",
+      "reviews": "Đánh giá khách hàng",
+      "no_posts": "Không có bài viết nào.",
+      "no_reviews": "Không có đánh giá nào.",
+      "delete_post": "Xóa bài",
+      "delete_review": "Xóa review"
+    },
+    "common": {
+      "edit": "Sửa",
+      "delete": "Xóa",
+      "saving": "Đang tải dữ liệu..."
+    }
+  },
+  "owner": {
+    "description": "Mô tả quán ăn",
+    "description_placeholder": "Nhập mô tả chi tiết của quán ăn...",
+    "table_map": "Sơ đồ bàn",
+    "table_layout": "SƠ ĐỒ BÀN ĂN CHI TIẾT",
+    "table_legend": "Trạng thái bàn",
+    "table_vacant": "Bàn trống",
+    "table_reserved": "Đã đặt",
+    "table_occupied": "Đã có người",
+    "add_table": "Thêm bàn ăn",
+    "table_number": "Số bàn",
+    "capacity": "Sức chứa",
+    "edit_table": "Chỉnh sửa bàn",
+    "seats": "chỗ ngồi",
+    "save_layout": "Lưu sơ đồ bàn",
+    "layout_saved_success": "Đã lưu sơ đồ bàn thành công!",
+    "no_tables": "Chưa thiết lập sơ đồ bàn. Nhấp 'Thêm bàn ăn' để bắt đầu thiết kế!",
+    "status_updated": "Đã cập nhật trạng thái bàn ăn!",
+    "posts": "Bài đăng",
+    "create_post": "Đăng bài viết mới",
+    "post_content": "Nội dung bài viết",
+    "post_content_placeholder": "Nhập thông báo, khuyến mãi hoặc tin tức từ quán của bạn...",
+    "post_image": "Link ảnh đính kèm (URL)",
+    "post_image_placeholder": "Nhập link hình ảnh món ăn hoặc khuyến mãi (URL)...",
+    "publish_btn": "Đăng lên bảng tin // 📢",
+    "publish_success": "Đăng bài viết lên bảng tin thành công!",
+    "official_badge": "CHÍNH THỨC"
+  }
+}

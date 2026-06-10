@@ -18,7 +18,7 @@ public static class MappingExtensions
         new(review.Id, review.Author, review.Role, review.Rating, review.Comment, review.Avatar, review.ImageUrl);
 
     public static UserDto ToDto(this User user) =>
-        new(user.Id, user.Username, user.Email, user.Role, user.RestaurantId, user.IsActive, user.CreatedAt);
+        new(user.Id, user.Username, user.Email, user.Role, user.RestaurantId, user.IsActive, user.CreatedAt, user.Avatar);
 
     public static RestaurantDto ToDto(this Restaurant restaurant) =>
         new(
@@ -31,6 +31,8 @@ public static class MappingExtensions
             restaurant.Address,
             restaurant.Area,
             restaurant.OpeningHours,
+            restaurant.Description,
+            restaurant.TableStatuses,
             restaurant.Image,
             restaurant.IsVerified,
             restaurant.ReplySpeed,
@@ -42,7 +44,7 @@ public static class MappingExtensions
             restaurant.Reviews.OrderByDescending(review => review.CreatedAt).Select(review => review.ToDto()).ToList());
 
     public static CommunityPostDto ToDto(this CommunityPost post) =>
-        new(post.Id, post.Author, post.Handle, post.Avatar, post.TimeAgo, post.Rating, post.Image, post.Content, post.LocationName, post.LikesCount, post.CommentsCount, post.IsLiked, post.IsSaved);
+        new(post.Id, post.Author, post.Handle, post.Avatar, post.TimeAgo, post.Rating, post.Image, post.Content, post.LocationName, post.LikesCount, post.CommentsCount, post.IsLiked, post.IsSaved, post.IsRestaurantPost);
 
     public static PostCommentDto ToDto(this PostComment comment) =>
         new(comment.Id, comment.CommunityPostId, comment.Author, comment.Avatar, comment.Content, comment.CreatedAt);

@@ -51,6 +51,8 @@ public class RestaurantsController : ControllerBase
             Address = dto.Address,
             Area = dto.Area,
             OpeningHours = dto.OpeningHours,
+            Description = dto.Description ?? string.Empty,
+            TableStatuses = dto.TableStatuses,
             Image = dto.Image,
             IsVerified = dto.IsVerified,
             ReplySpeed = dto.ReplySpeed,
@@ -87,6 +89,8 @@ public class RestaurantsController : ControllerBase
         restaurant.Address = dto.Address;
         restaurant.Area = dto.Area;
         restaurant.OpeningHours = dto.OpeningHours;
+        restaurant.Description = dto.Description ?? string.Empty;
+        restaurant.TableStatuses = dto.TableStatuses;
         restaurant.Image = dto.Image;
         restaurant.IsVerified = dto.IsVerified;
         restaurant.ReplySpeed = dto.ReplySpeed;

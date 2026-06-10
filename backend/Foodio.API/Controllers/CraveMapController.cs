@@ -118,6 +118,7 @@ public class CraveMapController : ControllerBase
             CommentsCount = dto.CommentsCount,
             IsLiked = dto.IsLiked,
             IsSaved = dto.IsSaved,
+            IsRestaurantPost = dto.IsRestaurantPost,
             CreatedAt = DateTimeOffset.UtcNow
         };
 

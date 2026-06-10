@@ -10,6 +10,8 @@ interface AuthContextType {
   logout: () => void;
   clearQrSession: () => void;
   updateUserRestaurantId: (restaurantId: string) => void;
+  updateAvatar: (avatarUrl: string) => Promise<User>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -124,8 +126,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const updateAvatar = async (avatarUrl: string): Promise<User> => {
+    if (!user) throw new Error('Not logged in');
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const response = await fetch(`${baseUrl}/api/auth/update-avatar`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email: user.email, avatar: avatarUrl }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText || 'Failed to update avatar.');
+    }
+
+    const updatedUser = await response.json();
+    setUser(updatedUser);
+    localStorage.setItem('foodio_user', JSON.stringify(updatedUser));
+    return updatedUser;
+  };
+
+  const updatePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+    if (!user) throw new Error('Not logged in');
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const response = await fetch(`${baseUrl}/api/auth/update-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email: user.email, currentPassword, newPassword }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText || 'Failed to update password.');
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, qrLogin, logout, clearQrSession, updateUserRestaurantId }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, qrLogin, logout, clearQrSession, updateUserRestaurantId, updateAvatar, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

@@ -5,7 +5,11 @@ const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY ?? '';
 const geminiModel = 'gemini-2.5-flash';
 
 async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${apiBase}${path}`);
+  const response = await fetch(`${apiBase}${path}`, {
+    headers: {
+      'Accept-Language': localStorage.getItem('app_lang') || 'vi'
+    }
+  });
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status}`);
   }
@@ -16,7 +20,8 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(`${apiBase}${path}`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Accept-Language': localStorage.getItem('app_lang') || 'vi'
     },
     body: JSON.stringify(body)
   });
