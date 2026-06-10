@@ -1,4 +1,4 @@
-import { AudioTour, ChatMessage, ChatThread, CommunityPost, PostComment, Restaurant } from '../types';
+import { AudioTour, ChatMessage, ChatThread, CommunityPost, FoodieReview, PostComment, Restaurant } from '../types';
 
 const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY ?? '';
@@ -46,6 +46,10 @@ export function getAudioTours() {
 
 export function createCommunityPost(post: CommunityPost) {
   return postJson<CommunityPost>('/api/cravemap/community-posts', post);
+}
+
+export function createReview(restaurantId: string, review: Omit<FoodieReview, 'id'>) {
+  return postJson<FoodieReview>(`/api/restaurants/${restaurantId}/reviews`, review);
 }
 
 export function getPostComments(postId: string) {

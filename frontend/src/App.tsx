@@ -244,6 +244,7 @@ function AppContent() {
             });
           }}
           requireAuth={requireAuth}
+          onRestaurantUpdated={handleRestaurantUpdated}
         />
       );
     }

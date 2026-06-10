@@ -19,7 +19,7 @@ public record DishDto(
     string? Description);
 
 public record FoodieReviewDto(
-    string Id,
+    string? Id,
     string Author,
     string Role,
     decimal Rating,
