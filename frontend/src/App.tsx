@@ -22,8 +22,10 @@ import PageInbox from './pages/PageInbox';
 import PageProfile from './pages/PageProfile';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 function AppContent() {
+  const { t, i18n } = useTranslation();
   const { user, qrLogin, logout } = useAuth();
   const [currentTab, setCurrentTab] = useState<'map' | 'discover' | 'create' | 'inbox' | 'profile'>('map');
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
@@ -46,7 +48,7 @@ function AppContent() {
   // QR verification status banner states
   const [qrStatus, setQrStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const userEmail = user ? user.email : 'Chưa đăng nhập';
+  const userEmail = user ? user.email : t('auth.not_logged_in');
   const activeChatUserId = user?.id ?? 'usr_3';
   const activeChatRestaurantId = user?.role === 'Owner' ? user.restaurantId : undefined;
 
@@ -117,7 +119,7 @@ function AppContent() {
           const guestUser = await qrLogin(qrToken);
           setQrStatus({
             type: 'success',
-            message: `🎯 Quét mã QR thành công! Chào mừng bạn đến bàn ${guestUser.tableNumber}.`
+            message: t('qr.verify_success', { table: guestUser.tableNumber })
           });
           // Redirect to the restaurant scanned if possible
           if (guestUser.restaurantId) {
@@ -127,7 +129,7 @@ function AppContent() {
         } catch (err: any) {
           setQrStatus({
             type: 'error',
-            message: `❌ Không thể xác thực QR: ${err.message || 'Mã hết hạn hoặc không hợp lệ'}`
+            message: t('qr.verify_error', { error: err.message || (i18n.language === 'vi' ? 'Mã hết hạn hoặc không hợp lệ' : 'Code expired or invalid') })
           });
           setTimeout(() => setQrStatus(null), 5000);
         } finally {
@@ -182,7 +184,7 @@ function AppContent() {
   };
 
   const handleContactRestaurant = async (restaurantId: string) => {
-    requireAuth('Bạn cần đăng nhập bằng tài khoản để chat với quán ăn.', async () => {
+    requireAuth(t('auth.require_login_chat'), async () => {
       try {
         const thread = await ensureChatThread(restaurantId, activeChatUserId);
         upsertThread(thread);
@@ -251,7 +253,7 @@ function AppContent() {
           restaurant={selectedRestaurant}
           onBack={() => setSelectedRestaurantId(null)}
           onOpenBooking={() => {
-            requireAuth('Bạn cần đăng nhập bằng tài khoản để đặt bàn ăn.', () => {
+            requireAuth(t('auth.require_login_booking'), () => {
               setIsBookingOpen(true);
             });
           }}
@@ -306,7 +308,7 @@ function AppContent() {
           <PageProfile 
             userEmail={userEmail} 
             onLoginTrigger={() => {
-              setLoginMessage('Đăng nhập hệ thống Foodio');
+              setLoginMessage(t('auth.login_title'));
               setPendingAction(null);
               setIsLoginOpen(true);
             }} 
@@ -336,7 +338,7 @@ function AppContent() {
         currentTab={currentTab}
         onChangeTab={(tab) => {
           if (tab === 'create') {
-            requireAuth('Bạn cần đăng nhập bằng tài khoản để tạo bài viết hoặc đánh giá.', () => {
+            requireAuth(t('auth.require_login_post'), () => {
               setSelectedRestaurantId(null);
               setCurrentTab('create');
             });
@@ -365,12 +367,12 @@ function AppContent() {
       {user?.role === 'Guest' && (
         <div className="fixed bottom-20 left-4 md:bottom-6 md:left-4 z-[45] bg-[#ffe0b2] border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] px-3.5 py-1.5 font-mono text-[9px] font-bold uppercase tracking-wider text-[#e65100] flex items-center gap-1.5 select-none">
           <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-          <span>Bàn {user.tableNumber} (Chế độ Khách)</span>
+          <span>{t('auth.guest_mode', { table: user.tableNumber })}</span>
           <button 
             onClick={logout}
             className="ml-2 underline text-[#1a1a1a] hover:text-[#e2533b]"
           >
-            Đăng nhập
+            {t('auth.login')}
           </button>
         </div>
       )}
@@ -400,10 +402,10 @@ function AppContent() {
 
       {currentTab !== 'map' && (
         <footer className="hidden md:flex bg-surface-container-high text-on-surface-variant font-label-sm text-[11px] py-4 border-t border-outline-variant/20 items-center justify-center gap-2 select-none z-40 relative">
-          <span>© 2026 CraveMap Food Exploration System. Match visual mockup layouts.</span>
+          <span>{t('footer.copyright')}</span>
           <span className="w-1.5 h-1.5 bg-primary rounded-full" />
           <span>
-            User Active: <strong className="font-bold">{userEmail}</strong>
+            {t('auth.active_user')}: <strong className="font-bold">{userEmail}</strong>
           </span>
         </footer>
       )}

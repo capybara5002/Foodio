@@ -6,6 +6,7 @@
 import { useState, FormEvent } from 'react';
 import { PRESET_IMAGES } from '../data';
 import { X, Camera, MapPin, Star, Utensils, Tag, Store } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface PageCreateProps {
   onAddPost: (newPost: {
@@ -18,6 +19,7 @@ interface PageCreateProps {
 }
 
 export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
+  const { t } = useTranslation();
   const [photoIndex, setPhotoIndex] = useState(0);
   const [rating, setRating] = useState(4);
   const [content, setContent] = useState('');
@@ -27,25 +29,25 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
   // Dynamic feedback phrase mapping
   const getRatingLabel = (stars: number) => {
     switch (stars) {
-      case 1: return 'Tệ quá 😞';
-      case 2: return 'Tạm được 😐';
-      case 3: return 'Bình thường 😏';
-      case 4: return 'Rất ngon! 😋';
-      case 5: return 'Tuyệt vời! 😍';
-      default: return 'Chọn số sao';
+      case 1: return t('create.rating_label_1');
+      case 2: return t('create.rating_label_2');
+      case 3: return t('create.rating_label_3');
+      case 4: return t('create.rating_label_4');
+      case 5: return t('create.rating_label_5');
+      default: return t('create.select_stars');
     }
   };
 
   const handleCyclePhoto = () => {
     setPhotoIndex((prev) => (prev + 1) % PRESET_IMAGES.length);
-    setToast('📸 Đã thay đổi mẫu món ăn khác ngon tuyệt!');
+    setToast(t('create.toast_photo_changed'));
     setTimeout(() => setToast(null), 2000);
   };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!content.trim()) {
-      setToast('⚠️ Vui lòng viết trải nghiệm của bạn!');
+      setToast(t('create.toast_write_experience'));
       setTimeout(() => setToast(null), 2000);
       return;
     }
@@ -69,12 +71,12 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
         >
           <X size={14} strokeWidth={3} className="select-none" />
         </button>
-        <span className="font-serif italic font-bold text-sm text-[#1a1a1a]">Tạo bài đăng mới // Review</span>
+        <span className="font-serif italic font-bold text-sm text-[#1a1a1a]">{t('create.new_post_title')}</span>
         <button 
           onClick={handleSubmit}
           className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-[#fdfcf9] font-mono text-[10px] uppercase tracking-widest px-5 py-2 rounded-none shadow-sm active:scale-95 transition-all cursor-pointer"
         >
-          Đăng
+          {t('create.post_button')}
         </button>
       </div>
 
@@ -87,7 +89,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
         >
           <img 
             src={PRESET_IMAGES[photoIndex]} 
-            alt="Món ăn đường phố hấp dẫn" 
+            alt={t('create.alt_food')} 
             className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-transform duration-500" 
           />
           
@@ -95,14 +97,14 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-xs">
             <div className="bg-white text-on-surface px-4 py-2 rounded-none flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider font-bold shadow-lg border border-[#1a1a1a]">
               <Camera size={16} />
-              Thay đổi ảnh ({photoIndex + 1}/{PRESET_IMAGES.length})
+              {t('create.change_photo', { current: photoIndex + 1, total: PRESET_IMAGES.length })}
             </div>
           </div>
-
+ 
           {/* Snail location tag badges matches image */}
           <div className="absolute bottom-4 right-4 bg-white text-[#1a1a1a] px-3 py-1.5 rounded-none flex items-center gap-1.5 shadow border border-[#1a1a1a]/15">
             <MapPin size={16} className="text-[#e2533b]" />
-            <span className="font-mono text-[9px] uppercase tracking-wider font-bold">Đang ở gần Bùi Viện</span>
+            <span className="font-mono text-[9px] uppercase tracking-wider font-bold">{t('create.near_bui_vien')}</span>
           </div>
 
         </div>
@@ -110,7 +112,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
         {/* Rating Stars specification */}
         <div className="bg-white rounded-none p-5 shadow-sm border border-[#1a1a1a]/15 flex flex-col items-center gap-2">
           <span className="font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold select-none">
-            Bạn đánh giá món này thế nào?
+            {t('create.rating_question')}
           </span>
           
           <div className="flex gap-2">
@@ -142,7 +144,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
             value={content}
             onChange={(e) => setContent(e.target.value.slice(0, 500))}
             className="w-full bg-transparent border-0 p-4 font-sans text-xs text-[#1a1a1a] placeholder:text-[#1a1a1a]/40 resize-none focus:ring-0 min-h-[140px] leading-relaxed font-light" 
-            placeholder="Chia sẻ trải nghiệm của bạn về món ăn này... Mùi vị thế nào? Không gian ra sao?"
+            placeholder={t('create.placeholder')}
           />
           
           {/* Metadata action tools row */}
@@ -151,25 +153,25 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
               <button 
                 type="button"
                 onClick={() => {
-                  setToast('🏷️ Chọn nhãn quán ăn ở Vinh Khánh!');
+                  setToast(t('create.toast_tag_restaurant'));
                   setTimeout(() => setToast(null), 2000);
                 }}
                 className="flex items-center gap-1.5 bg-white rounded-none px-2.5 py-1 text-[#1a1a1a] border border-[#1a1a1a]/15 hover:bg-[#f9f7f2] transition-colors shadow-xs cursor-pointer text-[9px] font-mono uppercase tracking-wider font-extrabold"
               >
                 <Utensils size={14} className="text-[#e2533b]" />
-                <span>Tag Quán</span>
+                <span>{t('create.tag_restaurant_btn')}</span>
               </button>
-
+ 
               <button 
                 type="button"
                 onClick={() => {
-                  setToast('🏷️ Chọn thể loại ẩm thực của món ăn!');
+                  setToast(t('create.toast_select_category'));
                   setTimeout(() => setToast(null), 2000);
                 }}
                 className="flex items-center gap-1.5 bg-white rounded-none px-2.5 py-1 text-[#1a1a1a] border border-[#1a1a1a]/15 hover:bg-[#f9f7f2] transition-colors shadow-xs cursor-pointer text-[9px] font-mono uppercase tracking-wider font-extrabold"
               >
                 <Tag size={14} className="text-secondary" />
-                <span>Thể loại</span>
+                <span>{t('create.category_btn')}</span>
               </button>
             </div>
 
@@ -213,7 +215,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
             onClick={() => setHasLocation(true)}
             className="text-[#e2533b] hover:underline font-mono text-[9px] uppercase tracking-wider font-extrabold text-left self-start text-[#e2533b]"
           >
-            + Gắn thẻ lại Phở Quỳnh gần Bui Vien
+            {t('create.re_tag_location')}
           </button>
         )}
 

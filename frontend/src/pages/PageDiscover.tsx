@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { AudioTour, CommunityPost } from '../types';
 import { Flame, MapPin, Star, Heart, MessageSquare, Bookmark, Volume2, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface PageDiscoverProps {
   tours: AudioTour[];
@@ -14,6 +15,7 @@ interface PageDiscoverProps {
 }
 
 export default function PageDiscover({ tours, onPlayTour, searchText }: PageDiscoverProps) {
+  const { t } = useTranslation();
   const [subTab, setSubTab] = useState<'tours' | 'feed'>('tours');
   const [feedFilter, setFeedFilter] = useState<'forYou' | 'following'>('forYou');
   const [tourFilter, setTourFilter] = useState('All');
@@ -123,15 +125,15 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
 
           {/* Header Introduction Block */}
           <div className="flex flex-col gap-2 pt-2 border-b border-[#1a1a1a]/10 pb-6">
-            <span className="text-[10px] tracking-[0.3em] uppercase text-[#e2533b] font-extrabold">Collection // 02</span>
+            <span className="text-[10px] tracking-[0.3em] uppercase text-[#e2533b] font-extrabold">{t('discover.collection')} // 02</span>
             <h1 className="font-serif italic font-light text-headline-lg-mobile md:text-headline-lg text-[#1a1a1a] leading-none">
-              Curated Audio Tours
+              {t('discover.audio_tours_title')}
             </h1>
             <p className="font-sans text-xs md:text-sm text-[#1a1a1a]/60 leading-relaxed font-light max-w-xl">
-              Immersive, high-density culinary journeys guided by local culinary experts. Plug in your headphones and explore the sensory trace of street setups.
+              {t('discover.audio_tours_desc')}
             </p>
           </div>
-
+ 
           {/* Scollable Categories Horizon Filters */}
           <div className="flex overflow-x-auto no-scrollbar gap-2 py-1">
             {tourCategories.map((cat) => (
@@ -144,7 +146,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                     : 'bg-white text-[#1a1a1a] border-[#1a1a1a]/15 hover:bg-[#f9f7f2]'
                   }`}
               >
-                {cat === 'All' ? 'All Tours' : cat}
+                {cat === 'All' ? t('discover.all_tours') : cat}
               </button>
             ))}
           </div>
@@ -197,7 +199,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                       {tour.isTrending && (
                         <div className="absolute top-5 left-5 bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-sm flex items-center gap-1 shadow border border-transparent">
                           <Flame size={12} className="fill-[#e2533b] text-[#e2533b]" />
-                          <span className="text-[9px] font-mono uppercase tracking-widest font-bold">Trending</span>
+                          <span className="text-[9px] font-mono uppercase tracking-widest font-bold">{t('discover.trending')}</span>
                         </div>
                       )}
                     </div>
@@ -227,19 +229,19 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                       {/* Numeric meta counters */}
                       <div className="grid grid-cols-3 gap-2 border-y border-[#1a1a1a]/10 py-3 text-[10px]">
                         <div className="flex flex-col gap-0.5">
-                          <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">Duration</span>
+                          <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">{t('discover.duration')}</span>
                           <span className="font-mono font-bold text-[#1a1a1a]">
                             {tour.duration}
                           </span>
                         </div>
                         <div className="flex flex-col gap-0.5 border-l border-[#1a1a1a]/10 pl-2">
-                          <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">Stops</span>
+                          <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">{t('discover.stops')}</span>
                           <span className="font-mono font-bold text-[#1a1a1a]">
-                            {tour.stopsCount} Spots
+                            {tour.stopsCount} {t('discover.stops_suffix')}
                           </span>
                         </div>
                         <div className="flex flex-col gap-0.5 border-l border-[#1a1a1a]/10 pl-2">
-                          <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">Atmos</span>
+                          <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">{t('discover.atmos')}</span>
                           <span className="font-mono font-bold text-[#1a1a1a] truncate">
                             {tour.vibe}
                           </span>
@@ -252,7 +254,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                         onClick={() => onPlayTour(tour)}
                         className="w-full mt-auto bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest py-3 rounded-none shadow transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
                       >
-                        <Volume2 size={12} /> Start Audio Tour
+                        <Volume2 size={12} /> {t('discover.start_audio')}
                       </button>
                     </div>
                   </article>
@@ -275,7 +277,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                   : 'text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5'
                 }`}
             >
-              Dành cho bạn
+              {t('discover.for_you')}
             </button>
             <button
               type="button"
@@ -285,26 +287,26 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                   : 'text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5'
                 }`}
             >
-              Đang theo dõi
+              {t('discover.following')}
             </button>
           </div>
 
           {loading && (
             <div className="flex flex-col items-center justify-center py-12 text-[#1a1a1a]/60">
               <span className="animate-spin text-2xl">⏳</span>
-              <span className="font-mono text-[10px] mt-2 uppercase tracking-widest font-bold">Loading Feed...</span>
+              <span className="font-mono text-[10px] mt-2 uppercase tracking-widest font-bold">{t('discover.loading_feed')}</span>
             </div>
           )}
 
           {error && (
             <div className="text-center py-12 font-mono text-[10px] uppercase text-[#e2533b] font-bold">
-              ⚠️ {error}
+              ⚠️ {t('discover.error_feed')}
             </div>
           )}
 
           {!loading && !error && posts.length === 0 && (
             <div className="text-center py-12 font-mono text-[10px] uppercase text-[#1a1a1a]/40 font-bold">
-              No posts found.
+              {t('discover.no_posts')}
             </div>
           )}
 

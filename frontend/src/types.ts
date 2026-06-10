@@ -30,6 +30,7 @@ export interface User {
   tableNumber?: number;
   isActive: boolean;
   createdAt?: string;
+  avatar?: string;
 }
 
 export interface Restaurant {
@@ -124,6 +125,18 @@ export interface AudioTour {
 export interface Category {
   id: number;
   name: string;
+  slug?: string;
+  icon?: string;
+}
+
+export interface FoodStreet {
+  id: number;
+  name: string;
+  district: string;
+  description: string;
+  centerLatitude: number;
+  centerLongitude: number;
+  openingWindow: string;
 }
 
 export interface RestaurantRequest {

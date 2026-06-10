@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { User, Restaurant, Category, FoodStreet, AudioTour, RestaurantRequest, CommunityPost } from '../../types';
 import { Plus, Pencil, Trash2, X, Shield, Store, User as UserIcon, Ban, Users, Unlock, MapPin, Calendar, MessageSquare, AlertTriangle, FileText, Check, Navigation, CheckCircle2, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface AdminReviewDto {
   id: string;
@@ -14,6 +15,7 @@ interface AdminReviewDto {
 }
 
 export default function AdminDashboard() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'accounts' | 'requests' | 'categories' | 'streets' | 'tours' | 'moderation'>('accounts');
   
   // Data lists
@@ -460,10 +462,10 @@ export default function AdminDashboard() {
       <div className="bg-[#1a1a1a] text-white p-6 border-3 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#e2533b] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <span className="font-mono text-[9px] text-[#e2533b] uppercase tracking-[0.3em] font-extrabold block mb-1">
-            CONTROL CENTER
+            {t('admin.control_center')}
           </span>
           <h2 className="font-serif italic font-bold text-3xl flex items-center gap-2">
-            <Shield size={26} className="text-[#e2533b]" /> Admin Dashboard
+            <Shield size={26} className="text-[#e2533b]" /> {t('admin.dashboard')}
           </h2>
         </div>
 
@@ -479,11 +481,11 @@ export default function AdminDashboard() {
                   : 'bg-white text-[#1a1a1a] border-white hover:bg-white/10 hover:text-white'
               }`}
             >
-              {tab === 'accounts' ? 'Tài khoản' :
-               tab === 'requests' ? 'Yêu cầu mở quán' :
-               tab === 'categories' ? 'Danh mục' :
-               tab === 'streets' ? 'Phố ẩm thực' :
-               tab === 'tours' ? 'Audio Tours' : 'Kiểm duyệt'}
+              {tab === 'accounts' ? t('admin.tabs.accounts') :
+               tab === 'requests' ? t('admin.tabs.requests') :
+               tab === 'categories' ? t('admin.tabs.categories') :
+               tab === 'streets' ? t('admin.tabs.streets') :
+               tab === 'tours' ? t('admin.tabs.tours') : t('admin.tabs.moderation')}
             </button>
           ))}
         </div>
@@ -492,7 +494,7 @@ export default function AdminDashboard() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 text-[#1a1a1a]/60">
           <span className="animate-spin text-3xl">⏳</span>
-          <span className="font-mono text-xs mt-2 uppercase tracking-widest font-bold">Loading dashboard data...</span>
+          <span className="font-mono text-xs mt-2 uppercase tracking-widest font-bold">{t('admin.common.saving')}</span>
         </div>
       ) : error ? (
         <div className="bg-red-100 border border-red-300 text-xs font-mono font-bold text-[#e2533b] p-3">
@@ -507,31 +509,31 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
                 <div className="bg-white p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
                   <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold flex items-center gap-1">
-                    <Users size={12} /> Tổng tài khoản
+                    <Users size={12} /> {t('admin.stats.total_accounts')}
                   </span>
                   <span className="font-serif italic font-bold text-3xl text-[#1a1a1a] mt-1">{totalUsers}</span>
                 </div>
                 <div className="bg-white p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
                   <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold flex items-center gap-1">
-                    <Shield size={12} /> Admin
+                    <Shield size={12} /> {t('admin.stats.admin')}
                   </span>
                   <span className="font-serif italic font-bold text-3xl text-[#1a1a1a] mt-1">{adminCount}</span>
                 </div>
                 <div className="bg-white p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
                   <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold flex items-center gap-1">
-                    <Store size={12} /> Chủ quán
+                    <Store size={12} /> {t('admin.stats.owner')}
                   </span>
                   <span className="font-serif italic font-bold text-3xl text-[#1a1a1a] mt-1">{ownerCount}</span>
                 </div>
                 <div className="bg-white p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
                   <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold flex items-center gap-1">
-                    <UserIcon size={12} /> Thực khách
+                    <UserIcon size={12} /> {t('admin.stats.customer')}
                   </span>
                   <span className="font-serif italic font-bold text-3xl text-[#1a1a1a] mt-1">{customerCount}</span>
                 </div>
                 <div className="bg-[#fff0f0] p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between col-span-2 md:col-span-1">
                   <span className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b] font-bold flex items-center gap-1">
-                    <Ban size={12} /> Đang khóa
+                    <Ban size={12} /> {t('admin.stats.suspended')}
                   </span>
                   <span className="font-serif italic font-bold text-3xl text-[#e2533b] mt-1">{suspendedCount}</span>
                 </div>
@@ -541,14 +543,14 @@ export default function AdminDashboard() {
               <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-4 flex flex-col gap-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#1a1a1a]/15 pb-4">
                   <div>
-                    <h3 className="font-serif italic font-bold text-lg">Danh sách Tài khoản</h3>
+                    <h3 className="font-serif italic font-bold text-lg">{t('admin.accounts.list_title')}</h3>
                     <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">ADMIN SECURITY TERMINAL</p>
                   </div>
                   <button
                     onClick={handleOpenAddUser}
                     className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest px-4 py-2.5 shadow border-2 border-[#1a1a1a] transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5"
                   >
-                    <Plus size={13} strokeWidth={3} /> Thêm tài khoản
+                    <Plus size={13} strokeWidth={3} /> {t('admin.accounts.add_btn')}
                   </button>
                 </div>
 
@@ -556,12 +558,12 @@ export default function AdminDashboard() {
                   <table className="w-full text-left font-sans text-xs border-collapse">
                     <thead>
                       <tr className="border-b-2 border-[#1a1a1a] bg-[#f9f7f2] font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60">
-                        <th className="py-2.5 px-3">Tên đăng nhập</th>
-                        <th className="py-2.5 px-3">Địa chỉ Email</th>
-                        <th className="py-2.5 px-3">Vai trò</th>
-                        <th className="py-2.5 px-3">Liên kết quán</th>
-                        <th className="py-2.5 px-3">Trạng thái</th>
-                        <th className="py-2.5 px-3 text-right">Thao tác</th>
+                        <th className="py-2.5 px-3">{t('admin.accounts.username')}</th>
+                        <th className="py-2.5 px-3">{t('admin.accounts.email')}</th>
+                        <th className="py-2.5 px-3">{t('admin.accounts.role')}</th>
+                        <th className="py-2.5 px-3">{t('admin.accounts.linked_restaurant')}</th>
+                        <th className="py-2.5 px-3">{t('admin.accounts.status')}</th>
+                        <th className="py-2.5 px-3 text-right">{t('admin.accounts.actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#1a1a1a]/10">
@@ -580,7 +582,7 @@ export default function AdminDashboard() {
                           </td>
                           <td className="py-3 px-3 font-serif italic text-xs text-[#1a1a1a]/60">
                             {u.role === 'Owner'
-                              ? (restaurants.find(r => r.id === u.restaurantId)?.name || u.restaurantId || 'Chưa liên kết')
+                              ? (restaurants.find(r => r.id === u.restaurantId)?.name || u.restaurantId || t('admin.accounts.unassigned'))
                               : '-'
                             }
                           </td>
@@ -592,7 +594,7 @@ export default function AdminDashboard() {
                                   : 'bg-[#f8d7da] text-red-900 border-red-400 hover:bg-red-200'
                                 }`}
                             >
-                              {u.isActive ? 'Hoạt động' : 'Đã khóa'}
+                              {u.isActive ? t('admin.accounts.active') : t('admin.accounts.locked')}
                             </button>
                           </td>
                           <td className="py-3 px-3 text-right">
@@ -600,7 +602,7 @@ export default function AdminDashboard() {
                               <button
                                 onClick={() => handleOpenEditUser(u)}
                                 className="w-7 h-7 flex items-center justify-center border border-[#1a1a1a]/20 hover:border-[#1a1a1a] hover:bg-[#f9f7f2] bg-white cursor-pointer transition-colors shadow-xs"
-                                title="Chỉnh sửa"
+                                title={t('admin.common.edit')}
                               >
                                 <Pencil size={13} />
                               </button>
@@ -608,7 +610,7 @@ export default function AdminDashboard() {
                                 <button
                                   onClick={() => handleLockUser(u.id)}
                                   className="w-7 h-7 flex items-center justify-center border border-[#1a1a1a]/20 hover:border-red-500 hover:bg-red-50 bg-white cursor-pointer transition-colors text-red-500 shadow-xs"
-                                  title="Khóa tài khoản"
+                                  title={t('admin.accounts.locked')}
                                 >
                                   <Ban size={13} />
                                 </button>
@@ -616,7 +618,7 @@ export default function AdminDashboard() {
                                 <button
                                   onClick={() => handleUnlockUser(u.id)}
                                   className="w-7 h-7 flex items-center justify-center border border-[#1a1a1a]/20 hover:border-green-500 hover:bg-green-50 bg-white cursor-pointer transition-colors text-green-600 shadow-xs"
-                                  title="Mở khóa tài khoản"
+                                  title={t('admin.accounts.active')}
                                 >
                                   <Unlock size={13} />
                                 </button>
@@ -636,7 +638,7 @@ export default function AdminDashboard() {
           {activeTab === 'requests' && (
             <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5">
               <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4">
-                <h3 className="font-serif italic font-bold text-lg">Yêu cầu đăng ký quán ăn</h3>
+                <h3 className="font-serif italic font-bold text-lg">{t('admin.requests.title')}</h3>
                 <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">RESTAURANT APPROVAL PIPELINE</p>
               </div>
 
@@ -644,20 +646,20 @@ export default function AdminDashboard() {
                 <table className="w-full text-left font-sans text-xs border-collapse">
                   <thead>
                     <tr className="border-b-2 border-[#1a1a1a] bg-[#f9f7f2] font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60">
-                      <th className="py-2.5 px-3">Quán ăn</th>
-                      <th className="py-2.5 px-3">Chủ sở hữu</th>
-                      <th className="py-2.5 px-3">Khu vực</th>
-                      <th className="py-2.5 px-3">Mức giá</th>
-                      <th className="py-2.5 px-3">Phố ẩm thực</th>
-                      <th className="py-2.5 px-3">Trạng thái</th>
-                      <th className="py-2.5 px-3 text-right">Thao tác</th>
+                      <th className="py-2.5 px-3">{t('admin.requests.restaurant')}</th>
+                      <th className="py-2.5 px-3">{t('admin.requests.owner')}</th>
+                      <th className="py-2.5 px-3">{t('admin.requests.area')}</th>
+                      <th className="py-2.5 px-3">{t('admin.requests.price')}</th>
+                      <th className="py-2.5 px-3">{t('admin.requests.street')}</th>
+                      <th className="py-2.5 px-3">{t('admin.requests.status')}</th>
+                      <th className="py-2.5 px-3 text-right">{t('admin.requests.actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#1a1a1a]/10">
                     {requests.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="py-8 text-center font-mono text-xs text-[#1a1a1a]/40 uppercase">
-                          Chưa có yêu cầu nào.
+                          {t('admin.requests.no_requests')}
                         </td>
                       </tr>
                     ) : (
@@ -687,7 +689,7 @@ export default function AdminDashboard() {
                               r.status === 'Approved' ? 'bg-green-100 border-green-400 text-green-800' :
                               'bg-red-100 border-red-400 text-red-800'
                             }`}>
-                              {r.status === 'Pending' ? 'Đang chờ' : r.status === 'Approved' ? 'Đã duyệt' : 'Từ chối'}
+                              {r.status === 'Pending' ? t('admin.requests.pending') : r.status === 'Approved' ? t('admin.requests.approved') : t('admin.requests.rejected')}
                             </span>
                             {r.adminNote && (
                               <p className="text-[9px] text-red-500 italic mt-0.5">Note: {r.adminNote}</p>
@@ -700,13 +702,13 @@ export default function AdminDashboard() {
                                   onClick={() => handleApproveRequest(r.id)}
                                   className="px-2 py-1 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-green-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5"
                                 >
-                                  <Check size={11} strokeWidth={3} className="text-green-600" /> Duyệt
+                                  <Check size={11} strokeWidth={3} className="text-green-600" /> {t('admin.requests.approve')}
                                 </button>
                                 <button
                                   onClick={() => handleRejectRequest(r.id)}
                                   className="px-2 py-1 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-red-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5 text-red-500"
                                 >
-                                  <X size={11} strokeWidth={3} className="text-red-500" /> Từ chối
+                                  <X size={11} strokeWidth={3} className="text-red-500" /> {t('admin.requests.reject')}
                                 </button>
                               </div>
                             )}
@@ -725,14 +727,14 @@ export default function AdminDashboard() {
             <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5">
               <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4 flex justify-between items-center">
                 <div>
-                  <h3 className="font-serif italic font-bold text-lg">Danh mục món ăn</h3>
+                  <h3 className="font-serif italic font-bold text-lg">{t('admin.categories.title')}</h3>
                   <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">RESTAURANT CATEGORIES</p>
                 </div>
                 <button
                   onClick={handleOpenAddCategory}
                   className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest px-4 py-2 border-2 border-[#1a1a1a] transition-all cursor-pointer shadow flex items-center gap-1.5 active:translate-y-0.5 font-bold"
                 >
-                  <Plus size={13} strokeWidth={3} /> Thêm danh mục
+                  <Plus size={13} strokeWidth={3} /> {t('admin.categories.add_btn')}
                 </button>
               </div>
 
@@ -748,12 +750,14 @@ export default function AdminDashboard() {
                       <button
                         onClick={() => handleOpenEditCategory(cat)}
                         className="w-7 h-7 flex items-center justify-center border border-[#1a1a1a]/15 hover:border-[#1a1a1a] hover:bg-white bg-transparent cursor-pointer transition-all"
+                        title={t('admin.common.edit')}
                       >
                         <Pencil size={12} />
                       </button>
                       <button
                         onClick={() => handleDeleteCategory(cat.id)}
                         className="w-7 h-7 flex items-center justify-center border border-[#1a1a1a]/15 hover:border-red-500 hover:bg-red-50 text-red-500 cursor-pointer transition-all"
+                        title={t('admin.common.delete')}
                       >
                         <Trash2 size={12} />
                       </button>
@@ -769,14 +773,14 @@ export default function AdminDashboard() {
             <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5">
               <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4 flex justify-between items-center">
                 <div>
-                  <h3 className="font-serif italic font-bold text-lg">Khu phố ẩm thực</h3>
+                  <h3 className="font-serif italic font-bold text-lg">{t('admin.streets.title')}</h3>
                   <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">CULINARY CORRIDOR MANAGER</p>
                 </div>
                 <button
                   onClick={handleOpenAddStreet}
                   className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest px-4 py-2 border-2 border-[#1a1a1a] transition-all cursor-pointer shadow flex items-center gap-1.5 active:translate-y-0.5 font-bold"
                 >
-                  <Plus size={13} strokeWidth={3} /> Thêm tuyến phố
+                  <Plus size={13} strokeWidth={3} /> {t('admin.streets.add_btn')}
                 </button>
               </div>
 
@@ -799,13 +803,13 @@ export default function AdminDashboard() {
                           onClick={() => handleOpenEditStreet(st)}
                           className="px-2.5 py-1 flex items-center gap-1 border-2 border-[#1a1a1a] bg-white hover:bg-slate-50 font-mono text-[9px] uppercase font-bold cursor-pointer transition-all active:translate-y-0.5"
                         >
-                          <Pencil size={11} /> Sửa
+                          <Pencil size={11} /> {t('admin.common.edit')}
                         </button>
                         <button
                           onClick={() => handleDeleteStreet(st.id)}
                           className="px-2.5 py-1 flex items-center gap-1 border-2 border-red-500 hover:bg-red-50 text-red-500 font-mono text-[9px] uppercase font-bold cursor-pointer transition-all active:translate-y-0.5 bg-white"
                         >
-                          <Trash2 size={11} /> Xóa
+                          <Trash2 size={11} /> {t('admin.common.delete')}
                         </button>
                       </div>
                     </div>
@@ -820,44 +824,46 @@ export default function AdminDashboard() {
             <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5">
               <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4 flex justify-between items-center">
                 <div>
-                  <h3 className="font-serif italic font-bold text-lg">Audio Tours khám phá</h3>
+                  <h3 className="font-serif italic font-bold text-lg">{t('admin.tours.title')}</h3>
                   <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">GPS AUDIO GUIDE TOURS</p>
                 </div>
                 <button
                   onClick={handleOpenAddTour}
                   className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest px-4 py-2 border-2 border-[#1a1a1a] transition-all cursor-pointer shadow flex items-center gap-1.5 active:translate-y-0.5 font-bold"
                 >
-                  <Plus size={13} strokeWidth={3} /> Thêm Audio Tour
+                  <Plus size={13} strokeWidth={3} /> {t('admin.tours.add_btn')}
                 </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {tours.map(t => (
-                  <div key={t.id} className="bg-white border-2 border-[#1a1a1a] shadow-[4px_4px_0px_0px_#1a1a1a] flex flex-col group hover:border-[#e2533b] transition-all relative">
-                    <img src={t.image} alt={t.title} className="h-36 w-full object-cover border-b-2 border-[#1a1a1a]" />
+                {tours.map(tour => (
+                  <div key={tour.id} className="bg-white border-2 border-[#1a1a1a] shadow-[4px_4px_0px_0px_#1a1a1a] flex flex-col group hover:border-[#e2533b] transition-all relative">
+                    <img src={tour.image} alt={tour.title} className="h-36 w-full object-cover border-b-2 border-[#1a1a1a]" />
                     <div className="p-4 flex flex-col justify-between flex-1 gap-2">
                       <div>
                         <div className="flex justify-between items-center">
-                          <span className="font-mono text-[8px] bg-amber-100 border border-amber-300 text-amber-800 px-1.5 py-0.5 uppercase tracking-wider font-extrabold">{t.vibe}</span>
-                          <span className="font-mono text-[9px] text-slate-500 font-bold">{t.duration} // {t.stopsCount} stops</span>
+                          <span className="font-mono text-[8px] bg-amber-100 border border-amber-300 text-amber-800 px-1.5 py-0.5 uppercase tracking-wider font-extrabold">{tour.vibe}</span>
+                          <span className="font-mono text-[9px] text-slate-500 font-bold">{tour.duration} // {tour.stopsCount} stops</span>
                         </div>
-                        <h4 className="font-serif italic font-bold text-base mt-2">{t.title}</h4>
-                        <p className="text-[10px] font-mono text-[#e2533b] mt-1 flex items-center gap-1"><MapPin size={10} /> {t.location}</p>
-                        <p className="text-xs font-sans text-slate-600 mt-2 line-clamp-2 leading-relaxed font-light">{t.description}</p>
+                        <h4 className="font-serif italic font-bold text-base mt-2">{tour.title}</h4>
+                        <p className="text-[10px] font-mono text-[#e2533b] mt-1 flex items-center gap-1"><MapPin size={10} /> {tour.location}</p>
+                        <p className="text-xs font-sans text-slate-600 mt-2 line-clamp-2 leading-relaxed font-light">{tour.description}</p>
                       </div>
 
                       <div className="flex justify-between items-center pt-3 mt-2 border-t border-dashed border-[#1a1a1a]/10">
-                        <span className="font-mono font-bold text-xs text-amber-500">⭐ {t.rating.toFixed(1)}</span>
+                        <span className="font-mono font-bold text-xs text-amber-500">⭐ {tour.rating.toFixed(1)}</span>
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleOpenEditTour(t)}
+                            onClick={() => handleOpenEditTour(tour)}
                             className="w-7 h-7 flex items-center justify-center border border-[#1a1a1a]/15 hover:border-[#1a1a1a] bg-white transition-all cursor-pointer"
+                            title={t('admin.common.edit')}
                           >
                             <Pencil size={12} />
                           </button>
                           <button
-                            onClick={() => handleDeleteTour(t.id)}
+                            onClick={() => handleDeleteTour(tour.id)}
                             className="w-7 h-7 flex items-center justify-center border border-[#1a1a1a]/15 hover:border-red-500 hover:bg-red-50 text-red-500 bg-white transition-all cursor-pointer"
+                            title={t('admin.common.delete')}
                           >
                             <Trash2 size={12} />
                           </button>
@@ -875,7 +881,7 @@ export default function AdminDashboard() {
             <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5">
               <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
-                  <h3 className="font-serif italic font-bold text-lg">Kiểm duyệt Nội dung</h3>
+                  <h3 className="font-serif italic font-bold text-lg">{t('admin.moderation.title')}</h3>
                   <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">CONTENT MODERATION TERMINAL</p>
                 </div>
                 
@@ -887,7 +893,7 @@ export default function AdminDashboard() {
                       modSubTab === 'posts' ? 'bg-[#1a1a1a] text-white' : 'bg-white hover:bg-slate-50'
                     }`}
                   >
-                    Bài viết cộng đồng ({posts.length})
+                    {t('admin.moderation.posts')} ({posts.length})
                   </button>
                   <button
                     onClick={() => setModSubTab('reviews')}
@@ -895,7 +901,7 @@ export default function AdminDashboard() {
                       modSubTab === 'reviews' ? 'bg-[#1a1a1a] text-white' : 'bg-white hover:bg-slate-50'
                     }`}
                   >
-                    Đánh giá khách hàng ({reviews.length})
+                    {t('admin.moderation.reviews')} ({reviews.length})
                   </button>
                 </div>
               </div>
@@ -903,7 +909,7 @@ export default function AdminDashboard() {
               {modSubTab === 'posts' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {posts.length === 0 ? (
-                    <p className="col-span-full py-8 text-center font-mono text-xs text-[#1a1a1a]/40 uppercase">Không có bài viết nào.</p>
+                    <p className="col-span-full py-8 text-center font-mono text-xs text-[#1a1a1a]/40 uppercase">{t('admin.moderation.no_posts')}</p>
                   ) : (
                     posts.map(p => (
                       <div key={p.id} className="p-4 border-2 border-[#1a1a1a] bg-[#fdfcf9] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between gap-3">
@@ -933,7 +939,7 @@ export default function AdminDashboard() {
                             onClick={() => handleDeletePost(p.id)}
                             className="px-2.5 py-1 flex items-center gap-1 border-2 border-red-500 hover:bg-red-50 text-red-500 font-mono text-[9px] uppercase font-bold cursor-pointer transition-all active:translate-y-0.5 bg-white"
                           >
-                            <Trash2 size={11} /> Xóa bài
+                            <Trash2 size={11} /> {t('admin.moderation.delete_post')}
                           </button>
                         </div>
                       </div>
@@ -945,19 +951,19 @@ export default function AdminDashboard() {
                   <table className="w-full text-left font-sans text-xs border-collapse">
                     <thead>
                       <tr className="border-b-2 border-[#1a1a1a] bg-[#f9f7f2] font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60">
-                        <th className="py-2.5 px-3">Quán ăn</th>
-                        <th className="py-2.5 px-3">Người đánh giá</th>
-                        <th className="py-2.5 px-3">Vai trò</th>
-                        <th className="py-2.5 px-3">Đánh giá</th>
-                        <th className="py-2.5 px-3">Nội dung bình luận</th>
-                        <th className="py-2.5 px-3 text-right">Thao tác</th>
+                        <th className="py-2.5 px-3">{t('admin.requests.restaurant')}</th>
+                        <th className="py-2.5 px-3">{t('admin.requests.owner')}</th>
+                        <th className="py-2.5 px-3">{t('admin.accounts.role')}</th>
+                        <th className="py-2.5 px-3">{t('admin.moderation.reviews')}</th>
+                        <th className="py-2.5 px-3">{t('admin.accounts.linked_restaurant') === 'Linked Restaurant' ? 'Comment' : 'Bình luận'}</th>
+                        <th className="py-2.5 px-3 text-right">{t('admin.accounts.actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#1a1a1a]/10">
                       {reviews.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="py-8 text-center font-mono text-xs text-[#1a1a1a]/40 uppercase">
-                            Không có đánh giá nào.
+                            {t('admin.moderation.no_reviews')}
                           </td>
                         </tr>
                       ) : (
@@ -973,7 +979,7 @@ export default function AdminDashboard() {
                                 onClick={() => handleDeleteReview(r.id)}
                                 className="px-2 py-1 flex items-center gap-1 border-2 border-red-500 hover:bg-red-50 text-red-500 font-mono text-[9px] uppercase font-bold cursor-pointer transition-all active:translate-y-0.5 bg-white ml-auto"
                               >
-                                <Trash2 size={11} /> Xóa review
+                                <Trash2 size={11} /> {t('admin.moderation.delete_review')}
                               </button>
                             </td>
                           </tr>

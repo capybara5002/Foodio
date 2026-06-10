@@ -1,0 +1,225 @@
+{
+  "nav": {
+    "food_map": "Food Map",
+    "discover": "Discover",
+    "review": "Review",
+    "inbox": "Inbox",
+    "profile": "Profile",
+    "contact": "Contact Stalls"
+  },
+  "search": {
+    "placeholder": "Search Vinh Khanh...",
+    "no_results": "No restaurants found"
+  },
+  "auth": {
+    "not_logged_in": "Not logged in",
+    "require_login_booking": "You need to log in to book a table.",
+    "require_login_chat": "You need to log in to chat with the restaurant.",
+    "require_login_post": "You need to log in to create a post or review.",
+    "login_title": "Login to Foodio System",
+    "guest_mode": "Table {{table}} (Guest Mode)",
+    "login": "Login",
+    "active_user": "User Active"
+  },
+  "qr": {
+    "verify_success": "🎯 QR scan successful! Welcome to table {{table}}.",
+    "verify_error": "❌ QR verification failed: {{error}}"
+  },
+  "footer": {
+    "copyright": "© 2026 CraveMap Food Exploration System. Match visual mockup layouts."
+  },
+  "profile": {
+    "login_required": "Login Required",
+    "login_required_desc": "Please log in to your account to view personal info or access admin/owner tools.",
+    "login_now": "Log In Now // 🔑",
+    "personal": "Profile",
+    "admin_console": "Admin Console",
+    "owner_console": "Owner Dashboard",
+    "member_suffix": "Member",
+    "posts_count": "Posts Published",
+    "saved_places": "Saved Places",
+    "app_language": "App Language",
+    "logout": "Logout Account",
+    "change_avatar": "Change Avatar",
+    "preset_avatars": "Choose Preset Avatar",
+    "custom_avatar_url": "Custom Avatar URL",
+    "update_avatar_success": "Avatar updated successfully!",
+    "update_password": "Update Password",
+    "current_password": "Current Password",
+    "new_password": "New Password",
+    "confirm_new_password": "Confirm New Password",
+    "change_password_btn": "Update Password",
+    "password_mismatch": "Confirm password does not match!",
+    "password_length_error": "New password must be at least 6 characters!",
+    "update_password_success": "Password updated successfully!",
+    "update_password_error": "Incorrect current password or an error occurred!",
+    "saving": "Saving...",
+    "save": "Save Changes",
+    "cancel": "Cancel"
+  },
+  "map": {
+    "your_position": "Your Position",
+    "walk_instruction": "Walk with Arrow Keys",
+    "contact_restaurant": "Contact Restaurant",
+    "gps_toast": "🎯 Recycled tracking on Vinh Khanh street...",
+    "curated": "Curated",
+    "hot": "HOT",
+    "view_full_info": "View Full Info & Book // 🔗"
+  },
+  "discover": {
+    "collection": "Collection",
+    "audio_tours_title": "Curated Audio Tours",
+    "audio_tours_desc": "Immersive, high-density culinary journeys guided by local culinary experts. Plug in your headphones and explore the sensory trace of street setups.",
+    "all_tours": "All Tours",
+    "trending": "Trending",
+    "duration": "Duration",
+    "stops": "Stops",
+    "atmos": "Atmos",
+    "stops_suffix": "Spots",
+    "start_audio": "Start Audio Tour",
+    "for_you": "For You",
+    "following": "Following",
+    "loading_feed": "Loading Feed...",
+    "error_feed": "Could not load posts. Please try again later.",
+    "no_posts": "No posts found."
+  },
+  "detail": {
+    "share_copied": "🔗 Link copied! Enjoy sharing this creative street food spot.",
+    "added_dish": "😋 Added {{name}} to your tasting list!",
+    "play_audio": "Play Audio Guide",
+    "signature_dishes": "Signature Dishes",
+    "show_less": "Show Less",
+    "see_all": "See All",
+    "foodie_reviews": "Foodie Reviews",
+    "stars_filter": "Stars:",
+    "all_stars": "All",
+    "reviews_with_images": "Reviews with Images",
+    "no_reviews": "No reviews matching filters.",
+    "book_table": "Book a Table // Reserve"
+  },
+  "create": {
+    "rating_label_1": "Too bad 😞",
+    "rating_label_2": "Decent 😐",
+    "rating_label_3": "Average 😏",
+    "rating_label_4": "Delicious! 😋",
+    "rating_label_5": "Excellent! 😍",
+    "select_stars": "Select Stars",
+    "toast_photo_changed": "📸 Changed to another delicious food template!",
+    "toast_write_experience": "⚠️ Please write your experience!",
+    "new_post_title": "Create New Post // Review",
+    "post_button": "Post",
+    "alt_food": "Delicious street food",
+    "change_photo": "Change Photo ({{current}}/{{total}})",
+    "near_bui_vien": "Near Bui Vien",
+    "rating_question": "How do you rate this dish?",
+    "placeholder": "Share your experience about this dish... How does it taste? How is the atmosphere?",
+    "toast_tag_restaurant": "🏷️ Select a restaurant tag in Vinh Khanh!",
+    "tag_restaurant_btn": "Tag Restaurant",
+    "toast_select_category": "🏷️ Select food category of the dish!",
+    "category_btn": "Category",
+    "re_tag_location": "+ Tag Pho Quynh near Bui Vien again"
+  },
+  "booking": {
+    "title": "Book a Table",
+    "at_restaurant": "At {{name}}",
+    "select_date": "Select Date",
+    "select_time": "Select Time Slot",
+    "guests_count": "Number of Guests",
+    "seating_choice": "Seating Choice",
+    "street_outdoor": "Street outdoor",
+    "indoor_room": "Indoor Room",
+    "confirm_button": "Confirm Reservation // 📝",
+    "success_title": "Booking successful!",
+    "success_message": "{{name}} is waiting for you! We have secured an outdoor spot at our street-side tables on {{date}} at {{time}} for {{guests}} guests.",
+    "reference": "Booking Reference: {{ref}}",
+    "ticket_desc": "Present this ticket when checking in",
+    "done_button": "Got it!"
+  },
+  "login": {
+    "error_username": "Please enter username.",
+    "error_general": "An error occurred, please try again.",
+    "register_title": "Register Account",
+    "login_title": "Login App",
+    "username": "Username",
+    "email": "Email Address",
+    "password": "Password",
+    "register_button": "Create Account",
+    "login_button": "Login",
+    "switch_login": "Already have an account? Login now",
+    "switch_register": "Don't have an account? Register now"
+  },
+  "admin": {
+    "dashboard": "Admin Dashboard",
+    "control_center": "CONTROL CENTER",
+    "tabs": {
+      "accounts": "Accounts",
+      "requests": "Open Requests",
+      "categories": "Categories",
+      "streets": "Food Streets",
+      "tours": "Audio Tours",
+      "moderation": "Moderation"
+    },
+    "stats": {
+      "total_accounts": "Total Accounts",
+      "admin": "Admin",
+      "owner": "Owner",
+      "customer": "Customer",
+      "suspended": "Suspended"
+    },
+    "accounts": {
+      "list_title": "Account List",
+      "add_btn": "Add Account",
+      "username": "Username",
+      "email": "Email Address",
+      "role": "Role",
+      "linked_restaurant": "Linked Restaurant",
+      "status": "Status",
+      "actions": "Actions",
+      "active": "Active",
+      "locked": "Locked",
+      "unassigned": "Unassigned"
+    },
+    "requests": {
+      "title": "Restaurant Registration Requests",
+      "restaurant": "Restaurant",
+      "owner": "Owner",
+      "area": "Area",
+      "price": "Price Range",
+      "street": "Food Street",
+      "status": "Status",
+      "actions": "Actions",
+      "approve": "Approve",
+      "reject": "Reject",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "no_requests": "No requests found."
+    },
+    "categories": {
+      "title": "Food Categories",
+      "add_btn": "Add Category"
+    },
+    "streets": {
+      "title": "Culinary Food Streets",
+      "add_btn": "Add Food Street"
+    },
+    "tours": {
+      "title": "Explore Audio Tours",
+      "add_btn": "Add Audio Tour"
+    },
+    "moderation": {
+      "title": "Content Moderation",
+      "posts": "Community Posts",
+      "reviews": "Customer Reviews",
+      "no_posts": "No posts found.",
+      "no_reviews": "No reviews found.",
+      "delete_post": "Delete Post",
+      "delete_review": "Delete Review"
+    },
+    "common": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "saving": "Loading dashboard data..."
+    }
+  }
+}

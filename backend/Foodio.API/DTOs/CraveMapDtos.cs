@@ -164,11 +164,16 @@ public record UserDto(
     string Role,
     string? RestaurantId,
     bool IsActive,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? Avatar);
 
 public record UserLoginRequestDto(string Email, string Password);
 
 public record UserRegisterRequestDto(string Username, string Email, string Password);
+
+public record UpdatePasswordRequestDto(string Email, string CurrentPassword, string NewPassword);
+
+public record UpdateAvatarRequestDto(string Email, string Avatar);
 
 public record UserCreateUpdateDto(
     string Username,

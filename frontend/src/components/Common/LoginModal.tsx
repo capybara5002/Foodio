@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { X, User, Store, Shield } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ isOpen, onClose, onSuccess, message }: LoginModalProps) {
+  const { t } = useTranslation();
   const { login, register } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
@@ -27,7 +29,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
 
     try {
       if (isRegister) {
-        if (!username.trim()) throw new Error('Vui lòng nhập tên người dùng.');
+        if (!username.trim()) throw new Error(t('login.error_username'));
         await register(username, email, password);
       } else {
         await login(email, password);
@@ -35,7 +37,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
       onClose();
       if (onSuccess) onSuccess();
     } catch (err: any) {
-      setError(err.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+      setError(err.message || t('login.error_general'));
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +69,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
             SECURE TERMINAL ACCESS // AUTH
           </span>
           <h2 className="font-serif italic font-bold text-2xl uppercase">
-            {isRegister ? 'Đăng ký Tài khoản' : 'Đăng nhập App'}
+            {isRegister ? t('login.register_title') : t('login.login_title')}
           </h2>
           {message && (
             <p className="mt-2 text-xs font-mono text-[#e2533b] bg-[#e2533b]/10 border border-[#e2533b]/25 p-2 font-semibold">
@@ -87,7 +89,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {isRegister && (
             <div className="flex flex-col gap-1">
-              <label className="font-mono text-[10px] uppercase font-bold tracking-wider">Tên người dùng</label>
+              <label className="font-mono text-[10px] uppercase font-bold tracking-wider">{t('login.username')}</label>
               <input 
                 type="text"
                 value={username}
@@ -100,7 +102,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
           )}
 
           <div className="flex flex-col gap-1">
-            <label className="font-mono text-[10px] uppercase font-bold tracking-wider">Địa chỉ Email</label>
+            <label className="font-mono text-[10px] uppercase font-bold tracking-wider">{t('login.email')}</label>
             <input 
               type="email"
               value={email}
@@ -112,7 +114,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="font-mono text-[10px] uppercase font-bold tracking-wider">Mật khẩu</label>
+            <label className="font-mono text-[10px] uppercase font-bold tracking-wider">{t('login.password')}</label>
             <input 
               type="password"
               value={password}
@@ -128,7 +130,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
             disabled={isLoading}
             className="w-full bg-[#1a1a1a] text-white hover:bg-[#e2533b] py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md active:translate-y-0.5 disabled:opacity-50"
           >
-            {isLoading ? 'Processing...' : (isRegister ? 'Tạo tài khoản' : 'Đăng nhập')}
+            {isLoading ? 'Processing...' : (isRegister ? t('login.register_button') : t('login.login_button'))}
           </button>
         </form>
 
@@ -141,7 +143,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
             }}
             className="text-xs font-mono font-bold text-[#e2533b] hover:underline cursor-pointer"
           >
-            {isRegister ? 'Đã có tài khoản? Đăng nhập ngay' : 'Chưa có tài khoản? Đăng ký ngay'}
+            {isRegister ? t('login.switch_login') : t('login.switch_register')}
           </button>
         </div>
 

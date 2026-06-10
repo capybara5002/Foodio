@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Restaurant } from '../types';
 import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface PageDetailProps {
   restaurant: Restaurant;
@@ -17,6 +18,7 @@ interface PageDetailProps {
 }
 
 export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartAudio, onGoToChat, requireAuth }: PageDetailProps) {
+  const { t } = useTranslation();
   const [isFavorite, setIsFavorite] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showAllDishes, setShowAllDishes] = useState(false);
@@ -32,12 +34,12 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
   });
 
   const handleShare = () => {
-    setToastMessage('🔗 Link copied! Enjoy sharing this creative street food spot.');
+    setToastMessage(t('detail.share_copied'));
     setTimeout(() => setToastMessage(null), 2500);
   };
 
   const handleAddDish = (dishName: string) => {
-    setToastMessage(`😋 Added ${dishName} to your tasting list!`);
+    setToastMessage(t('detail.added_dish', { name: dishName }));
     setTimeout(() => setToastMessage(null), 2500);
   };
 
@@ -125,7 +127,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             onClick={onStartAudio}
             className="flex-1 flex items-center justify-center gap-1.5 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3.5 px-4 rounded-none shadow-md active:scale-98 transition-all font-mono text-[10px] uppercase tracking-widest cursor-pointer"
           >
-            <Volume2 size={14} /> Play Audio Guide
+            <Volume2 size={14} /> {t('detail.play_audio')}
           </button>
           
           <button 
@@ -135,7 +137,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             className="flex items-center justify-center gap-2 bg-white border border-[#1a1a1a]/25 text-on-surface hover:bg-[#f9f7f2] rounded-none shadow-sm active:scale-95 transition-transform cursor-pointer px-4 h-12 font-mono text-[10px] uppercase tracking-widest font-bold"
           >
             <MessageSquare size={18} />
-            Liên hệ quán
+            {t('nav.contact')}
           </button>
         </section>
 
@@ -166,13 +168,13 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
         {/* Menu signature dishes highlighting bento lists */}
         <section className="flex flex-col gap-3">
           <div className="flex justify-between items-baseline border-b border-[#1a1a1a]/10 pb-2 mb-2">
-            <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">Signature Dishes</h2>
+            <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">{t('detail.signature_dishes')}</h2>
             {restaurant.dishes.length > 2 && (
               <button 
                 onClick={() => setShowAllDishes(!showAllDishes)}
                 className="font-mono text-[9px] uppercase tracking-wider font-extrabold text-[#e2533b] hover:underline cursor-pointer"
               >
-                {showAllDishes ? 'Show Less' : 'See All'}
+                {showAllDishes ? t('detail.show_less') : t('detail.see_all')}
               </button>
             )}
           </div>
@@ -213,13 +215,13 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
         {/* Foodie list reviews */}
         <section className="flex flex-col gap-3 pb-12">
           <div className="border-b border-[#1a1a1a]/10 pb-2 mb-2">
-            <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">Foodie Reviews</h2>
+            <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">{t('detail.foodie_reviews')}</h2>
           </div>
 
           {/* Advanced Filter UI */}
           <div className="flex flex-col gap-3 p-3.5 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-xs font-mono text-left">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-bold uppercase tracking-wider text-[10px] text-[#1a1a1a]/55">Số sao:</span>
+              <span className="font-bold uppercase tracking-wider text-[10px] text-[#1a1a1a]/55">{t('detail.stars_filter')}</span>
               <div className="flex flex-wrap gap-1">
                 {(['All', 5, 4, 3, 2, 1] as const).map(stars => (
                   <button
@@ -231,7 +233,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
                         : 'bg-white text-[#1a1a1a] border-[#1a1a1a]/15 hover:bg-[#fdfcf9]'
                     }`}
                   >
-                    {stars === 'All' ? 'Tất cả' : `${stars} ★`}
+                    {stars === 'All' ? t('detail.all_stars') : `${stars} ★`}
                   </button>
                 ))}
               </div>
@@ -246,15 +248,15 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
                 className="w-4 h-4 border-2 border-[#1a1a1a] rounded-none focus:ring-0 checked:bg-[#e2533b] cursor-pointer"
               />
               <label htmlFor="photoFilter" className="font-bold uppercase tracking-wider text-[10px] text-[#1a1a1a]/70 select-none cursor-pointer">
-                🖼️ Đánh giá có hình ảnh
+                {t('detail.reviews_with_images')}
               </label>
             </div>
           </div>
-          
+
           <div className="flex overflow-x-auto gap-3 hide-scrollbar -mx-5 px-5 pb-2">
             {filteredReviews.length === 0 ? (
               <div className="min-w-full text-center py-8 font-mono text-[10px] uppercase text-[#1a1a1a]/40 font-bold">
-                Không có đánh giá phù hợp bộ lọc.
+                {t('detail.no_reviews')}
               </div>
             ) : (
               filteredReviews.map((rev) => (
@@ -315,7 +317,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
           onClick={onOpenBooking}
           className="w-full max-w-md bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest py-3.5 rounded-none shadow-md active:scale-[0.98] transition-all text-center cursor-pointer"
         >
-          Book a Table // Reserve
+          {t('detail.book_table')}
         </button>
       </div>
 
