@@ -114,23 +114,23 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
 
           <div className="flex flex-col gap-1">
             <label className="font-mono text-[10px] uppercase font-bold tracking-wider">Mật khẩu</label>
-            <input 
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-2 pr-10 text-sm focus:outline-none focus:bg-[#f9f7f2]"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((current) => !current)}
-              className="self-end -mt-9 mr-3 h-8 w-8 flex items-center justify-center text-[#1a1a1a]/55 hover:text-[#e2533b] transition-colors cursor-pointer"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-              aria-pressed={showPassword}
-            >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-2 text-sm focus:outline-none focus:bg-[#f9f7f2] pr-10"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#1a1a1a]/50 hover:text-[#e2533b] transition-colors cursor-pointer"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           <button 

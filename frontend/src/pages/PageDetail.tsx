@@ -5,7 +5,10 @@
 
 import { useState } from 'react';
 import { Restaurant } from '../types';
-import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2 } from 'lucide-react';
+import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { createReview } from '../api/cravemapApi';
+import { PRESET_IMAGES } from '../data';
 
 interface PageDetailProps {
   restaurant: Restaurant;
@@ -14,18 +17,82 @@ interface PageDetailProps {
   onStartAudio: () => void;
   onGoToChat: () => void;
   requireAuth: (message: string, action: () => void) => void;
+  onRestaurantUpdated: (updated: Restaurant) => void;
 }
 
-export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartAudio, onGoToChat, requireAuth }: PageDetailProps) {
+export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartAudio, onGoToChat, requireAuth, onRestaurantUpdated }: PageDetailProps) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showAllDishes, setShowAllDishes] = useState(false);
+
+  // Write Review State
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [newRating, setNewRating] = useState(5);
+  const [newPhotoIndex, setNewPhotoIndex] = useState<number | null>(null);
+  const { user } = useAuth();
+
+  const handleCyclePhoto = () => {
+    if (newPhotoIndex === null) {
+      setNewPhotoIndex(0);
+    } else {
+      setNewPhotoIndex((prev) => (prev! + 1) % PRESET_IMAGES.length);
+    }
+  };
+
+  const handleCreateReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) {
+      setToastMessage('⚠️ Vui lòng viết bình luận của bạn!');
+      setTimeout(() => setToastMessage(null), 2000);
+      return;
+    }
+
+    try {
+      const reviewPayload = {
+        author: user?.username || 'Khách ẩn danh',
+        role: user?.role ? (user.role === 'Guest' ? 'Guest' : 'Foodie') : 'Khách',
+        rating: newRating,
+        comment: newComment.trim(),
+        avatar: (user?.username || 'AN').slice(0, 2).toUpperCase(),
+        imageUrl: newPhotoIndex !== null ? PRESET_IMAGES[newPhotoIndex] : undefined,
+      };
+
+      const addedReview = await createReview(restaurant.id, reviewPayload);
+
+      // Append review locally
+      const updatedReviews = [addedReview, ...(restaurant.reviews || [])];
+      
+      // Recalculate rating
+      const avgRating = updatedReviews.reduce((sum, r) => sum + r.rating, 0) / updatedReviews.length;
+
+      const updatedRestaurant = {
+        ...restaurant,
+        reviews: updatedReviews,
+        rating: Math.round(avgRating * 10) / 10
+      };
+
+      onRestaurantUpdated(updatedRestaurant);
+      
+      // Reset form
+      setNewComment('');
+      setNewRating(5);
+      setNewPhotoIndex(null);
+      setShowReviewForm(false);
+      setToastMessage('⭐ Cảm ơn bạn đã đánh giá quán ăn!');
+      setTimeout(() => setToastMessage(null), 2500);
+    } catch (error) {
+      console.error('Lỗi khi gửi đánh giá:', error);
+      setToastMessage('❌ Không thể gửi đánh giá. Vui lòng thử lại.');
+      setTimeout(() => setToastMessage(null), 2500);
+    }
+  };
 
   // Advanced Review Filters State
   const [starFilter, setStarFilter] = useState<number | 'All'>('All');
   const [hasImageFilter, setHasImageFilter] = useState<boolean>(false);
 
-  const filteredReviews = restaurant.reviews.filter((rev) => {
+  const filteredReviews = (restaurant.reviews || []).filter((rev) => {
     if (starFilter !== 'All' && Math.floor(rev.rating) !== starFilter) return false;
     if (hasImageFilter && !rev.imageUrl) return false;
     return true;
@@ -212,9 +279,121 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
 
         {/* Foodie list reviews */}
         <section className="flex flex-col gap-3 pb-12">
-          <div className="border-b border-[#1a1a1a]/10 pb-2 mb-2">
+          <div className="border-b border-[#1a1a1a]/10 pb-2 mb-2 flex justify-between items-center">
             <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">Foodie Reviews</h2>
+            <button
+              type="button"
+              onClick={() => {
+                requireAuth('Bạn cần đăng nhập bằng tài khoản để tạo đánh giá.', () => {
+                  setShowReviewForm(!showReviewForm);
+                });
+              }}
+              className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[9px] uppercase tracking-wider px-3.5 py-1.5 rounded-none shadow-xs active:scale-95 transition-all cursor-pointer font-bold"
+            >
+              {showReviewForm ? 'Đóng form' : 'Viết đánh giá'}
+            </button>
           </div>
+
+          {/* Write Review Form */}
+          {showReviewForm && (
+            <form onSubmit={handleCreateReview} className="bg-white p-5 border border-[#1a1a1a]/15 shadow-sm flex flex-col gap-4 text-left">
+              <div className="flex flex-col gap-1.5">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold select-none">
+                  Bạn đánh giá quán này thế nào?
+                </span>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((stars) => (
+                    <button
+                      key={stars}
+                      type="button"
+                      onClick={() => setNewRating(stars)}
+                      className="hover:scale-110 transition-transform cursor-pointer"
+                    >
+                      <Star 
+                        size={22} 
+                        className={`select-none transition-all ${
+                          stars <= newRating ? 'fill-[#e2533b] text-[#e2533b]' : 'text-[#1a1a1a]/25'
+                        }`} 
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Text comment input */}
+              <div className="flex flex-col gap-1">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold select-none">
+                  Trải nghiệm của bạn
+                </span>
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value.slice(0, 500))}
+                  placeholder="Chia sẻ hương vị món ăn, thái độ phục vụ và không gian quán..."
+                  className="w-full bg-[#fdfcf9] border border-[#1a1a1a]/15 p-3 font-sans text-xs text-[#1a1a1a] placeholder:text-[#1a1a1a]/45 focus:outline-none focus:border-[#e2533b] resize-none min-h-[90px] leading-relaxed font-light"
+                />
+                <span className="font-mono text-[9px] text-[#1a1a1a]/40 font-bold self-end mt-0.5">
+                  {newComment.length}/500
+                </span>
+              </div>
+
+              {/* Optional Photo Attachment */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold select-none">
+                    Ảnh đính kèm
+                  </span>
+                  {newPhotoIndex !== null && (
+                    <button 
+                      type="button" 
+                      onClick={() => setNewPhotoIndex(null)}
+                      className="text-red-500 font-mono text-[9px] uppercase font-bold tracking-wider hover:underline"
+                    >
+                      Xóa ảnh
+                    </button>
+                  )}
+                </div>
+                
+                {newPhotoIndex !== null ? (
+                  <div className="relative aspect-video w-full max-w-[200px] border border-[#1a1a1a]/15 overflow-hidden group cursor-pointer" onClick={handleCyclePhoto}>
+                    <img 
+                      src={PRESET_IMAGES[newPhotoIndex]} 
+                      alt="Preset Food" 
+                      className="w-full h-full object-cover" 
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <span className="text-white text-[9px] uppercase font-mono tracking-wider font-bold">Đổi ảnh khác</span>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCyclePhoto}
+                    className="flex items-center justify-center gap-1.5 border border-dashed border-[#1a1a1a]/25 py-3 text-[#1a1a1a]/60 hover:text-[#e2533b] hover:border-[#e2533b] transition-all cursor-pointer font-mono text-[10px] uppercase tracking-wider font-bold max-w-[200px] self-start"
+                  >
+                    <Camera size={14} />
+                    <span>Gắn ảnh mẫu</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex justify-end gap-2 border-t border-[#1a1a1a]/10 pt-3 mt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowReviewForm(false)}
+                  className="bg-white border border-[#1a1a1a]/15 text-[#1a1a1a] font-mono text-[10px] uppercase tracking-wider px-4 py-2 hover:bg-[#fdfcf9] active:scale-95 transition-all cursor-pointer font-bold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest px-6 py-2 shadow-xs active:scale-95 transition-all cursor-pointer font-bold"
+                >
+                  Gửi đánh giá
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Advanced Filter UI */}
           <div className="flex flex-col gap-3 p-3.5 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-xs font-mono text-left">

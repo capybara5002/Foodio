@@ -10,8 +10,8 @@ public static class DbInitializer
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         try
         {
-            await context.Database.EnsureCreatedAsync();
-            await EnsureChatSchemaAsync(context);
+            await context.Users.AnyAsync();
+            await context.PostComments.AnyAsync();
         }
         catch (Exception ex)
         {

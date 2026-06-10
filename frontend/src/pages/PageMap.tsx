@@ -94,7 +94,10 @@ function RoutingControl({ userLocation, destination }: RoutingControlProps) {
     if (!map) return;
 
     if (routingControlRef.current) {
-      map.removeControl(routingControlRef.current);
+      try {
+        routingControlRef.current.setWaypoints([]);
+        map.removeControl(routingControlRef.current);
+      } catch (e) {}
       routingControlRef.current = null;
     }
 
@@ -106,6 +109,9 @@ function RoutingControl({ userLocation, destination }: RoutingControlProps) {
           L.latLng(userLocation[0], userLocation[1]),
           L.latLng(destination[0], destination[1])
         ],
+        router: (L as any).Routing.osrmv1({
+          serviceUrl: 'https://router.project-osrm.org/route/v1'
+        }),
         routeWhileDragging: false,
         addWaypoints: false,
         fitSelectedRoutes: false,
@@ -128,7 +134,10 @@ function RoutingControl({ userLocation, destination }: RoutingControlProps) {
 
     return () => {
       if (map && routingControlRef.current) {
-        map.removeControl(routingControlRef.current);
+        try {
+          routingControlRef.current.setWaypoints([]);
+          map.removeControl(routingControlRef.current);
+        } catch (e) {}
         routingControlRef.current = null;
       }
     };

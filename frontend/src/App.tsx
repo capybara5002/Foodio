@@ -261,6 +261,7 @@ function AppContent() {
           }}
           onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
           requireAuth={requireAuth}
+          onRestaurantUpdated={handleRestaurantUpdated}
         />
       );
     }

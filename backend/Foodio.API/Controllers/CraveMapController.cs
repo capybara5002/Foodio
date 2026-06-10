@@ -127,6 +127,43 @@ public class CraveMapController : ControllerBase
         return CreatedAtAction(nameof(GetCommunityPosts), post.ToDto());
     }
 
+    [HttpGet("community-posts/{postId}/comments")]
+    [HttpGet("/api/communityposts/{postId}/comments")]
+    public async Task<ActionResult<IReadOnlyList<PostCommentDto>>> GetPostComments(string postId)
+    {
+        var comments = await _db.PostComments
+            .AsNoTracking()
+            .Where(c => c.CommunityPostId == postId)
+            .OrderBy(c => c.CreatedAt)
+            .ToListAsync();
+
+        return Ok(comments.Select(c => c.ToDto()).ToList());
+    }
+
+    [HttpPost("community-posts/{postId}/comments")]
+    [HttpPost("/api/communityposts/{postId}/comments")]
+    public async Task<ActionResult<PostCommentDto>> CreatePostComment(string postId, CreatePostCommentDto dto)
+    {
+        var post = await _db.CommunityPosts.FindAsync(postId);
+        if (post is null) return NotFound("Post not found.");
+
+        var comment = new PostComment
+        {
+            Id = $"pcom_{Guid.NewGuid():N}",
+            CommunityPostId = postId,
+            Author = "Current User",
+            Avatar = "https://ui-avatars.com/api/?name=User&background=random",
+            Content = dto.Content,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _db.PostComments.Add(comment);
+        post.CommentsCount++;
+        await _db.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetPostComments), new { postId }, comment.ToDto());
+    }
+
     [HttpGet("chat-threads")]
     [HttpGet("/api/chatthreads")]
     public async Task<ActionResult<IReadOnlyList<ChatThreadDto>>> GetChatThreads([FromQuery] string? userId, [FromQuery] string? restaurantId)
