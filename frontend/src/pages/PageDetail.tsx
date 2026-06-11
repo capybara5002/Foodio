@@ -22,7 +22,7 @@ interface PageDetailProps {
 }
 
 export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartAudio, onGoToChat, requireAuth, onRestaurantUpdated }: PageDetailProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isFavorite, setIsFavorite] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showAllDishes, setShowAllDishes] = useState(false);
@@ -45,15 +45,15 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
   const handleCreateReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) {
-      setToastMessage('⚠️ Vui lòng viết bình luận của bạn!');
+      setToastMessage(t('review_form.validation_comment'));
       setTimeout(() => setToastMessage(null), 2000);
       return;
     }
 
     try {
       const reviewPayload = {
-        author: user?.username || 'Khách ẩn danh',
-        role: user?.role ? (user.role === 'Guest' ? 'Guest' : 'Foodie') : 'Khách',
+        author: user?.username || (i18n.language === 'vi' ? 'Khách ẩn danh' : 'Anonymous'),
+        role: user?.role ? (user.role === 'Guest' ? 'Guest' : 'Foodie') : (i18n.language === 'vi' ? 'Khách' : 'Visitor'),
         rating: newRating,
         comment: newComment.trim(),
         avatar: (user?.username || 'AN').slice(0, 2).toUpperCase(),
@@ -81,11 +81,11 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
       setNewRating(5);
       setNewPhotoIndex(null);
       setShowReviewForm(false);
-      setToastMessage('⭐ Cảm ơn bạn đã đánh giá quán ăn!');
+      setToastMessage(t('review_form.success_toast'));
       setTimeout(() => setToastMessage(null), 2500);
     } catch (error) {
       console.error('Lỗi khi gửi đánh giá:', error);
-      setToastMessage('❌ Không thể gửi đánh giá. Vui lòng thử lại.');
+      setToastMessage(t('review_form.error_toast'));
       setTimeout(() => setToastMessage(null), 2500);
     }
   };
@@ -307,7 +307,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             <form onSubmit={handleCreateReview} className="bg-white p-5 border border-[#1a1a1a]/15 shadow-sm flex flex-col gap-4 text-left">
               <div className="flex flex-col gap-1.5">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold select-none">
-                  Bạn đánh giá quán này thế nào?
+                  {t('review_form.question')}
                 </span>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((stars) => (
@@ -331,12 +331,12 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
               {/* Text comment input */}
               <div className="flex flex-col gap-1">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold select-none">
-                  Trải nghiệm của bạn
+                  {t('review_form.experience')}
                 </span>
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value.slice(0, 500))}
-                  placeholder="Chia sẻ hương vị món ăn, thái độ phục vụ và không gian quán..."
+                  placeholder={t('review_form.placeholder')}
                   className="w-full bg-[#fdfcf9] border border-[#1a1a1a]/15 p-3 font-sans text-xs text-[#1a1a1a] placeholder:text-[#1a1a1a]/45 focus:outline-none focus:border-[#e2533b] resize-none min-h-[90px] leading-relaxed font-light"
                 />
                 <span className="font-mono text-[9px] text-[#1a1a1a]/40 font-bold self-end mt-0.5">
@@ -348,7 +348,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold select-none">
-                    Ảnh đính kèm
+                    {t('review_form.photo_attachment')}
                   </span>
                   {newPhotoIndex !== null && (
                     <button 
@@ -356,7 +356,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
                       onClick={() => setNewPhotoIndex(null)}
                       className="text-red-500 font-mono text-[9px] uppercase font-bold tracking-wider hover:underline"
                     >
-                      Xóa ảnh
+                      {t('review_form.photo_delete')}
                     </button>
                   )}
                 </div>
@@ -369,7 +369,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
                       className="w-full h-full object-cover" 
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <span className="text-white text-[9px] uppercase font-mono tracking-wider font-bold">Đổi ảnh khác</span>
+                      <span className="text-white text-[9px] uppercase font-mono tracking-wider font-bold">{t('review_form.photo_change')}</span>
                     </div>
                   </div>
                 ) : (
@@ -379,7 +379,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
                     className="flex items-center justify-center gap-1.5 border border-dashed border-[#1a1a1a]/25 py-3 text-[#1a1a1a]/60 hover:text-[#e2533b] hover:border-[#e2533b] transition-all cursor-pointer font-mono text-[10px] uppercase tracking-wider font-bold max-w-[200px] self-start"
                   >
                     <Camera size={14} />
-                    <span>Gắn ảnh mẫu</span>
+                    <span>{t('review_form.photo_preset')}</span>
                   </button>
                 )}
               </div>
@@ -391,13 +391,13 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
                   onClick={() => setShowReviewForm(false)}
                   className="bg-white border border-[#1a1a1a]/15 text-[#1a1a1a] font-mono text-[10px] uppercase tracking-wider px-4 py-2 hover:bg-[#fdfcf9] active:scale-95 transition-all cursor-pointer font-bold"
                 >
-                  Hủy
+                  {t('review_form.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest px-6 py-2 shadow-xs active:scale-95 transition-all cursor-pointer font-bold"
                 >
-                  Gửi đánh giá
+                  {t('review_form.submit')}
                 </button>
               </div>
             </form>

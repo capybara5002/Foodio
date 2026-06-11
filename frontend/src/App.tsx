@@ -21,6 +21,9 @@ import PageCreate from './pages/PageCreate';
 import PageInbox from './pages/PageInbox';
 import PageProfile from './pages/PageProfile';
 
+import OfflineBanner from './components/Common/OfflineBanner';
+import { getCachedRestaurants, saveRestaurants, getCachedAudioTours, saveAudioTours, saveLastSyncInfo } from './services/offlineStore';
+
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTranslation } from 'react-i18next';
 
@@ -81,6 +84,25 @@ function AppContent() {
     let cancelled = false;
 
     const loadData = async () => {
+      // Step 1: Attempt to load from IndexedDB cache first
+      try {
+        const [cachedRest, cachedTours] = await Promise.all([
+          getCachedRestaurants(),
+          getCachedAudioTours()
+        ]);
+        if (!cancelled) {
+          if (cachedRest && cachedRest.length > 0) {
+            setRestaurants(cachedRest);
+          }
+          if (cachedTours && cachedTours.length > 0) {
+            setAudioTours(cachedTours);
+          }
+        }
+      } catch (cacheErr) {
+        console.warn('Failed to load from IndexedDB cache on start:', cacheErr);
+      }
+
+      // Step 2: Fetch fresh data from remote API
       try {
         const [remoteRestaurants, remoteThreads, remoteTours] = await Promise.all([
           getRestaurants(),
@@ -94,11 +116,18 @@ function AppContent() {
 
         if (cancelled) return;
 
-        if (remoteRestaurants.length > 0) setRestaurants(remoteRestaurants);
+        if (remoteRestaurants.length > 0) {
+          setRestaurants(remoteRestaurants);
+          void saveRestaurants(remoteRestaurants);
+        }
         replaceChatThreads(remoteThreads);
-        if (remoteTours.length > 0) setAudioTours(remoteTours);
+        if (remoteTours.length > 0) {
+          setAudioTours(remoteTours);
+          void saveAudioTours(remoteTours);
+        }
+        void saveLastSyncInfo({ timestamp: Date.now() });
       } catch (error) {
-        console.warn('CraveMap API unavailable, using local seed data.', error);
+        console.warn('CraveMap API unavailable, using local/cached data.', error);
       }
     };
 
@@ -355,6 +384,8 @@ function AppContent() {
         onSearchQueryChange={setMapSearchQuery}
         onSearchRestaurantSelect={handleMapSearchSelect}
       />
+
+      <OfflineBanner />
 
       {/* Floating QR scan notification banner */}
       {qrStatus && (
