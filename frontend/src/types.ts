@@ -75,6 +75,10 @@ export interface Restaurant {
   longitude?: number;
   dishes: Dish[];
   reviews: FoodieReview[];
+  audioPriority?: number;
+  geofenceRadiusMeters?: number;
+  audioUrl?: string;
+  updatedAt?: string;
 }
 
 export interface CommunityPost {

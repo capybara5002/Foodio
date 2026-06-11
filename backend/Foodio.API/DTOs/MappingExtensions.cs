@@ -47,7 +47,11 @@ public static class MappingExtensions
             restaurant.CategoryId,
             restaurant.FoodStreetId,
             restaurant.Dishes.OrderBy(dish => dish.Name).Select(dish => dish.ToDto()).ToList(),
-            restaurant.Reviews.OrderByDescending(review => review.CreatedAt).Select(review => review.ToDto()).ToList());
+            restaurant.Reviews.OrderByDescending(review => review.CreatedAt).Select(review => review.ToDto()).ToList(),
+            restaurant.AudioPriority,
+            restaurant.GeofenceRadiusMeters,
+            restaurant.AudioUrl,
+            restaurant.UpdatedAt);
 
     public static CommunityPostDto ToDto(this CommunityPost post) =>
         new(post.Id, post.Author, post.Handle, post.Avatar, post.TimeAgo, post.Rating, post.Image, post.Content, post.LocationName, post.LikesCount, post.CommentsCount, post.IsLiked, post.IsSaved, post.IsRestaurantPost, post.IsApproved);

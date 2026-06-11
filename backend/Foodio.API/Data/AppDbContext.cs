@@ -151,7 +151,10 @@ public class AppDbContext : DbContext
                 Longitude = 106.688515m,
                 CategoryId = 1,
                 FoodStreetId = 3,
-                CreatedAt = createdAt
+                AudioPriority = 70,
+                GeofenceRadiusMeters = 35,
+                CreatedAt = createdAt,
+                UpdatedAt = createdAt
             },
             new Restaurant
             {
@@ -170,7 +173,10 @@ public class AppDbContext : DbContext
                 Longitude = 106.706962m,
                 CategoryId = 1,
                 FoodStreetId = 1,
-                CreatedAt = createdAt
+                AudioPriority = 100,
+                GeofenceRadiusMeters = 45,
+                CreatedAt = createdAt,
+                UpdatedAt = createdAt
             },
             new Restaurant
             {
@@ -189,7 +195,10 @@ public class AppDbContext : DbContext
                 Longitude = 106.693385m,
                 CategoryId = 2,
                 FoodStreetId = 2,
-                CreatedAt = createdAt
+                AudioPriority = 55,
+                GeofenceRadiusMeters = 30,
+                CreatedAt = createdAt,
+                UpdatedAt = createdAt
             },
             new Restaurant
             {
@@ -208,7 +217,10 @@ public class AppDbContext : DbContext
                 Longitude = 106.695142m,
                 CategoryId = 3,
                 FoodStreetId = 3,
-                CreatedAt = createdAt
+                AudioPriority = 40,
+                GeofenceRadiusMeters = 30,
+                CreatedAt = createdAt,
+                UpdatedAt = createdAt
             });
 
         modelBuilder.Entity<MenuItem>().HasData(

@@ -11,7 +11,10 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 
 import { Restaurant } from '../types';
-import { X, BadgeCheck, Star, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, MessageSquare } from 'lucide-react';
+import { X, BadgeCheck, Star, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, MessageSquare, Volume2, VolumeX, Compass, Keyboard } from 'lucide-react';
+import { startLocationTracking, stopLocationTracking, LocationMode } from '../services/locationService';
+import { checkGeofences } from '../services/geofenceEngine';
+import { playNarration, stopNarration, onNarrationStart, onNarrationEnd, getMuted, setMuted } from '../services/narrationEngine';
 
 // Standard Leaflet asset fixes for Vite builds to prevent broken image references
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -254,8 +257,11 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
     }
   }, [selectedRestaurant]);
 
-  // Keyboard movement state
+  // Location and narration guide states
   const [userLocation, setUserLocation] = useState<[number, number]>(VINH_KHANH_CENTER);
+  const [locationMode, setLocationMode] = useState<LocationMode>('mock');
+  const [currentNarration, setCurrentNarration] = useState<{ restaurant: Restaurant; text: string } | null>(null);
+  const [isAudioMuted, setIsAudioMuted] = useState(getMuted());
 
   // Freeze layouts and disable background scrolling dynamically when Map mounts
   useEffect(() => {
@@ -271,47 +277,48 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
     };
   }, []);
 
-  // Listen to keyboard arrow key movements
+  // Hook location service tracking
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault(); // Prevent standard page scroll behavior
+    startLocationTracking(locationMode, (pos) => {
+      setUserLocation([pos.lat, pos.lng]);
+
+      // Verify geofence trigger
+      const triggered = checkGeofences(pos, restaurants);
+      if (triggered) {
+        const lang = localStorage.getItem('app_lang') || 'vi';
+        void playNarration(triggered, lang);
       }
+    });
 
-      setUserLocation((prev) => {
-        let [lat, lng] = prev;
-        const delta = 0.00015;
-
-        switch (e.key) {
-          case 'ArrowUp':
-            lat += delta;
-            break;
-          case 'ArrowDown':
-            lat -= delta;
-            break;
-          case 'ArrowLeft':
-            lng -= delta;
-            break;
-          case 'ArrowRight':
-            lng += delta;
-            break;
-          default:
-            return prev;
-        }
-
-        // Lock boundaries [10.7500, 106.6950] (SW) to [10.7650, 106.7150] (NE)
-        lat = Math.max(10.7500, Math.min(10.7650, lat));
-        lng = Math.max(106.6950, Math.min(106.7150, lng));
-
-        return [lat, lng];
-      });
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      stopLocationTracking();
+    };
+  }, [locationMode, restaurants]);
+
+  // Subscribe to active audio guide narrations
+  useEffect(() => {
+    const unsubStart = onNarrationStart((res, text) => {
+      setCurrentNarration({ restaurant: res, text });
+    });
+    const unsubEnd = onNarrationEnd(() => {
+      setCurrentNarration(null);
+    });
+
+    return () => {
+      unsubStart();
+      unsubEnd();
     };
   }, []);
+
+  const toggleMute = () => {
+    const nextMuted = !isAudioMuted;
+    setIsAudioMuted(nextMuted);
+    setMuted(nextMuted);
+  };
+
+  const toggleLocationMode = () => {
+    setLocationMode((prev) => (prev === 'real' ? 'mock' : 'real'));
+  };
 
   // Project coordinates of items onto Vinh Khanh Food Street if they are seeded outside maps bounds
   const getCoordinates = (r: Restaurant): [number, number] => {
@@ -329,6 +336,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
   };
 
   const handleGeoLocate = () => {
+    setLocationMode('real');
     setGpsNotification(true);
     setLocateTrigger(true);
     setTimeout(() => setLocateTrigger(false), 50);
@@ -352,6 +360,41 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
 
   return (
     <div className="fixed inset-x-0 bottom-0 top-[72px] bottom-16 md:bottom-0 flex bg-[#fdfcf9] overflow-hidden text-[#1a1a1a] z-40 transition-all duration-300">
+
+      {/* Live Audio Narration Guide Overlay (Glassmorphism + mini player styling) */}
+      {currentNarration && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-[#1a1a1a]/95 backdrop-blur-md border border-white/20 text-white p-4 shadow-2xl flex items-start gap-3.5 z-[1005] animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="w-12 h-12 shrink-0 overflow-hidden border border-white/10 bg-white/5">
+            <img 
+              src={currentNarration.restaurant.image} 
+              alt={currentNarration.restaurant.name} 
+              className="w-full h-full object-cover grayscale brightness-90"
+            />
+          </div>
+          <div className="flex-1 min-w-0 text-left">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="font-mono text-[8px] font-bold tracking-widest text-[#e2533b] bg-white/10 px-1.5 py-0.5 rounded-none uppercase select-none">
+                  {t('map.narration_active', 'Audio Narration')}
+                </span>
+                <h4 className="font-serif italic font-bold text-xs text-white mt-1 truncate">
+                  {currentNarration.restaurant.name}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => stopNarration()}
+                className="text-white/60 hover:text-white transition-colors p-1 cursor-pointer"
+              >
+                <X size={14} strokeWidth={3} />
+              </button>
+            </div>
+            <p className="font-sans text-[10px] leading-relaxed text-white/80 line-clamp-3 mt-1.5 font-light">
+              {currentNarration.text}
+            </p>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .leaflet-container {
@@ -616,7 +659,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           {/* Render every backend restaurant marker regardless of active search text. */}
           {restaurants.map((restaurant) => {
             const coords = getCoordinates(restaurant);
-            const isSelected = selectedRestaurant?.id === restaurant.id;
+            const isSelected = selectedRestaurant?.id === restaurant.id || currentNarration?.restaurant.id === restaurant.id;
 
             return (
               <Marker
@@ -658,16 +701,39 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           </div>
         )}
 
-        {/* Bottom Left GPS control button & Tour Card overlay */}
+        {/* Bottom Right Controls (Narration, Mode Toggle, GPS Locator) & Tour Card overlay */}
         <div className="absolute bottom-6 left-0 w-full px-4 z-[1000] pointer-events-none flex flex-col items-end gap-3">
-          <button
-            type="button"
-            onClick={handleGeoLocate}
-            aria-label="Align camera to current GPS location"
-            className="w-12 h-12 bg-white text-[#1a1a1a] hover:text-[#e2533b] rounded-none shadow-xl flex items-center justify-center border-2 border-[#1a1a1a] hover:bg-[#f9f7f2] active:scale-90 transition-all pointer-events-auto cursor-pointer group"
-          >
-            <LocateFixed size={24} className="group-hover:scale-110 transition-transform" />
-          </button>
+          <div className="flex flex-col gap-2.5">
+            {/* Narration Mute/Unmute */}
+            <button
+              type="button"
+              onClick={toggleMute}
+              title={isAudioMuted ? t('map.narration_unmuted', 'Enable Audio Guide') : t('map.narration_muted', 'Disable Audio Guide')}
+              className={`w-12 h-12 ${isAudioMuted ? 'bg-[#e2533b] text-white border-[#e2533b] hover:bg-[#e2533b]/90' : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2]'} rounded-none shadow-xl flex items-center justify-center border-2 active:scale-90 transition-all pointer-events-auto cursor-pointer`}
+            >
+              {isAudioMuted ? <VolumeX size={22} /> : <Volume2 size={22} />}
+            </button>
+
+            {/* Tracking Mode Switcher */}
+            <button
+              type="button"
+              onClick={toggleLocationMode}
+              title={locationMode === 'real' ? t('map.mode_walk', 'Switch to Walk Mode') : t('map.mode_gps', 'Switch to GPS Mode')}
+              className={`w-12 h-12 ${locationMode === 'real' ? 'bg-[#1a1a1a] text-white border-[#1a1a1a] hover:bg-black' : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2]'} rounded-none shadow-xl flex items-center justify-center border-2 active:scale-90 transition-all pointer-events-auto cursor-pointer`}
+            >
+              {locationMode === 'real' ? <Compass size={22} /> : <Keyboard size={22} />}
+            </button>
+
+            {/* GPS Recenter View */}
+            <button
+              type="button"
+              onClick={handleGeoLocate}
+              aria-label="Align camera to current location"
+              className="w-12 h-12 bg-white text-[#1a1a1a] hover:text-[#e2533b] rounded-none shadow-xl flex items-center justify-center border-2 border-[#1a1a1a] hover:bg-[#f9f7f2] active:scale-90 transition-all pointer-events-auto cursor-pointer group"
+            >
+              <LocateFixed size={22} className="group-hover:scale-110 transition-transform" />
+            </button>
+          </div>
 
           <div
             onClick={onSelectTour}

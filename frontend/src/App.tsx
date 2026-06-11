@@ -23,6 +23,7 @@ import PageProfile from './pages/PageProfile';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { stopNarration } from './services/narrationEngine';
 
 function AppContent() {
   const { t, i18n } = useTranslation();
@@ -338,6 +339,9 @@ function AppContent() {
       <NavBar
         currentTab={currentTab}
         onChangeTab={(tab) => {
+          try {
+            stopNarration();
+          } catch (e) {}
           if (tab === 'create') {
             requireAuth(t('auth.require_login_post'), () => {
               setSelectedRestaurantId(null);

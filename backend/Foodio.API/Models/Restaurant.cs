@@ -57,7 +57,16 @@ public class Restaurant
 
     public bool IsActive { get; set; } = true;
 
+    public int AudioPriority { get; set; }
+
+    public int GeofenceRadiusMeters { get; set; } = 30;
+
+    [MaxLength(500)]
+    public string? AudioUrl { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public int CategoryId { get; set; }
     public Category? Category { get; set; }

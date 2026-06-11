@@ -96,6 +96,26 @@ BEGIN
     ALTER TABLE dbo.Restaurants ADD TableStatuses NVARCHAR(MAX) NULL;
 END
 
+IF COL_LENGTH('dbo.Restaurants', 'AudioPriority') IS NULL
+BEGIN
+    ALTER TABLE dbo.Restaurants ADD AudioPriority INT NOT NULL CONSTRAINT DF_Restaurants_AudioPriority DEFAULT 0;
+END
+
+IF COL_LENGTH('dbo.Restaurants', 'GeofenceRadiusMeters') IS NULL
+BEGIN
+    ALTER TABLE dbo.Restaurants ADD GeofenceRadiusMeters INT NOT NULL CONSTRAINT DF_Restaurants_GeofenceRadiusMeters DEFAULT 30;
+END
+
+IF COL_LENGTH('dbo.Restaurants', 'AudioUrl') IS NULL
+BEGIN
+    ALTER TABLE dbo.Restaurants ADD AudioUrl NVARCHAR(500) NULL;
+END
+
+IF COL_LENGTH('dbo.Restaurants', 'UpdatedAt') IS NULL
+BEGIN
+    ALTER TABLE dbo.Restaurants ADD UpdatedAt DATETIMEOFFSET NOT NULL CONSTRAINT DF_Restaurants_UpdatedAt DEFAULT SYSDATETIMEOFFSET();
+END
+
 IF COL_LENGTH('dbo.CommunityPosts', 'IsRestaurantPost') IS NULL
 BEGIN
     ALTER TABLE dbo.CommunityPosts ADD IsRestaurantPost BIT NOT NULL CONSTRAINT DF_CommunityPosts_IsRestaurantPost DEFAULT 0;

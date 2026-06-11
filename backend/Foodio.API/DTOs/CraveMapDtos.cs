@@ -47,7 +47,11 @@ public record RestaurantDto(
     int CategoryId,
     int FoodStreetId,
     IReadOnlyList<DishDto> Dishes,
-    IReadOnlyList<FoodieReviewDto> Reviews);
+    IReadOnlyList<FoodieReviewDto> Reviews,
+    int AudioPriority,
+    int GeofenceRadiusMeters,
+    string? AudioUrl,
+    DateTimeOffset UpdatedAt);
 
 public record RestaurantUpsertDto(
     string Name,
@@ -268,3 +272,12 @@ public record RestaurantRequestDto(
     DateTimeOffset? ReviewedAt);
 
 public record RestaurantRequestReviewDto(string? AdminNote);
+
+public record NarrationRequestDto(string RestaurantId, string? Language = null);
+
+public record NarrationResponseDto(
+    string RestaurantId,
+    string Language,
+    string Text,
+    string? AudioUrl,
+    string Source);
