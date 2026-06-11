@@ -10,11 +10,33 @@ public static class DbInitializer
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         try
         {
+            await context.Database.MigrateAsync();
+            await EnsureChatSchemaAsync(context);
             await context.Users.AnyAsync();
             await context.PostComments.AnyAsync();
         }
         catch (Exception ex)
         {
+            // Auto-heal: If migrations fail due to table/migration conflicts in local dev database, drop & recreate cleanly.
+            if (ex.ToString().Contains("already an object named") || ex.ToString().Contains("Invalid object name") || ex.ToString().Contains("2714") || ex.ToString().Contains("208"))
+            {
+                try
+                {
+                    await context.Database.EnsureDeletedAsync();
+                    await context.Database.MigrateAsync();
+                    await EnsureChatSchemaAsync(context);
+                    await context.Users.AnyAsync();
+                    await context.PostComments.AnyAsync();
+                    return;
+                }
+                catch (Exception healEx)
+                {
+                    throw new InvalidOperationException(
+                        "Failed to auto-heal database. Manual DB drop might be required.",
+                        healEx);
+                }
+            }
+
             throw new InvalidOperationException(
                 "Could not initialize the SQL Server database. Check ConnectionStrings:DefaultConnection in appsettings.Development.json or appsettings.json.",
                 ex);
@@ -124,6 +146,19 @@ BEGIN
         EntityId NVARCHAR(64) NOT NULL,
         Timestamp DATETIMEOFFSET NOT NULL,
         Details NVARCHAR(2000) NULL
+    );
+END
+
+IF OBJECT_ID('dbo.PostComments', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.PostComments (
+        Id NVARCHAR(64) PRIMARY KEY,
+        CommunityPostId NVARCHAR(64) NOT NULL,
+        Author NVARCHAR(80) NOT NULL,
+        Avatar NVARCHAR(1000) NOT NULL,
+        Content NVARCHAR(1000) NOT NULL,
+        CreatedAt DATETIMEOFFSET NOT NULL,
+        CONSTRAINT FK_PostComments_CommunityPosts_CommunityPostId FOREIGN KEY (CommunityPostId) REFERENCES dbo.CommunityPosts(Id) ON DELETE CASCADE
     );
 END
 ");
