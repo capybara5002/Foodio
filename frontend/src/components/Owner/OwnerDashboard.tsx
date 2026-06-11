@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Restaurant, Category, BookingMessagePayload } from '../../types';
-import { Trash2, X, Plus, Store, Users, Calendar, Ban, QrCode, TrendingUp, Settings, Check, Clock, MapPin, Star, CheckCircle2, XCircle, FileText, Grid, Megaphone } from 'lucide-react';
+import { Restaurant, Category, BookingMessagePayload, Notification } from '../../types';
+import { Trash2, X, Plus, Store, Users, Calendar, Ban, QrCode, TrendingUp, Settings, Check, Clock, MapPin, Star, CheckCircle2, XCircle, FileText, Grid, Megaphone, Bell, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface OwnerDashboardProps {
@@ -29,19 +29,21 @@ interface AnalyticsDto {
 }
 
 export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardProps) {
-  const { user } = useAuth();
+  const { user, syncUser } = useAuth();
   const { t } = useTranslation();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [foodStreets, setFoodStreets] = useState<any[]>([]);
   const [bookings, setBookings] = useState<BookingDto[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsDto | null>(null);
-  const [activeTab, setActiveTab] = useState<'analytics' | 'bookings' | 'tables' | 'dishes' | 'posts' | 'settings' | 'qr'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'bookings' | 'tables' | 'dishes' | 'reviews' | 'posts' | 'settings' | 'qr'>('analytics');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [tablesSaveSuccess, setTablesSaveSuccess] = useState(false);
   const [requestStatus, setRequestStatus] = useState<{ status: string; note?: string } | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Edit Restaurant Form state
   const [restForm, setRestForm] = useState({
@@ -105,6 +107,21 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     setIsLoading(true);
     setError(null);
     try {
+      // Sync user profile first
+      if (user) {
+        try {
+          const profileRes = await fetch(`${baseUrl}/api/auth/me/${user.id}`);
+          if (profileRes.ok) {
+            const updatedUser = await profileRes.json();
+            if (updatedUser.restaurantId !== user.restaurantId || updatedUser.ownerStatus !== user.ownerStatus) {
+              syncUser(updatedUser);
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to sync user profile:", e);
+        }
+      }
+
       // Fetch categories and streets first
       const [catRes, streetRes] = await Promise.all([
         fetch(`${baseUrl}/api/cravemap/categories`),
@@ -121,10 +138,11 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       }
 
       if (activeRestaurantId) {
-        const [restRes, bookingsRes, analyticsRes] = await Promise.all([
+        const [restRes, bookingsRes, analyticsRes, notificationsRes] = await Promise.all([
           fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`),
           fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/bookings`),
-          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/analytics`)
+          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/analytics`),
+          fetch(`${baseUrl}/api/owner/notifications?ownerId=${user?.id}`)
         ]);
 
         if (!restRes.ok) throw new Error('Failed to load restaurant details.');
@@ -165,6 +183,11 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
         if (analyticsRes.ok) {
           const analyticsData = await analyticsRes.json();
           setAnalytics(analyticsData);
+        }
+
+        if (notificationsRes.ok) {
+          const notificationsData = await notificationsRes.json();
+          setNotifications(notificationsData);
         }
 
         setRestForm({
@@ -224,6 +247,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
       const requestData = await res.json();
       setRequestStatus({ status: requestData.status, note: requestData.adminNote });
+      syncUser({ ownerStatus: 'Pending' });
     } catch (err: any) {
       setError(err.message || 'Error submitting request.');
     } finally {
@@ -235,7 +259,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     e.preventDefault();
     setSaveSuccess(false);
     try {
-      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`, {
+      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}?ownerId=${user?.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -436,7 +460,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     if (!window.confirm(`Bạn có chắc chắn muốn ${actionLabel} đơn đặt bàn này?`)) return;
 
     try {
-      const res = await fetch(`${baseUrl}/api/owner/bookings/${bookingId}/status`, {
+      const res = await fetch(`${baseUrl}/api/owner/bookings/${bookingId}/status?ownerId=${user?.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -455,6 +479,36 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       }
     } catch (err: any) {
       alert(err.message || 'Error updating status.');
+    }
+  };
+
+  const handleReportReview = async (reviewId: string) => {
+    if (!window.confirm("Bạn có chắc chắn muốn báo cáo đánh giá này không?")) return;
+    try {
+      const res = await fetch(`${baseUrl}/api/owner/reviews/${reviewId}/report?ownerId=${user?.id}`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        alert("Đã báo cáo đánh giá vi phạm thành công tới Admin!");
+      } else {
+        const msg = await res.text();
+        alert("Lỗi: " + msg);
+      }
+    } catch (e: any) {
+      alert("Lỗi báo cáo: " + e.message);
+    }
+  };
+
+  const handleMarkNotificationAsRead = async (id: number) => {
+    try {
+      const res = await fetch(`${baseUrl}/api/owner/notifications/${id}/read`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      }
+    } catch (e) {
+      console.error("Failed to mark notification as read", e);
     }
   };
 
@@ -700,8 +754,60 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
         </div>
 
         {/* Tab Headers */}
-        <div className="flex flex-wrap gap-2">
-          {(['analytics', 'bookings', 'tables', 'dishes', 'posts', 'settings', 'qr'] as const).map(tab => (
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Notifications Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="p-2 border-2 border-white hover:bg-white/10 text-white transition-all cursor-pointer font-bold relative flex items-center justify-center h-10 w-10 active:translate-y-0.5"
+              title="Thông báo"
+            >
+              <Bell size={16} />
+              {notifications.filter(n => !n.isRead).length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#e2533b] border border-[#1a1a1a] text-[9px] font-black text-white flex items-center justify-center rounded-none shadow-md">
+                  {notifications.filter(n => !n.isRead).length}
+                </span>
+              )}
+            </button>
+            
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-white border-3 border-[#1a1a1a] shadow-[6px_6px_0px_0px_#1a1a1a] text-[#1a1a1a] z-[1000] p-3 max-h-96 overflow-y-auto animate-in fade-in duration-150">
+                <div className="flex justify-between items-center border-b border-dashed border-[#1a1a1a]/15 pb-2 mb-2">
+                  <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#1a1a1a]/60">Thông báo cho Chủ quán</span>
+                  {notifications.length > 0 && (
+                    <button
+                      onClick={() => setNotifications([])}
+                      className="font-mono text-[8px] uppercase tracking-wider text-red-500 hover:underline font-bold"
+                    >
+                      Xóa tất cả
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  {notifications.length === 0 ? (
+                    <p className="text-center text-xs font-mono py-6 text-[#1a1a1a]/40 uppercase">Không có thông báo nào</p>
+                  ) : (
+                    notifications.map(n => (
+                      <div
+                        key={n.id}
+                        onClick={() => {
+                          if (!n.isRead) handleMarkNotificationAsRead(n.id);
+                        }}
+                        className={`p-2.5 border border-[#1a1a1a]/15 flex flex-col gap-1 cursor-pointer hover:bg-[#f9f7f2] transition-colors relative ${!n.isRead ? 'bg-amber-50/70 border-amber-300' : 'bg-white'}`}
+                      >
+                        {!n.isRead && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-amber-500 rounded-full"></span>}
+                        <h4 className="font-serif italic font-bold text-xs leading-tight pr-3">{n.title}</h4>
+                        <p className="font-sans text-[10px] text-[#1a1a1a]/70 leading-normal">{n.body}</p>
+                        <span className="font-mono text-[8px] text-slate-400 mt-1">{new Date(n.createdAt).toLocaleString()}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {(['analytics', 'bookings', 'tables', 'dishes', 'reviews', 'posts', 'settings', 'qr'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -715,6 +821,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                tab === 'bookings' ? t('booking.title', 'Đặt bàn') :
                tab === 'tables' ? t('owner.table_map', 'Sơ đồ bàn') :
                tab === 'dishes' ? t('detail.signature_dishes', 'Món ăn') :
+               tab === 'reviews' ? t('admin.tabs.moderation', 'Đánh giá') :
                tab === 'posts' ? t('owner.posts', 'Bài đăng') :
                tab === 'settings' ? t('profile.owner_console', 'Cấu hình') : 'Mã QR'}
             </button>
@@ -1336,6 +1443,56 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                   📲 Giả lập quét mã QR
                 </a>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'reviews' && (
+        <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5 animate-in fade-in duration-200">
+          <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4">
+            <h3 className="font-serif italic font-bold text-lg">Đánh giá từ khách hàng</h3>
+            <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">CUSTOMER REVIEWS & FEEDBACK</p>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {!restaurant?.reviews || restaurant.reviews.length === 0 ? (
+              <div className="text-center py-12 font-mono text-xs text-[#1a1a1a]/40 uppercase">
+                Chưa có đánh giá nào cho quán ăn của bạn.
+              </div>
+            ) : (
+              restaurant.reviews.map((rev: any) => (
+                <div key={rev.id} className="p-4 border-2 border-[#1a1a1a] bg-[#fdfcf9] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-[#e2533b] transition-all">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-serif italic font-bold text-sm">{rev.author}</span>
+                      <span className="text-xs font-mono text-slate-400">({rev.role})</span>
+                      <div className="flex text-[#e2533b] ml-2">
+                        {Array.from({ length: 5 }).map((_, st) => (
+                          <Star 
+                            key={st} 
+                            size={12} 
+                            className={`select-none ${st < Math.floor(rev.rating) ? 'fill-[#e2533b] text-[#e2533b]' : 'text-slate-300'}`} 
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#1a1a1a]/80 mt-1 leading-relaxed italic">"{rev.comment}"</p>
+                    {rev.imageUrl && (
+                      <img src={rev.imageUrl} alt="Attachment" className="mt-2 w-32 h-20 object-cover border border-[#1a1a1a]/20" />
+                    )}
+                    <span className="text-[10px] font-mono text-slate-400 mt-2 block">
+                      {rev.createdAt ? new Date(rev.createdAt).toLocaleString() : ''}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleReportReview(rev.id)}
+                    className="px-3 py-1.5 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-amber-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5 text-amber-600 shrink-0"
+                  >
+                    <AlertTriangle size={11} className="text-amber-500" /> Báo cáo vi phạm
+                  </button>
+                </div>
+              ))
             )}
           </div>
         </div>

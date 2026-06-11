@@ -18,7 +18,13 @@ public static class MappingExtensions
         new(review.Id, review.Author, review.Role, review.Rating, review.Comment, review.Avatar, review.ImageUrl);
 
     public static UserDto ToDto(this User user) =>
-        new(user.Id, user.Username, user.Email, user.Role, user.RestaurantId, user.IsActive, user.CreatedAt, user.Avatar);
+        new(user.Id, user.Username, user.Email, user.Role, user.RestaurantId, user.OwnerStatus, user.IsActive, user.CreatedAt, user.Avatar);
+
+    public static NotificationDto ToDto(this Notification notification) =>
+        new(notification.Id, notification.UserId, notification.RestaurantId, notification.Type, notification.Title, notification.Body, notification.PayloadJson, notification.IsRead, notification.CreatedAt);
+
+    public static AuditLogDto ToDto(this AuditLog log) =>
+        new(log.Id, log.Actor, log.Action, log.EntityType, log.EntityId, log.Timestamp, log.Details);
 
     public static RestaurantDto ToDto(this Restaurant restaurant) =>
         new(
@@ -44,7 +50,7 @@ public static class MappingExtensions
             restaurant.Reviews.OrderByDescending(review => review.CreatedAt).Select(review => review.ToDto()).ToList());
 
     public static CommunityPostDto ToDto(this CommunityPost post) =>
-        new(post.Id, post.Author, post.Handle, post.Avatar, post.TimeAgo, post.Rating, post.Image, post.Content, post.LocationName, post.LikesCount, post.CommentsCount, post.IsLiked, post.IsSaved, post.IsRestaurantPost);
+        new(post.Id, post.Author, post.Handle, post.Avatar, post.TimeAgo, post.Rating, post.Image, post.Content, post.LocationName, post.LikesCount, post.CommentsCount, post.IsLiked, post.IsSaved, post.IsRestaurantPost, post.IsApproved);
 
     public static ChatMessageDto ToDto(this ChatMessage message) =>
         new(
@@ -83,7 +89,7 @@ public static class MappingExtensions
         $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(name)}&background=1a1a1a&color=ffffff&size=128";
 
     public static AudioTourDto ToDto(this AudioTour tour) =>
-        new(tour.Id, tour.Title, tour.Location, tour.Image, tour.MapImage, tour.IsTrending, tour.Rating, tour.Duration, tour.StopsCount, tour.Vibe, tour.Description);
+        new(tour.Id, tour.Title, tour.Location, tour.Image, tour.MapImage, tour.IsTrending, tour.Rating, tour.Duration, tour.StopsCount, tour.Vibe, tour.Description, tour.AudioData);
 
     public static BookingDto ToDto(this Booking booking) =>
         new(booking.Id, booking.RestaurantId, booking.Date, booking.Time, booking.Guests, booking.Seating, booking.Status);

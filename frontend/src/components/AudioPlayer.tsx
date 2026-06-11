@@ -26,10 +26,54 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     progressRef.current = progress;
   }, [progress]);
 
-  // High-frequency interval timer (every 50ms) to update the progress bar visually with 60fps-like smoothness
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize Audio object if tour.audioData is present
+  useEffect(() => {
+    if (!tour) return;
+
+    if (tour.audioData) {
+      const audio = new Audio(tour.audioData);
+      audioRef.current = audio;
+
+      const onLoadedMetadata = () => {
+        setDurationSec(Math.ceil(audio.duration));
+      };
+
+      const onTimeUpdate = () => {
+        if (audio.duration > 0) {
+          setProgress((audio.currentTime / audio.duration) * 100);
+        }
+      };
+
+      const onEnded = () => {
+        setIsPlaying(false);
+        setProgress(100);
+      };
+
+      audio.addEventListener('loadedmetadata', onLoadedMetadata);
+      audio.addEventListener('timeupdate', onTimeUpdate);
+      audio.addEventListener('ended', onEnded);
+
+      // Trigger initial load metadata
+      if (audio.readyState >= 1) {
+        setDurationSec(Math.ceil(audio.duration));
+      }
+
+      return () => {
+        audio.pause();
+        audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+        audio.removeEventListener('timeupdate', onTimeUpdate);
+        audio.removeEventListener('ended', onEnded);
+        audioRef.current = null;
+      };
+    }
+  }, [tour]);
+
+  // High-frequency interval timer (every 50ms) to update the progress bar visually with 60fps-like smoothness (Only for TTS)
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (isPlaying && tour && durationSec > 0) {
+    if (isPlaying && tour && durationSec > 0 && !tour.audioData) {
       interval = setInterval(() => {
         setProgress((prev) => {
           const next = prev + (5 / durationSec);
@@ -44,9 +88,13 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     return () => clearInterval(interval);
   }, [isPlaying, tour, durationSec]);
 
-  // Load narrative when tour changes
+  // Load narrative when tour changes (Only for TTS)
   useEffect(() => {
     if (!tour) return;
+    if (tour.audioData) {
+      setIsLoadingNarrative(false);
+      return;
+    }
 
     let cancelled = false;
     setNarrative('');
@@ -72,9 +120,24 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     };
   }, [tour]);
 
-  // Handle TTS play / pause when state changes (decoupled from progress updates)
+  // Handle TTS or HTML5 Audio play / pause when state changes
   useEffect(() => {
-    if (!tour || !narrative || !('speechSynthesis' in window)) return;
+    if (!tour) return;
+
+    if (tour.audioData) {
+      const audio = audioRef.current;
+      if (!audio) return;
+      
+      if (isPlaying) {
+        audio.play().catch(err => console.error("Audio playback error:", err));
+      } else {
+        audio.pause();
+      }
+      return;
+    }
+
+    // TTS Fallback
+    if (!narrative || !('speechSynthesis' in window)) return;
 
     if (isPlaying) {
       window.speechSynthesis.cancel();
@@ -110,6 +173,15 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     const clampedProgress = Math.max(0, Math.min(100, newProgress));
     setProgress(clampedProgress);
     
+    if (tour?.audioData) {
+      const audio = audioRef.current;
+      if (audio && audio.duration > 0) {
+        audio.currentTime = (clampedProgress / 100) * audio.duration;
+      }
+      return;
+    }
+
+    // TTS Fallback
     if (isPlaying && narrative && ('speechSynthesis' in window)) {
       window.speechSynthesis.cancel();
       const startIndex = Math.floor((clampedProgress / 100) * narrative.length);

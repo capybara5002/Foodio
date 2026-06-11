@@ -84,6 +84,17 @@ public class AuthController : ControllerBase
         return Ok(user.ToDto());
     }
 
+    [HttpGet("me/{userId}")]
+    public async Task<ActionResult<UserDto>> GetProfile(string userId)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+        return Ok(user.ToDto());
+    }
+
     [HttpPost("qr/generate")]
     public async Task<ActionResult<string>> GenerateQrToken(QrGenerateRequestDto request)
     {

@@ -93,6 +93,7 @@ public class CraveMapController : ControllerBase
     {
         var posts = await _db.CommunityPosts
             .AsNoTracking()
+            .Where(post => post.IsApproved)
             .OrderByDescending(post => post.CreatedAt)
             .ToListAsync();
 
@@ -119,6 +120,7 @@ public class CraveMapController : ControllerBase
             IsLiked = dto.IsLiked,
             IsSaved = dto.IsSaved,
             IsRestaurantPost = dto.IsRestaurantPost,
+            IsApproved = dto.IsRestaurantPost, // Restaurant posts are auto-approved, guest posts are false by default
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -284,10 +286,27 @@ public class CraveMapController : ControllerBase
             Guests = dto.Guests,
             Seating = dto.Seating,
             Status = "Confirmed",
+            UserId = dto.UserId ?? "usr_3",
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         _db.Bookings.Add(booking);
+
+        var owner = await _db.Users.FirstOrDefaultAsync(u => u.RestaurantId == dto.RestaurantId && u.Role == "Owner");
+        if (owner != null)
+        {
+            var notification = new Notification
+            {
+                UserId = owner.Id,
+                RestaurantId = dto.RestaurantId,
+                Type = "Booking",
+                Title = "Đơn đặt bàn mới",
+                Body = $"Nhận được đơn đặt bàn mới từ khách hàng cho {dto.Guests} khách vào lúc {dto.Time} ngày {dto.Date}.",
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            _db.Notifications.Add(notification);
+        }
+
         await _db.SaveChangesAsync();
 
         var threadDto = await _chatService.EnsureThreadAsync(dto.RestaurantId, dto.UserId ?? "usr_3");
