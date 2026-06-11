@@ -254,9 +254,9 @@ public class AppDbContext : DbContext
             new AudioTour { Id = "tour_2", Title = "Seafood Heaven Tour", Location = "Vinh Khanh Food Street", Image = seafoodImage, MapImage = seafoodImage, IsTrending = false, Rating = 4.7m, Duration = "1.5 hrs", StopsCount = 4, Vibe = "Premium", Description = "Fresh shellfish, grilled oysters, and local ordering tips from the canal-side stalls." });
 
         modelBuilder.Entity<User>().HasData(
-            new User { Id = "usr_1", Username = "admin", Email = "admin@foodio.com", PasswordHash = "admin123", Role = "Admin", IsActive = true, CreatedAt = createdAt },
-            new User { Id = "usr_2", Username = "owner_ocdao", Email = "owner@foodio.com", PasswordHash = "owner123", Role = "Owner", RestaurantId = "oc_dao", IsActive = true, CreatedAt = createdAt },
-            new User { Id = "usr_3", Username = "customer", Email = "customer@foodio.com", PasswordHash = "customer123", Role = "User", IsActive = true, CreatedAt = createdAt }
+            new User { Id = "usr_1", Username = "admin", Email = "admin@foodio.com", PasswordHash = "123456", Role = "Admin", IsActive = true, CreatedAt = createdAt },
+            new User { Id = "usr_2", Username = "owner_ocdao", Email = "owner@foodio.com", PasswordHash = "123456", Role = "Owner", RestaurantId = "oc_dao", IsActive = true, CreatedAt = createdAt },
+            new User { Id = "usr_3", Username = "customer", Email = "customer@foodio.com", PasswordHash = "123456", Role = "User", IsActive = true, CreatedAt = createdAt }
         );
     }
 }
