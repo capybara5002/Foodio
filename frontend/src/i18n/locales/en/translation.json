@@ -252,5 +252,23 @@
     "publish_btn": "Publish to Feed // 📢",
     "publish_success": "Successfully published announcement to feed!",
     "official_badge": "OFFICIAL"
+  },
+  "offline": {
+    "banner_text": "Using offline data",
+    "no_cached_data": "No offline cached data available."
+  },
+  "review_form": {
+    "question": "How do you rate this place?",
+    "experience": "Your Experience",
+    "placeholder": "Share the taste, service attitude, and atmosphere...",
+    "photo_attachment": "Photo Attachment",
+    "photo_delete": "Delete Photo",
+    "photo_change": "Change Photo",
+    "photo_preset": "Attach Preset Photo",
+    "cancel": "Cancel",
+    "submit": "Submit Review",
+    "validation_comment": "⚠️ Please write your comment!",
+    "success_toast": "⭐ Thanks for reviewing this restaurant!",
+    "error_toast": "❌ Failed to submit review. Please try again."
   }
 }

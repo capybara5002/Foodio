@@ -125,6 +125,7 @@ export default function NavBar({
                     setIsSearchFocused(true);
                   }}
                   onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                   placeholder={t('search.placeholder')}
                   className="min-w-0 flex-1 bg-transparent outline-none font-mono text-[10px] sm:text-[11px] text-[#1a1a1a] placeholder:text-[#1a1a1a]/45"
                   aria-label="Search restaurants on the map"

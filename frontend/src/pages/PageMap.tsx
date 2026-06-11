@@ -182,36 +182,32 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
   useEffect(() => {
     if (selectedRestaurant) {
       const coords = getCoordinates(selectedRestaurant);
-      const bounds = L.latLngBounds([userLocation[0], userLocation[1]], coords);
 
       const wasNull = prevSelectedRef.current === null;
       prevSelectedRef.current = selectedRestaurant;
 
-      const performFitBounds = () => {
+      const performPan = () => {
         map.invalidateSize();
 
         const isMobile = window.innerWidth < 768;
-        // Shift visible center upward on mobile bottom sheet (50vh bottom padding)
-        const paddingBottom = isMobile ? Math.floor(window.innerHeight * 0.5) + 40 : 80;
+        // Shift visible center upward on mobile bottom sheet (offset latitude by about -0.0018 degrees)
+        const offsetLat = isMobile ? -0.0018 : 0;
 
-        map.fitBounds(bounds, {
-          paddingTopLeft: [80, 80],
-          paddingBottomRight: [80, paddingBottom],
-          maxZoom: 17,
+        map.setView([coords[0] + offsetLat, coords[1]], 17, {
           animate: true,
           duration: 0.8
         });
       };
 
       if (wasNull && window.innerWidth >= 768) {
-        // Desktop transition width (100% -> 70%) takes 300ms. Delay fitBounds until map resizing finishes.
+        // Desktop transition width (100% -> 70%) takes 300ms. Delay pan until map resizing finishes.
         const timer = setTimeout(() => {
-          performFitBounds();
+          performPan();
         }, 300);
         return () => clearTimeout(timer);
       } else {
-        // Fit immediately when selecting a restaurant on mobile
-        performFitBounds();
+        // Pan immediately when selecting a restaurant on mobile
+        performPan();
       }
     } else {
       prevSelectedRef.current = null;
@@ -223,8 +219,6 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
         return () => clearTimeout(timer);
       }
     }
-    // NOTE: userLocation intentionally excluded — arrow-key walking must NOT re-trigger fitBounds.
-    // fitBounds should only fire when selectedRestaurant changes (marker click / close).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRestaurant, map, getCoordinates]);
 
