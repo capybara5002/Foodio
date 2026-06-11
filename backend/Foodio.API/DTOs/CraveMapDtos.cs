@@ -164,7 +164,8 @@ public record BookingRequestDto(
     string Time,
     int Guests,
     string Seating,
-    string? UserId = null);
+    string? UserId = null,
+    string? TableNumber = null);
 
 public record BookingDto(
     int Id,
@@ -173,7 +174,8 @@ public record BookingDto(
     TimeOnly Time,
     int Guests,
     string Seating,
-    string Status);
+    string Status,
+    string? TableNumber = null);
 
 public record UserDto(
     string Id,

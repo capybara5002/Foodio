@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Restaurant, Category, BookingMessagePayload, Notification } from '../../types';
-import { Trash2, X, Plus, Store, Users, Calendar, Ban, QrCode, TrendingUp, Settings, Check, Clock, MapPin, Star, CheckCircle2, XCircle, FileText, Grid, Megaphone, Bell, AlertTriangle } from 'lucide-react';
+import { Trash2, X, Plus, Store, Users, Calendar, Ban, QrCode, TrendingUp, Settings, Check, Clock, MapPin, Star, CheckCircle2, XCircle, FileText, Grid, Megaphone, Bell, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface OwnerDashboardProps {
@@ -99,6 +99,38 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   const [tableNumber, setTableNumber] = useState(5);
   const [generatedQrToken, setGeneratedQrToken] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
+
+  // TTS state for reading restaurant description
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const handleToggleTTS = () => {
+    if (!('speechSynthesis' in window)) {
+      alert('Trình duyệt của bạn không hỗ trợ đọc giọng nói.');
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const text = restForm.description?.trim();
+    if (!text) {
+      alert('Vui lòng nhập mô tả quán ăn trước khi nghe audio!');
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'vi-VN';
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
+  };
 
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   const activeRestaurantId = user?.restaurantId;
@@ -1280,6 +1312,18 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                 placeholder={t('owner.description_placeholder', 'Nhập mô tả chi tiết của quán ăn...')}
                 className="bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none h-20"
               />
+              <button
+                type="button"
+                onClick={handleToggleTTS}
+                className={`mt-1.5 flex items-center gap-2 px-4 py-2 border-2 border-[#1a1a1a] font-mono text-[10px] uppercase tracking-widest font-bold transition-all cursor-pointer shadow-xs active:translate-y-0.5 self-start ${
+                  isSpeaking
+                    ? 'bg-[#e2533b] text-white hover:bg-red-600'
+                    : 'bg-white text-[#1a1a1a] hover:bg-[#f9f7f2]'
+                }`}
+              >
+                {isSpeaking ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                {isSpeaking ? 'Dừng đọc' : '🔊 Nghe mô tả quán'}
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
