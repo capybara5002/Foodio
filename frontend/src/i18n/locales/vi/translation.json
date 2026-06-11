@@ -159,7 +159,8 @@
       "categories": "Danh mục",
       "streets": "Phố ẩm thực",
       "tours": "Audio Tours",
-      "moderation": "Kiểm duyệt"
+      "moderation": "Kiểm duyệt",
+      "audit_logs": "Nhật ký"
     },
     "stats": {
       "total_accounts": "Tổng tài khoản",

@@ -27,10 +27,33 @@ export interface User {
   email: string;
   role: 'Admin' | 'Owner' | 'User' | 'Guest';
   restaurantId?: string;
+  ownerStatus?: string;
   tableNumber?: number;
   isActive: boolean;
   createdAt?: string;
   avatar?: string;
+}
+
+export interface Notification {
+  id: number;
+  userId: string;
+  restaurantId?: string;
+  type: string;
+  title: string;
+  body: string;
+  payloadJson?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface AuditLog {
+  id: number;
+  actor: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  timestamp: string;
+  details?: string;
 }
 
 export interface Restaurant {
@@ -69,6 +92,7 @@ export interface CommunityPost {
   isLiked: boolean;
   isSaved: boolean;
   isRestaurantPost?: boolean;
+  isApproved?: boolean;
 }
 
 export interface PostComment {
@@ -132,6 +156,7 @@ export interface AudioTour {
   stopsCount: number;
   vibe: string;
   description: string;
+  audioData?: string;
 }
 
 export interface Category {

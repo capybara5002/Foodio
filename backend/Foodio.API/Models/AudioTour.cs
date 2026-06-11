@@ -43,4 +43,6 @@ public class AudioTour
     [Required]
     [MaxLength(1000)]
     public string Description { get; set; } = string.Empty;
+
+    public string? AudioData { get; set; }
 }

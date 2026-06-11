@@ -10,11 +10,33 @@ public static class DbInitializer
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         try
         {
-            await context.Database.EnsureCreatedAsync();
+            await context.Database.MigrateAsync();
             await EnsureChatSchemaAsync(context);
+            await context.Users.AnyAsync();
+            await context.PostComments.AnyAsync();
         }
         catch (Exception ex)
         {
+            // Auto-heal: If migrations fail due to table/migration conflicts in local dev database, drop & recreate cleanly.
+            if (ex.ToString().Contains("already an object named") || ex.ToString().Contains("Invalid object name") || ex.ToString().Contains("2714") || ex.ToString().Contains("208"))
+            {
+                try
+                {
+                    await context.Database.EnsureDeletedAsync();
+                    await context.Database.MigrateAsync();
+                    await EnsureChatSchemaAsync(context);
+                    await context.Users.AnyAsync();
+                    await context.PostComments.AnyAsync();
+                    return;
+                }
+                catch (Exception healEx)
+                {
+                    throw new InvalidOperationException(
+                        "Failed to auto-heal database. Manual DB drop might be required.",
+                        healEx);
+                }
+            }
+
             throw new InvalidOperationException(
                 "Could not initialize the SQL Server database. Check ConnectionStrings:DefaultConnection in appsettings.Development.json or appsettings.json.",
                 ex);
@@ -79,52 +101,65 @@ BEGIN
     ALTER TABLE dbo.CommunityPosts ADD IsRestaurantPost BIT NOT NULL CONSTRAINT DF_CommunityPosts_IsRestaurantPost DEFAULT 0;
 END
 
-IF OBJECT_ID(N'dbo.PostComments', N'U') IS NULL AND OBJECT_ID(N'dbo.CommunityPosts', N'U') IS NOT NULL
+IF COL_LENGTH('dbo.AudioTours', 'AudioData') IS NULL
 BEGIN
-    CREATE TABLE dbo.PostComments
-    (
-        Id NVARCHAR(64) NOT NULL CONSTRAINT PK_PostComments PRIMARY KEY,
+    ALTER TABLE dbo.AudioTours ADD AudioData NVARCHAR(MAX) NULL;
+END
+
+IF COL_LENGTH('dbo.CommunityPosts', 'IsApproved') IS NULL
+BEGIN
+    ALTER TABLE dbo.CommunityPosts ADD IsApproved BIT NOT NULL CONSTRAINT DF_CommunityPosts_IsApproved DEFAULT 1;
+END
+
+IF COL_LENGTH('dbo.Users', 'OwnerStatus') IS NULL
+BEGIN
+    ALTER TABLE dbo.Users ADD OwnerStatus NVARCHAR(32) NOT NULL CONSTRAINT DF_Users_OwnerStatus DEFAULT 'None';
+END
+
+IF COL_LENGTH('dbo.Bookings', 'UserId') IS NULL
+BEGIN
+    ALTER TABLE dbo.Bookings ADD UserId NVARCHAR(64) NOT NULL CONSTRAINT DF_Bookings_UserId DEFAULT 'usr_3';
+END
+
+IF OBJECT_ID('dbo.Notifications', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Notifications (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        UserId NVARCHAR(64) NOT NULL,
+        RestaurantId NVARCHAR(64) NULL,
+        Type NVARCHAR(50) NOT NULL,
+        Title NVARCHAR(200) NOT NULL,
+        Body NVARCHAR(1000) NOT NULL,
+        PayloadJson NVARCHAR(2000) NULL,
+        IsRead BIT NOT NULL DEFAULT 0,
+        CreatedAt DATETIMEOFFSET NOT NULL
+    );
+END
+
+IF OBJECT_ID('dbo.AuditLogs', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AuditLogs (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        Actor NVARCHAR(100) NOT NULL,
+        Action NVARCHAR(100) NOT NULL,
+        EntityType NVARCHAR(50) NOT NULL,
+        EntityId NVARCHAR(64) NOT NULL,
+        Timestamp DATETIMEOFFSET NOT NULL,
+        Details NVARCHAR(2000) NULL
+    );
+END
+
+IF OBJECT_ID('dbo.PostComments', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.PostComments (
+        Id NVARCHAR(64) PRIMARY KEY,
         CommunityPostId NVARCHAR(64) NOT NULL,
         Author NVARCHAR(80) NOT NULL,
         Avatar NVARCHAR(1000) NOT NULL,
         Content NVARCHAR(1000) NOT NULL,
         CreatedAt DATETIMEOFFSET NOT NULL,
-        CONSTRAINT FK_PostComments_CommunityPosts FOREIGN KEY (CommunityPostId) REFERENCES dbo.CommunityPosts(Id) ON DELETE CASCADE
+        CONSTRAINT FK_PostComments_CommunityPosts_CommunityPostId FOREIGN KEY (CommunityPostId) REFERENCES dbo.CommunityPosts(Id) ON DELETE CASCADE
     );
-END
-
-IF OBJECT_ID(N'dbo.RestaurantRequests', N'U') IS NULL
-   AND OBJECT_ID(N'dbo.Users', N'U') IS NOT NULL
-   AND OBJECT_ID(N'dbo.Categories', N'U') IS NOT NULL
-   AND OBJECT_ID(N'dbo.FoodStreets', N'U') IS NOT NULL
-BEGIN
-    CREATE TABLE dbo.RestaurantRequests
-    (
-        Id NVARCHAR(64) NOT NULL CONSTRAINT PK_RestaurantRequests PRIMARY KEY,
-        OwnerId NVARCHAR(64) NOT NULL,
-        Name NVARCHAR(160) NOT NULL,
-        PriceRange NVARCHAR(8) NOT NULL,
-        CategoryId INT NOT NULL,
-        FoodStreetId INT NOT NULL,
-        Distance NVARCHAR(64) NOT NULL,
-        Address NVARCHAR(240) NOT NULL,
-        Area NVARCHAR(120) NOT NULL,
-        OpeningHours NVARCHAR(80) NOT NULL,
-        Image NVARCHAR(1000) NOT NULL,
-        Latitude DECIMAL(9,6) NOT NULL,
-        Longitude DECIMAL(9,6) NOT NULL,
-        Status NVARCHAR(16) NOT NULL CONSTRAINT DF_RestaurantRequests_Status DEFAULT 'Pending',
-        AdminNote NVARCHAR(500) NULL,
-        CreatedAt DATETIMEOFFSET NOT NULL,
-        ReviewedAt DATETIMEOFFSET NULL,
-        CONSTRAINT FK_RestaurantRequests_Users_OwnerId FOREIGN KEY (OwnerId) REFERENCES dbo.Users(Id) ON DELETE CASCADE,
-        CONSTRAINT FK_RestaurantRequests_Categories_CategoryId FOREIGN KEY (CategoryId) REFERENCES dbo.Categories(Id) ON DELETE NO ACTION,
-        CONSTRAINT FK_RestaurantRequests_FoodStreets_FoodStreetId FOREIGN KEY (FoodStreetId) REFERENCES dbo.FoodStreets(Id) ON DELETE NO ACTION
-    );
-
-    CREATE INDEX IX_RestaurantRequests_OwnerId ON dbo.RestaurantRequests(OwnerId);
-    CREATE INDEX IX_RestaurantRequests_CategoryId ON dbo.RestaurantRequests(CategoryId);
-    CREATE INDEX IX_RestaurantRequests_FoodStreetId ON dbo.RestaurantRequests(FoodStreetId);
 END
 ");
     }

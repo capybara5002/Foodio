@@ -357,9 +357,9 @@ namespace Foodio.API.Migrations
                 columns: new[] { "Id", "CreatedAt", "Email", "IsActive", "PasswordHash", "RestaurantId", "Role", "Username" },
                 values: new object[,]
                 {
-                    { "usr_1", new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "admin@foodio.com", true, "admin123", null, "Admin", "admin" },
-                    { "usr_2", new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "owner@foodio.com", true, "owner123", "oc_dao", "Owner", "owner_ocdao" },
-                    { "usr_3", new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "customer@foodio.com", true, "customer123", null, "User", "customer" }
+                    { "usr_1", new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "admin@foodio.com", true, "123456", null, "Admin", "admin" },
+                    { "usr_2", new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "owner@foodio.com", true, "123456", "oc_dao", "Owner", "owner_ocdao" },
+                    { "usr_3", new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "customer@foodio.com", true, "123456", null, "User", "customer" }
                 });
 
             migrationBuilder.InsertData(

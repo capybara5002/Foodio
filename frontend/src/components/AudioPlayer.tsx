@@ -27,10 +27,54 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     progressRef.current = progress;
   }, [progress]);
 
-  // High-frequency interval timer (every 50ms) to update the progress bar visually with 60fps-like smoothness
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize Audio object if tour.audioData is present
+  useEffect(() => {
+    if (!tour) return;
+
+    if (tour.audioData) {
+      const audio = new Audio(tour.audioData);
+      audioRef.current = audio;
+
+      const onLoadedMetadata = () => {
+        setDurationSec(Math.ceil(audio.duration));
+      };
+
+      const onTimeUpdate = () => {
+        if (audio.duration > 0) {
+          setProgress((audio.currentTime / audio.duration) * 100);
+        }
+      };
+
+      const onEnded = () => {
+        setIsPlaying(false);
+        setProgress(100);
+      };
+
+      audio.addEventListener('loadedmetadata', onLoadedMetadata);
+      audio.addEventListener('timeupdate', onTimeUpdate);
+      audio.addEventListener('ended', onEnded);
+
+      // Trigger initial load metadata
+      if (audio.readyState >= 1) {
+        setDurationSec(Math.ceil(audio.duration));
+      }
+
+      return () => {
+        audio.pause();
+        audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+        audio.removeEventListener('timeupdate', onTimeUpdate);
+        audio.removeEventListener('ended', onEnded);
+        audioRef.current = null;
+      };
+    }
+  }, [tour]);
+
+  // High-frequency interval timer (every 50ms) to update the progress bar visually with 60fps-like smoothness (Only for TTS)
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (isPlaying && tour && durationSec > 0 && !isDragging) {
+    if (isPlaying && tour && durationSec > 0 && !tour.audioData && !isDragging) {
       interval = setInterval(() => {
         setProgress((prev) => {
           const next = prev + (5 / durationSec);
@@ -45,9 +89,13 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     return () => clearInterval(interval);
   }, [isPlaying, tour, durationSec, isDragging]);
 
-  // Load narrative when tour changes
+  // Load narrative when tour changes (Only for TTS)
   useEffect(() => {
     if (!tour) return;
+    if (tour.audioData) {
+      setIsLoadingNarrative(false);
+      return;
+    }
 
     let cancelled = false;
     setNarrative('');
@@ -84,30 +132,52 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     };
   }, [tour]);
 
-  const handleSeek = (newProgress: number) => {
-    const validProgress = Math.max(0, Math.min(100, newProgress));
-    setProgress(validProgress);
-    
-    if (!('speechSynthesis' in window) || !narrative) return;
-    
-    window.speechSynthesis.cancel();
-    
-    if (validProgress >= 100) {
-      setIsPlaying(false);
+  // Handle TTS or HTML5 Audio play / pause when state changes
+  useEffect(() => {
+    if (!tour) return;
+
+    if (tour.audioData) {
+      const audio = audioRef.current;
+      if (!audio) return;
+      
+      if (isPlaying) {
+        audio.play().catch(err => console.error("Audio playback error:", err));
+      } else {
+        audio.pause();
+      }
       return;
     }
 
-    const charIndex = Math.floor((validProgress / 100) * narrative.length);
-    const textToSpeak = narrative.substring(charIndex);
-    
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    utterance.lang = 'en-US';
-    
-    window.speechSynthesis.speak(utterance);
-    setIsPlaying(true);
-  };
+    // TTS Fallback
+    if (!narrative || !('speechSynthesis' in window)) return;
+
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      const currentProgress = progressRef.current;
+      const startIndex = Math.floor((currentProgress / 100) * narrative.length);
+      const subText = narrative.substring(startIndex);
+      
+      if (!subText.trim()) {
+        setIsPlaying(false);
+        setProgress(100);
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(subText);
+      utterance.rate = 0.95;
+      utterance.pitch = 1;
+      utterance.lang = 'en-US';
+      utterance.onend = () => {
+        setIsPlaying(false);
+        setProgress(100);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } else {
+      window.speechSynthesis.cancel();
+    }
+  }, [isPlaying, narrative, tour]);
+
 
   const togglePlay = () => {
     if (!('speechSynthesis' in window)) return;
@@ -122,6 +192,51 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
         window.speechSynthesis.resume();
         setIsPlaying(true);
       }
+    }
+  };
+
+  // Seek handler called on user interactions
+  const handleSeek = (newProgress: number) => {
+    const clampedProgress = Math.max(0, Math.min(100, newProgress));
+    setProgress(clampedProgress);
+    
+    if (tour?.audioData) {
+      const audio = audioRef.current;
+      if (audio && audio.duration > 0) {
+        audio.currentTime = (clampedProgress / 100) * audio.duration;
+      }
+      return;
+    }
+
+    // TTS Fallback
+    if (isPlaying && narrative && ('speechSynthesis' in window)) {
+      window.speechSynthesis.cancel();
+      const startIndex = Math.floor((clampedProgress / 100) * narrative.length);
+      const subText = narrative.substring(startIndex);
+      
+      if (subText.trim()) {
+        const utterance = new SpeechSynthesisUtterance(subText);
+        utterance.rate = 0.95;
+        utterance.pitch = 1;
+        utterance.lang = 'en-US';
+        utterance.onend = () => {
+          setIsPlaying(false);
+          setProgress(100);
+        };
+        window.speechSynthesis.speak(utterance);
+      } else {
+        setIsPlaying(false);
+        setProgress(100);
+      }
+    }
+  };
+
+  const handlePlayPause = () => {
+    if (progress >= 100) {
+      handleSeek(0);
+      setIsPlaying(true);
+    } else {
+      setIsPlaying(!isPlaying);
     }
   };
 

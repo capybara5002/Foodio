@@ -1055,7 +1055,7 @@ namespace Foodio.API.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "admin@foodio.com",
                             IsActive = true,
-                            PasswordHash = "admin123",
+                            PasswordHash = "123456",
                             Role = "Admin",
                             Username = "admin"
                         },
@@ -1065,7 +1065,7 @@ namespace Foodio.API.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "owner@foodio.com",
                             IsActive = true,
-                            PasswordHash = "owner123",
+                            PasswordHash = "123456",
                             RestaurantId = "oc_dao",
                             Role = "Owner",
                             Username = "owner_ocdao"
@@ -1076,7 +1076,7 @@ namespace Foodio.API.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "customer@foodio.com",
                             IsActive = true,
-                            PasswordHash = "customer123",
+                            PasswordHash = "123456",
                             Role = "User",
                             Username = "customer"
                         });

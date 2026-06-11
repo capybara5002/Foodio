@@ -44,6 +44,7 @@ public class AdminController : ControllerBase
             PasswordHash = BC.HashPassword(string.IsNullOrWhiteSpace(dto.Password) ? "password123" : dto.Password),
             Role = dto.Role,
             RestaurantId = dto.Role == "Owner" ? dto.RestaurantId : null,
+            OwnerStatus = dto.OwnerStatus ?? "None",
             IsActive = dto.IsActive,
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -72,6 +73,7 @@ public class AdminController : ControllerBase
         user.Email = dto.Email;
         user.Role = dto.Role;
         user.RestaurantId = dto.Role == "Owner" ? dto.RestaurantId : null;
+        user.OwnerStatus = dto.OwnerStatus ?? "None";
         user.IsActive = dto.IsActive;
 
         if (!string.IsNullOrWhiteSpace(dto.Password))
@@ -178,10 +180,35 @@ public class AdminController : ControllerBase
         if (owner != null)
         {
             owner.RestaurantId = restaurantId;
+            owner.OwnerStatus = "Verified";
         }
 
         request.Status = "Approved";
         request.ReviewedAt = DateTimeOffset.UtcNow;
+
+        // Create notification for owner
+        var notification = new Notification
+        {
+            UserId = request.OwnerId,
+            RestaurantId = restaurantId,
+            Type = "RequestApproval",
+            Title = "Yêu cầu mở quán đã được duyệt",
+            Body = $"Yêu cầu đăng ký quán ăn '{request.Name}' của bạn đã được duyệt thành công! Bạn hiện có quyền quản lý quán ăn của mình.",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        _db.Notifications.Add(notification);
+
+        // Log audit
+        var audit = new AuditLog
+        {
+            Actor = "Admin",
+            Action = "Duyệt yêu cầu đăng ký quán ăn",
+            EntityType = "RestaurantRequest",
+            EntityId = id,
+            Timestamp = DateTimeOffset.UtcNow,
+            Details = $"Duyệt quán '{request.Name}' cho chủ quán '{owner?.Username}'"
+        };
+        _db.AuditLogs.Add(audit);
 
         await _db.SaveChangesAsync();
 
@@ -200,9 +227,38 @@ public class AdminController : ControllerBase
         if (request == null) return NotFound("Request not found.");
         if (request.Status != "Pending") return BadRequest($"Request is already {request.Status}.");
 
+        var owner = await _db.Users.FindAsync(request.OwnerId);
+        if (owner != null)
+        {
+            owner.OwnerStatus = "Rejected";
+        }
+
         request.Status = "Rejected";
         request.AdminNote = dto.AdminNote;
         request.ReviewedAt = DateTimeOffset.UtcNow;
+
+        // Create notification for owner
+        var notification = new Notification
+        {
+            UserId = request.OwnerId,
+            Type = "RequestApproval",
+            Title = "Yêu cầu mở quán bị từ chối",
+            Body = $"Yêu cầu đăng ký quán ăn '{request.Name}' của bạn đã bị từ chối. Lý do từ admin: {dto.AdminNote}",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        _db.Notifications.Add(notification);
+
+        // Log audit
+        var audit = new AuditLog
+        {
+            Actor = "Admin",
+            Action = "Từ chối yêu cầu đăng ký quán ăn",
+            EntityType = "RestaurantRequest",
+            EntityId = id,
+            Timestamp = DateTimeOffset.UtcNow,
+            Details = $"Từ chối quán '{request.Name}' cho chủ quán '{owner?.Username}'. Lý do: {dto.AdminNote}"
+        };
+        _db.AuditLogs.Add(audit);
 
         await _db.SaveChangesAsync();
 
@@ -258,7 +314,8 @@ public class AdminController : ControllerBase
             Duration = dto.Duration,
             StopsCount = dto.StopsCount,
             Vibe = dto.Vibe,
-            Description = dto.Description
+            Description = dto.Description,
+            AudioData = dto.AudioData
         };
 
         _db.AudioTours.Add(tour);
@@ -286,6 +343,7 @@ public class AdminController : ControllerBase
         tour.StopsCount = dto.StopsCount;
         tour.Vibe = dto.Vibe;
         tour.Description = dto.Description;
+        tour.AudioData = dto.AudioData;
 
         await _db.SaveChangesAsync();
 
@@ -328,9 +386,33 @@ public class AdminController : ControllerBase
         }
 
         _db.CommunityPosts.Remove(post);
+
+        // Audit log
+        var audit = new AuditLog
+        {
+            Actor = "Admin",
+            Action = "Xóa bài viết cộng đồng",
+            EntityType = "CommunityPost",
+            EntityId = id,
+            Timestamp = DateTimeOffset.UtcNow,
+            Details = $"Xóa bài viết của tác giả '{post.Author}': \"{post.Content}\""
+        };
+        _db.AuditLogs.Add(audit);
+
         await _db.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    [HttpPost("posts/{id}/approve")]
+    public async Task<IActionResult> ApprovePost(string id)
+    {
+        var post = await _db.CommunityPosts.FindAsync(id);
+        if (post == null) return NotFound("Post not found.");
+        
+        post.IsApproved = true;
+        await _db.SaveChangesAsync();
+        return Ok(post.ToDto());
     }
 
     [HttpGet("reviews")]
@@ -361,13 +443,36 @@ public class AdminController : ControllerBase
         var review = await _db.Reviews.FindAsync(id);
         if (review == null)
         {
+            // Try to find by string ID
             return NotFound("Review not found.");
         }
 
         _db.Reviews.Remove(review);
+
+        // Audit log
+        var audit = new AuditLog
+        {
+            Actor = "Admin",
+            Action = "Xóa đánh giá",
+            EntityType = "Review",
+            EntityId = id,
+            Timestamp = DateTimeOffset.UtcNow,
+            Details = $"Xóa đánh giá của tác giả '{review.Author}' thuộc quán '{review.RestaurantId}'"
+        };
+        _db.AuditLogs.Add(audit);
+
         await _db.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    [HttpGet("audit-logs")]
+    public async Task<ActionResult<IReadOnlyList<AuditLogDto>>> GetAuditLogs()
+    {
+        var logs = await _db.AuditLogs
+            .OrderByDescending(l => l.Timestamp)
+            .ToListAsync();
+        return Ok(logs.Select(l => l.ToDto()).ToList());
     }
 
     public record AdminReviewDto(

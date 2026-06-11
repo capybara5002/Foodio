@@ -156,41 +156,44 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
         
         {/* Navigation Tabs if User has Admin/Owner roles */}
         {(isAdmin || isOwner) && (
-          <div className="flex border-b-2 border-[#1a1a1a] gap-2 font-mono text-[10px] uppercase tracking-wider font-extrabold pb-0.5">
+          <div className="flex flex-wrap gap-3 font-mono text-xs uppercase tracking-wider font-extrabold pb-3 border-b border-[#1a1a1a]/10">
             <button
               onClick={() => setActiveConsole('profile')}
-              className={`px-4 py-2 border-t-2 border-x-2 border-transparent transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-5 py-3 border-2 transition-all cursor-pointer flex items-center gap-2 font-bold ${
                 activeConsole === 'profile' 
-                  ? 'bg-white border-[#1a1a1a] text-[#e2533b] relative top-[2px] font-black' 
-                  : 'text-[#1a1a1a]/60 hover:text-[#1a1a1a]'
+                  ? 'bg-[#1a1a1a] text-white border-[#1a1a1a] shadow-[3px_3px_0px_0px_#e2533b]' 
+                  : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2] shadow-[3px_3px_0px_0px_#1a1a1a] active:translate-y-0.5 active:shadow-none'
               }`}
             >
-              <User size={12} className={activeConsole === 'profile' ? 'fill-current' : ''} /> {t('profile.personal')}
+              <User size={15} className={activeConsole === 'profile' ? 'fill-current text-[#e2533b]' : 'text-[#1a1a1a]/60'} />
+              <span>{t('profile.personal')}</span>
             </button>
 
             {isAdmin && (
               <button
                 onClick={() => setActiveConsole('admin')}
-                className={`px-4 py-2 border-t-2 border-x-2 border-transparent transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-5 py-3 border-2 transition-all cursor-pointer flex items-center gap-2 font-bold ${
                   activeConsole === 'admin' 
-                    ? 'bg-white border-[#1a1a1a] text-[#e2533b] relative top-[2px] font-black' 
-                    : 'text-[#1a1a1a]/60 hover:text-[#1a1a1a]'
+                    ? 'bg-[#1a1a1a] text-white border-[#1a1a1a] shadow-[3px_3px_0px_0px_#e2533b]' 
+                    : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2] shadow-[3px_3px_0px_0px_#1a1a1a] active:translate-y-0.5 active:shadow-none'
                 }`}
               >
-                <Shield size={12} className={activeConsole === 'admin' ? 'fill-current' : ''} /> {t('profile.admin_console')}
+                <Shield size={15} className={activeConsole === 'admin' ? 'fill-current text-[#e2533b]' : 'text-[#1a1a1a]/60'} />
+                <span>{t('profile.admin_console')}</span>
               </button>
             )}
 
             {isOwner && (
               <button
                 onClick={() => setActiveConsole('owner')}
-                className={`px-4 py-2 border-t-2 border-x-2 border-transparent transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-5 py-3 border-2 transition-all cursor-pointer flex items-center gap-2 font-bold ${
                   activeConsole === 'owner' 
-                    ? 'bg-white border-[#1a1a1a] text-[#e2533b] relative top-[2px] font-black' 
-                    : 'text-[#1a1a1a]/60 hover:text-[#1a1a1a]'
+                    ? 'bg-[#1a1a1a] text-white border-[#1a1a1a] shadow-[3px_3px_0px_0px_#e2533b]' 
+                    : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2] shadow-[3px_3px_0px_0px_#1a1a1a] active:translate-y-0.5 active:shadow-none'
                 }`}
               >
-                <Store size={12} className={activeConsole === 'owner' ? 'fill-current' : ''} /> {t('profile.owner_console')}
+                <Store size={15} className={activeConsole === 'owner' ? 'fill-current text-[#e2533b]' : 'text-[#1a1a1a]/60'} />
+                <span>{t('profile.owner_console')}</span>
               </button>
             )}
           </div>
