@@ -5,8 +5,11 @@
 
 import { useState } from 'react';
 import { Restaurant } from '../types';
-import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2 } from 'lucide-react';
+import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
+import { createReview } from '../api/cravemapApi';
+import { PRESET_IMAGES } from '../data';
 
 interface PageDetailProps {
   restaurant: Restaurant;
@@ -18,7 +21,7 @@ interface PageDetailProps {
   onRestaurantUpdated: (updated: Restaurant) => void;
 }
 
-export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartAudio, onGoToChat, requireAuth }: PageDetailProps) {
+export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartAudio, onGoToChat, requireAuth, onRestaurantUpdated }: PageDetailProps) {
   const { t } = useTranslation();
   const [isFavorite, setIsFavorite] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -284,8 +287,19 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
 
         {/* Foodie list reviews */}
         <section className="flex flex-col gap-3 pb-12">
-          <div className="border-b border-[#1a1a1a]/10 pb-2 mb-2">
+          <div className="border-b border-[#1a1a1a]/10 pb-2 mb-2 flex items-center justify-between gap-3">
             <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">{t('detail.foodie_reviews')}</h2>
+            <button
+              type="button"
+              onClick={() => {
+                requireAuth(t('auth.require_login_post'), () => {
+                  setShowReviewForm((current) => !current);
+                });
+              }}
+              className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[9px] uppercase tracking-wider px-3.5 py-1.5 shadow-xs active:scale-95 transition-all cursor-pointer font-bold shrink-0"
+            >
+              {showReviewForm ? t('detail.close_review_form') : t('detail.write_review')}
+            </button>
           </div>
 
           {/* Write Review Form */}
