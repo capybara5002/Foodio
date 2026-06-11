@@ -44,5 +44,6 @@ public class CommunityPost
     public bool IsLiked { get; set; }
     public bool IsSaved { get; set; }
     public bool IsRestaurantPost { get; set; } = false;
+    public bool IsApproved { get; set; } = false;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

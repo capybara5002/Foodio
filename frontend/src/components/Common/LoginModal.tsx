@@ -53,11 +53,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div 
+      <div
         className="w-full max-w-md bg-[#fdfcf9] border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a] relative animate-in zoom-in-95 duration-200"
       >
         {/* Close Button */}
-        <button 
+        <button
           onClick={onClose}
           className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center border-2 border-[#1a1a1a] bg-white hover:bg-[#e2533b] hover:text-white transition-colors cursor-pointer"
         >
@@ -91,7 +91,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
           {isRegister && (
             <div className="flex flex-col gap-1">
               <label className="font-mono text-[10px] uppercase font-bold tracking-wider">{t('login.username')}</label>
-              <input 
+              <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -104,7 +104,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
 
           <div className="flex flex-col gap-1">
             <label className="font-mono text-[10px] uppercase font-bold tracking-wider">{t('login.email')}</label>
-            <input 
+            <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -116,7 +116,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
 
           <div className="flex flex-col gap-1">
             <label className="font-mono text-[10px] uppercase font-bold tracking-wider">{t('login.password')}</label>
-            <input 
+            <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -126,7 +126,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
             />
           </div>
 
-          <button 
+          <button
             type="submit"
             disabled={isLoading}
             className="w-full bg-[#1a1a1a] text-white hover:bg-[#e2533b] py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md active:translate-y-0.5 disabled:opacity-50"
@@ -137,7 +137,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
 
         {/* Toggle Mode */}
         <div className="mt-4 text-center">
-          <button 
+          <button
             onClick={() => {
               setIsRegister(!isRegister);
               setError(null);
@@ -154,19 +154,19 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
             DEVELOPMENT QUICK ACCESS CREDENTIALS:
           </span>
           <div className="grid grid-cols-3 gap-2">
-            <button 
+            <button
               onClick={() => fillQuickLogin('customer@foodio.com', '123456')}
               className="px-2 py-1.5 bg-white border border-[#1a1a1a]/25 hover:border-[#1a1a1a] text-[9px] font-mono font-bold uppercase transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1"
             >
               <User size={10} /> Customer
             </button>
-            <button 
+            <button
               onClick={() => fillQuickLogin('owner@foodio.com', '123456')}
               className="px-2 py-1.5 bg-white border border-[#1a1a1a]/25 hover:border-[#1a1a1a] text-[9px] font-mono font-bold uppercase transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1"
             >
               <Store size={10} /> Owner
             </button>
-            <button 
+            <button
               onClick={() => fillQuickLogin('admin@foodio.com', '123456')}
               className="px-2 py-1.5 bg-white border border-[#1a1a1a]/25 hover:border-[#1a1a1a] text-[9px] font-mono font-bold uppercase transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1"
             >

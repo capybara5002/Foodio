@@ -82,7 +82,8 @@ public record CommunityPostDto(
     int CommentsCount,
     bool IsLiked,
     bool IsSaved,
-    bool IsRestaurantPost = false);
+    bool IsRestaurantPost = false,
+    bool IsApproved = false);
 
 public record PostCommentDto(
     string Id,
@@ -154,7 +155,8 @@ public record AudioTourDto(
     string Duration,
     int StopsCount,
     string Vibe,
-    string Description);
+    string Description,
+    string? AudioData = null);
 
 public record BookingRequestDto(
     string RestaurantId,
@@ -179,6 +181,7 @@ public record UserDto(
     string Email,
     string Role,
     string? RestaurantId,
+    string OwnerStatus,
     bool IsActive,
     DateTimeOffset CreatedAt,
     string? Avatar);
@@ -196,8 +199,29 @@ public record UserCreateUpdateDto(
     string Email,
     string Role,
     string? RestaurantId,
+    string OwnerStatus,
     string? Password,
     bool IsActive);
+
+public record NotificationDto(
+    int Id,
+    string UserId,
+    string? RestaurantId,
+    string Type,
+    string Title,
+    string Body,
+    string? PayloadJson,
+    bool IsRead,
+    DateTimeOffset CreatedAt);
+
+public record AuditLogDto(
+    int Id,
+    string Actor,
+    string Action,
+    string EntityType,
+    string EntityId,
+    DateTimeOffset Timestamp,
+    string? Details);
 
 public record QrGenerateRequestDto(string RestaurantId, int TableNumber);
 

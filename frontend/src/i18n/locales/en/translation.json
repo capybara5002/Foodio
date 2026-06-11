@@ -159,7 +159,8 @@
       "categories": "Categories",
       "streets": "Food Streets",
       "tours": "Audio Tours",
-      "moderation": "Moderation"
+      "moderation": "Moderation",
+      "audit_logs": "Audit Logs"
     },
     "stats": {
       "total_accounts": "Total Accounts",

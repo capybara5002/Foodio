@@ -22,6 +22,10 @@ public class Booking
     [MaxLength(40)]
     public string Status { get; set; } = "Confirmed";
 
+    [Required]
+    [MaxLength(64)]
+    public string UserId { get; set; } = "usr_3"; // Default customer ID
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public Restaurant? Restaurant { get; set; }

@@ -28,6 +28,10 @@ public class User
     [MaxLength(64)]
     public string? RestaurantId { get; set; }
 
+    [Required]
+    [MaxLength(32)]
+    public string OwnerStatus { get; set; } = "None"; // "None", "Pending", "Verified", "Rejected"
+
     [MaxLength(2000)]
     public string? Avatar { get; set; }
 

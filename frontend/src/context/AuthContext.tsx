@@ -12,6 +12,7 @@ interface AuthContextType {
   updateUserRestaurantId: (restaurantId: string) => void;
   updateAvatar: (avatarUrl: string) => Promise<User>;
   updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  syncUser: (updatedData: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -126,6 +127,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const syncUser = (updatedData: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, ...updatedData };
+      localStorage.setItem('foodio_user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const updateAvatar = async (avatarUrl: string): Promise<User> => {
     if (!user) throw new Error('Not logged in');
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -166,7 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, qrLogin, logout, clearQrSession, updateUserRestaurantId, updateAvatar, updatePassword }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, qrLogin, logout, clearQrSession, updateUserRestaurantId, updateAvatar, updatePassword, syncUser }}>
       {children}
     </AuthContext.Provider>
   );
