@@ -74,11 +74,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
   // High-frequency interval timer (every 50ms) to update the progress bar visually with 60fps-like smoothness (Only for TTS)
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-<<<<<<< HEAD
-    if (isPlaying && tour && durationSec > 0 && !tour.audioData) {
-=======
-    if (isPlaying && tour && durationSec > 0 && !isDragging) {
->>>>>>> e292a3d0ec1076d8ebb237f2dc098eaabff86dd6
+    if (isPlaying && tour && durationSec > 0 && !tour.audioData && !isDragging) {
       interval = setInterval(() => {
         setProgress((prev) => {
           const next = prev + (5 / durationSec);
@@ -136,7 +132,6 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     };
   }, [tour]);
 
-<<<<<<< HEAD
   // Handle TTS or HTML5 Audio play / pause when state changes
   useEffect(() => {
     if (!tour) return;
@@ -180,32 +175,9 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
       window.speechSynthesis.speak(utterance);
     } else {
       window.speechSynthesis.cancel();
-=======
-  const handleSeek = (newProgress: number) => {
-    const validProgress = Math.max(0, Math.min(100, newProgress));
-    setProgress(validProgress);
-    
-    if (!('speechSynthesis' in window) || !narrative) return;
-    
-    window.speechSynthesis.cancel();
-    
-    if (validProgress >= 100) {
-      setIsPlaying(false);
-      return;
->>>>>>> e292a3d0ec1076d8ebb237f2dc098eaabff86dd6
     }
+  }, [isPlaying, narrative, tour]);
 
-    const charIndex = Math.floor((validProgress / 100) * narrative.length);
-    const textToSpeak = narrative.substring(charIndex);
-    
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    utterance.lang = 'en-US';
-    
-    window.speechSynthesis.speak(utterance);
-    setIsPlaying(true);
-  };
 
   const togglePlay = () => {
     if (!('speechSynthesis' in window)) return;
