@@ -1,0 +1,21 @@
+{
+  "name": "Foodio CraveMap",
+  "short_name": "CraveMap",
+  "description": "Culinary tourism guide and food exploration system",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdfcf9",
+  "theme_color": "#e2533b",
+  "icons": [
+    {
+      "src": "https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=192&h=192&fit=crop",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=512&h=512&fit=crop",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

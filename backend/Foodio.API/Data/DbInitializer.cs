@@ -181,6 +181,18 @@ BEGIN
         CONSTRAINT FK_PostComments_CommunityPosts_CommunityPostId FOREIGN KEY (CommunityPostId) REFERENCES dbo.CommunityPosts(Id) ON DELETE CASCADE
     );
 END
+
+-- Fix CommunityPosts.Rating precision (was decimal(3,2) which only allows up to 9.99)
+IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CommunityPosts' AND COLUMN_NAME = 'Rating')
+BEGIN
+    ALTER TABLE dbo.CommunityPosts ALTER COLUMN Rating DECIMAL(4,2) NOT NULL;
+END
+
+-- Add TableNumber column to Bookings for table selection feature
+IF COL_LENGTH('dbo.Bookings', 'TableNumber') IS NULL
+BEGIN
+    ALTER TABLE dbo.Bookings ADD TableNumber NVARCHAR(40) NULL;
+END
 ");
     }
 }

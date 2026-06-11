@@ -24,7 +24,7 @@ public class CommunityPost
     [MaxLength(40)]
     public string TimeAgo { get; set; } = string.Empty;
 
-    [Column(TypeName = "decimal(3,2)")]
+    [Column(TypeName = "decimal(4,2)")]
     public decimal Rating { get; set; }
 
     [Required]

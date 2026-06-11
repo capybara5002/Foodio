@@ -252,5 +252,23 @@
     "publish_btn": "Đăng lên bảng tin // 📢",
     "publish_success": "Đăng bài viết lên bảng tin thành công!",
     "official_badge": "CHÍNH THỨC"
+  },
+  "offline": {
+    "banner_text": "Đang dùng dữ liệu offline",
+    "no_cached_data": "Không có dữ liệu offline lưu trữ."
+  },
+  "review_form": {
+    "question": "Bạn đánh giá quán này thế nào?",
+    "experience": "Trải nghiệm của bạn",
+    "placeholder": "Chia sẻ hương vị món ăn, thái độ phục vụ và không gian quán...",
+    "photo_attachment": "Ảnh đính kèm",
+    "photo_delete": "Xóa ảnh",
+    "photo_change": "Đổi ảnh khác",
+    "photo_preset": "Gắn ảnh mẫu",
+    "cancel": "Hủy",
+    "submit": "Gửi đánh giá",
+    "validation_comment": "⚠️ Vui lòng viết bình luận của bạn!",
+    "success_toast": "⭐ Cảm ơn bạn đã đánh giá quán ăn!",
+    "error_toast": "❌ Không thể gửi đánh giá. Vui lòng thử lại."
   }
 }

@@ -89,6 +89,7 @@ export function createBooking(booking: {
   guests: number;
   seating: string;
   userId?: string;
+  tableNumber?: string;
 }) {
   return postJson('/api/cravemap/bookings', booking);
 }
