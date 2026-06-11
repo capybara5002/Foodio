@@ -104,30 +104,38 @@ public class CraveMapController : ControllerBase
     [HttpPost("/api/communityposts")]
     public async Task<ActionResult<CommunityPostDto>> CreateCommunityPost(CommunityPostDto dto)
     {
-        var post = new CommunityPost
+        try
         {
-            Id = string.IsNullOrWhiteSpace(dto.Id) ? $"post_{Guid.NewGuid():N}" : dto.Id,
-            Author = dto.Author,
-            Handle = dto.Handle,
-            Avatar = dto.Avatar,
-            TimeAgo = string.IsNullOrWhiteSpace(dto.TimeAgo) ? "Just now" : dto.TimeAgo,
-            Rating = dto.Rating,
-            Image = dto.Image,
-            Content = dto.Content,
-            LocationName = dto.LocationName,
-            LikesCount = dto.LikesCount,
-            CommentsCount = dto.CommentsCount,
-            IsLiked = dto.IsLiked,
-            IsSaved = dto.IsSaved,
-            IsRestaurantPost = dto.IsRestaurantPost,
-            IsApproved = dto.IsRestaurantPost, // Restaurant posts are auto-approved, guest posts are false by default
-            CreatedAt = DateTimeOffset.UtcNow
-        };
+            var post = new CommunityPost
+            {
+                Id = string.IsNullOrWhiteSpace(dto.Id) ? $"post_{Guid.NewGuid():N}" : dto.Id,
+                Author = dto.Author,
+                Handle = dto.Handle,
+                Avatar = dto.Avatar,
+                TimeAgo = string.IsNullOrWhiteSpace(dto.TimeAgo) ? "Just now" : dto.TimeAgo,
+                Rating = dto.Rating,
+                Image = dto.Image,
+                Content = dto.Content,
+                LocationName = dto.LocationName,
+                LikesCount = dto.LikesCount,
+                CommentsCount = dto.CommentsCount,
+                IsLiked = dto.IsLiked,
+                IsSaved = dto.IsSaved,
+                IsRestaurantPost = dto.IsRestaurantPost,
+                IsApproved = dto.IsRestaurantPost, // Restaurant posts are auto-approved, guest posts are false by default
+                CreatedAt = DateTimeOffset.UtcNow
+            };
 
-        _db.CommunityPosts.Add(post);
-        await _db.SaveChangesAsync();
+            _db.CommunityPosts.Add(post);
+            await _db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetCommunityPosts), post.ToDto());
+            return CreatedAtAction(nameof(GetCommunityPosts), post.ToDto());
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[CreateCommunityPost ERROR] {ex.GetBaseException().Message}");
+            return StatusCode(500, $"Failed to create post: {ex.GetBaseException().Message}");
+        }
     }
 
     [HttpGet("community-posts/{postId}/comments")]
@@ -324,6 +332,7 @@ public class CraveMapController : ControllerBase
             Seating = dto.Seating,
             Status = "Confirmed",
             UserId = dto.UserId ?? "usr_3",
+            TableNumber = dto.TableNumber,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -361,7 +370,7 @@ public class CraveMapController : ControllerBase
             }
         }
 
-        var response = new BookingDto(booking.Id, booking.RestaurantId, booking.Date, booking.Time, booking.Guests, booking.Seating, booking.Status);
+        var response = new BookingDto(booking.Id, booking.RestaurantId, booking.Date, booking.Time, booking.Guests, booking.Seating, booking.Status, booking.TableNumber);
         return CreatedAtAction(nameof(CreateBooking), response);
     }
 }

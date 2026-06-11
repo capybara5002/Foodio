@@ -28,5 +28,8 @@ public class Booking
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
+    [MaxLength(40)]
+    public string? TableNumber { get; set; }
+
     public Restaurant? Restaurant { get; set; }
 }

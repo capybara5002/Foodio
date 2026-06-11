@@ -222,7 +222,7 @@ function AppContent() {
     }
   };
 
-  const handleConfirmBooking = (bookingDetails: { date: string; time: string; guests: number; seating: string }) => {
+  const handleConfirmBooking = (bookingDetails: { date: string; time: string; guests: number; seating: string; tableNumber?: string }) => {
     const bookingRestaurant = selectedRestaurantId
       ? restaurants.find((r) => r.id === selectedRestaurantId) || restaurants[0]
       : restaurants.find((r) => r.id === 'oc_oanh') || restaurants[0];
@@ -233,7 +233,8 @@ function AppContent() {
       time: bookingDetails.time,
       guests: bookingDetails.guests,
       seating: bookingDetails.seating,
-      userId: activeChatUserId
+      userId: activeChatUserId,
+      tableNumber: bookingDetails.tableNumber
     })
       .then(() => handleRefreshThreads())
       .catch(() => undefined);
