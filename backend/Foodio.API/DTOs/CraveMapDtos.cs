@@ -19,7 +19,7 @@ public record DishDto(
     string? Description);
 
 public record FoodieReviewDto(
-    string Id,
+    string? Id,
     string Author,
     string Role,
     decimal Rating,
@@ -84,6 +84,17 @@ public record CommunityPostDto(
     bool IsSaved,
     bool IsRestaurantPost = false,
     bool IsApproved = false);
+
+public record PostCommentDto(
+    string Id,
+    string CommunityPostId,
+    string Author,
+    string Avatar,
+    string Content,
+    DateTimeOffset CreatedAt);
+
+public record CreatePostCommentDto(
+    string Content);
 
 public record ChatMessageDto(
     string Id,

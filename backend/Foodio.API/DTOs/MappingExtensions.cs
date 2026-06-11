@@ -52,6 +52,9 @@ public static class MappingExtensions
     public static CommunityPostDto ToDto(this CommunityPost post) =>
         new(post.Id, post.Author, post.Handle, post.Avatar, post.TimeAgo, post.Rating, post.Image, post.Content, post.LocationName, post.LikesCount, post.CommentsCount, post.IsLiked, post.IsSaved, post.IsRestaurantPost, post.IsApproved);
 
+    public static PostCommentDto ToDto(this PostComment comment) =>
+        new(comment.Id, comment.CommunityPostId, comment.Author, comment.Avatar, comment.Content, comment.CreatedAt);
+
     public static ChatMessageDto ToDto(this ChatMessage message) =>
         new(
             message.Id,
