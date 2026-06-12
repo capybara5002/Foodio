@@ -18,10 +18,11 @@ interface PageDiscoverProps {
 export default function PageDiscover({ tours, onPlayTour, searchText }: PageDiscoverProps) {
   const { t } = useTranslation();
   const [subTab, setSubTab] = useState<'tours' | 'feed'>('tours');
-  const [feedFilter, setFeedFilter] = useState<'forYou' | 'following'>('forYou');
+  const [feedFilter, setFeedFilter] = useState<'forYou' | 'saved'>('forYou');
   const [tourFilter, setTourFilter] = useState('All');
 
   const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const displayedPosts = feedFilter === 'saved' ? posts.filter((post) => post.isSaved) : posts;
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -323,8 +324,8 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
             </button>
             <button
               type="button"
-              onClick={() => setFeedFilter('following')}
-              className={`flex-1 py-1.5 text-center rounded-none font-sans text-[10px] tracking-wider uppercase transition-all cursor-pointer ${feedFilter === 'following'
+              onClick={() => setFeedFilter('saved')}
+              className={`flex-1 py-1.5 text-center rounded-none font-sans text-[10px] tracking-wider uppercase transition-all cursor-pointer ${feedFilter === 'saved'
                   ? 'bg-[#1a1a1a] text-white font-bold'
                   : 'text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5'
                 }`}
@@ -346,14 +347,14 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
             </div>
           )}
 
-          {!loading && !error && posts.length === 0 && (
+          {!loading && !error && displayedPosts.length === 0 && (
             <div className="text-center py-12 font-mono text-[10px] uppercase text-[#1a1a1a]/40 font-bold">
               {t('discover.no_posts')}
             </div>
           )}
 
           {/* Social Posts lists */}
-          {!loading && !error && posts.map((post) => (
+          {!loading && !error && displayedPosts.map((post) => (
             <article
               key={post.id}
               className={`bg-white rounded-none border-2 shadow-sm overflow-hidden flex flex-col transition-all duration-300 ${
