@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { initialRestaurants, initialChatThreads, initialAudioTours } from './data';
 import { Restaurant, ChatThread, AudioTour } from './types';
 import {
   createBooking,
@@ -38,11 +37,11 @@ function AppContent() {
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [mapSearchSelection, setMapSearchSelection] = useState<{ restaurantId: string; requestId: number } | null>(null);
 
-  const [restaurants, setRestaurants] = useState<Restaurant[]>(initialRestaurants);
-  const [chatThreads, setChatThreads] = useState<ChatThread[]>(initialChatThreads);
-  const [audioTours, setAudioTours] = useState<AudioTour[]>(initialAudioTours);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [chatThreads, setChatThreads] = useState<ChatThread[]>([]);
+  const [audioTours, setAudioTours] = useState<AudioTour[]>([]);
 
-  const [activeThreadId, setActiveThreadId] = useState<string>('oc_oanh_thread');
+  const [activeThreadId, setActiveThreadId] = useState<string>('');
 
   // Authentication interception states
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -254,8 +253,13 @@ function AppContent() {
 
   const handleConfirmBooking = (bookingDetails: { date: string; time: string; guests: number; seating: string; tableNumber?: string }) => {
     const bookingRestaurant = selectedRestaurantId
-      ? restaurants.find((r) => r.id === selectedRestaurantId) || restaurants[0]
+      ? restaurants.find((r) => r.id === selectedRestaurantId)
       : restaurants.find((r) => r.id === 'oc_oanh') || restaurants[0];
+
+    if (!bookingRestaurant) {
+      console.error('No restaurant available for booking.');
+      return;
+    }
 
     void createBooking({
       restaurantId: bookingRestaurant.id,
