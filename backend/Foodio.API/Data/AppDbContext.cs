@@ -84,5 +84,6 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(comment => comment.CommunityPostId)
             .OnDelete(DeleteBehavior.Cascade);
+
     }
 }
