@@ -296,7 +296,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
 
         {tour.audioData && <div className="bg-white border border-[#1a1a1a]/10 p-3 max-h-24 overflow-y-auto">
           <p className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b] font-bold mb-1">
-            {isLoadingNarrative ? 'Generating Gemini narration...' : 'Gemini narration'}
+            {isLoadingNarrative ? 'Generating audio narration...' : 'Audio narration'}
           </p>
           <p className="font-sans text-[11px] leading-relaxed text-[#1a1a1a]/75">
             {narrative || tour.description}
