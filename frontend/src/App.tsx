@@ -439,15 +439,6 @@ function AppContent() {
         }}
       />
 
-      {currentTab !== 'map' && (
-        <footer className="hidden md:flex bg-surface-container-high text-on-surface-variant font-label-sm text-[11px] py-4 border-t border-outline-variant/20 items-center justify-center gap-2 select-none z-40 relative">
-          <span>{t('footer.copyright')}</span>
-          <span className="w-1.5 h-1.5 bg-primary rounded-full" />
-          <span>
-            {t('auth.active_user')}: <strong className="font-bold">{userEmail}</strong>
-          </span>
-        </footer>
-      )}
     </div>
   );
 }
