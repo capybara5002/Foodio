@@ -36,11 +36,6 @@ public class TranslateController : ControllerBase
         var sourceText = request.Text.Trim();
         var targetLang = request.TargetLang.Trim().ToLowerInvariant();
 
-        if (targetLang is "vi" or "vi-vn")
-        {
-            return Ok(sourceText);
-        }
-
         var apiKey = _configuration["Gemini:ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey))
         {
