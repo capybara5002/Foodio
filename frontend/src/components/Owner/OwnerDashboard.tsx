@@ -134,6 +134,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   const activeRestaurantId = user?.restaurantId;
+  const ownerQuery = user?.id ? `ownerId=${encodeURIComponent(user.id)}` : '';
 
   const fetchRestaurant = async () => {
     setIsLoading(true);
@@ -171,10 +172,10 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
       if (activeRestaurantId) {
         const [restRes, bookingsRes, analyticsRes, notificationsRes] = await Promise.all([
-          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`),
-          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/bookings`),
-          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/analytics`),
-          fetch(`${baseUrl}/api/owner/notifications?ownerId=${user?.id}`)
+          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}?${ownerQuery}`),
+          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/bookings?${ownerQuery}`),
+          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/analytics?${ownerQuery}`),
+          fetch(`${baseUrl}/api/owner/notifications?${ownerQuery}`)
         ]);
 
         if (!restRes.ok) throw new Error('Failed to load restaurant details.');
@@ -291,7 +292,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     e.preventDefault();
     setSaveSuccess(false);
     try {
-      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}?ownerId=${user?.id}`, {
+      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}?${ownerQuery}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -316,7 +317,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   const handleAddDish = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/dishes`, {
+      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/dishes?${ownerQuery}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -344,7 +345,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   const handleDeleteDish = async (dishId: string) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa món ăn này?')) return;
     try {
-      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/dishes/${dishId}`, {
+      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/dishes/${dishId}?${ownerQuery}`, {
         method: 'DELETE'
       });
 
@@ -387,7 +388,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     setTablesSaveSuccess(false);
     try {
       const jsonString = JSON.stringify(updatedTables);
-      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`, {
+      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}?${ownerQuery}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -492,7 +493,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     if (!window.confirm(`Bạn có chắc chắn muốn ${actionLabel} đơn đặt bàn này?`)) return;
 
     try {
-      const res = await fetch(`${baseUrl}/api/owner/bookings/${bookingId}/status?ownerId=${user?.id}`, {
+      const res = await fetch(`${baseUrl}/api/owner/bookings/${bookingId}/status?${ownerQuery}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -504,7 +505,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b));
 
       // Refresh analytics
-      const analyticsRes = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/analytics`);
+      const analyticsRes = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/analytics?${ownerQuery}`);
       if (analyticsRes.ok) {
         const analyticsData = await analyticsRes.json();
         setAnalytics(analyticsData);
@@ -533,7 +534,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
   const handleMarkNotificationAsRead = async (id: number) => {
     try {
-      const res = await fetch(`${baseUrl}/api/owner/notifications/${id}/read`, {
+      const res = await fetch(`${baseUrl}/api/owner/notifications/${id}/read?${ownerQuery}`, {
         method: 'POST'
       });
       if (res.ok) {

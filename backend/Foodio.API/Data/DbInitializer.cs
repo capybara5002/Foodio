@@ -136,6 +136,12 @@ BEGIN
     ALTER TABLE dbo.Users ADD OwnerStatus NVARCHAR(32) NOT NULL CONSTRAINT DF_Users_OwnerStatus DEFAULT 'None';
 END
 
+UPDATE dbo.Users
+SET OwnerStatus = 'Verified'
+WHERE Role = 'Owner'
+  AND RestaurantId IS NOT NULL
+  AND (OwnerStatus IS NULL OR OwnerStatus = 'None');
+
 IF COL_LENGTH('dbo.Bookings', 'UserId') IS NULL
 BEGIN
     ALTER TABLE dbo.Bookings ADD UserId NVARCHAR(64) NOT NULL CONSTRAINT DF_Bookings_UserId DEFAULT 'usr_3';

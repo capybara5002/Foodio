@@ -292,10 +292,6 @@ function AppContent() {
               setIsBookingOpen(true);
             });
           }}
-          onStartAudio={() => {
-            const relevantTour = audioTours.find((t) => t.title.toLowerCase().includes('seafood')) || audioTours[0];
-            setActiveAudioTour(relevantTour);
-          }}
           onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
           requireAuth={requireAuth}
           onRestaurantUpdated={handleRestaurantUpdated}
