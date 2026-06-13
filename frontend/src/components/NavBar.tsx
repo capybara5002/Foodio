@@ -69,52 +69,51 @@ export default function NavBar({
             <rect width="100" height="100" rx="20" fill="#1a1a1a"/>
             
             {/* Sound waves left */}
-            <path d="M 37.3 21.3 A 18 18 0 0 0 37.3 46.7" fill="none" stroke="#d49a6a" strokeWidth="3" strokeLinecap="round"/>
-            <path d="M 31.6 15.6 A 26 26 0 0 0 31.6 52.4" fill="none" stroke="#d49a6a" strokeWidth="2.2" strokeLinecap="round" opacity="0.75"/>
-            <path d="M 26 10 A 34 34 0 0 0 26 58" fill="none" stroke="#d49a6a" strokeWidth="1.5" strokeLinecap="round" opacity="0.45"/>
+            <path d="M 28 35 A 18 18 0 0 0 28 65" fill="none" stroke="#d49a6a" strokeWidth="3.5" strokeLinecap="round"/>
+            <path d="M 21 28 A 28 28 0 0 0 21 72" fill="none" stroke="#d49a6a" strokeWidth="2.5" strokeLinecap="round" opacity="0.6"/>
             
             {/* Sound waves right */}
-            <path d="M 62.7 21.3 A 18 18 0 0 1 62.7 46.7" fill="none" stroke="#d49a6a" strokeWidth="3" strokeLinecap="round"/>
-            <path d="M 68.4 15.6 A 26 26 0 0 1 68.4 52.4" fill="none" stroke="#d49a6a" strokeWidth="2.2" strokeLinecap="round" opacity="0.75"/>
-            <path d="M 74 10 A 34 34 0 0 1 74 58" fill="none" stroke="#d49a6a" strokeWidth="1.5" strokeLinecap="round" opacity="0.45"/>
+            <path d="M 72 35 A 18 18 0 0 1 72 65" fill="none" stroke="#d49a6a" strokeWidth="3.5" strokeLinecap="round"/>
+            <path d="M 79 28 A 28 28 0 0 1 79 72" fill="none" stroke="#d49a6a" strokeWidth="2.5" strokeLinecap="round" opacity="0.6"/>
             
             {/* Microphone Capsule */}
-            <rect x="42" y="20" width="16" height="28" rx="8" fill="#d49a6a"/>
+            <rect x="42" y="24" width="16" height="26" rx="8" fill="#d49a6a"/>
             {/* Horizontal grilles */}
-            <line x1="44" y1="25.5" x2="56" y2="25.5" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round"/>
-            <line x1="44" y1="31" x2="56" y2="31" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round"/>
-            <line x1="44" y1="36.5" x2="56" y2="36.5" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round"/>
-            <line x1="44" y1="42" x2="56" y2="42" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="45" y1="30" x2="55" y2="30" stroke="#1a1a1a" strokeWidth="2" />
+            <line x1="45" y1="36" x2="55" y2="36" stroke="#1a1a1a" strokeWidth="2" />
+            <line x1="45" y1="42" x2="55" y2="42" stroke="#1a1a1a" strokeWidth="2" />
             
-            {/* Stand Stem */}
-            <line x1="50" y1="48" x2="50" y2="70" stroke="#d49a6a" strokeWidth="4.5" strokeLinecap="round"/>
+            {/* Stand base & ring */}
+            <path d="M 36 37 A 14 14 0 0 0 64 37" fill="none" stroke="#d49a6a" strokeWidth="3.5" strokeLinecap="round"/>
+            <line x1="50" y1="51" x2="50" y2="65" stroke="#d49a6a" strokeWidth="4" />
+            <path d="M 38 66 L 62 66" stroke="#d49a6a" strokeWidth="4" strokeLinecap="round"/>
             
-            {/* Crossed Cutlery (Fork and Knife) */}
-            {/* Fork (Crossing bottom-left to top-right) */}
-            <g transform="translate(50, 60) rotate(-35) translate(-50, -60)">
+            {/* Fork & Knife crossing */}
+            {/* Fork (Crossing from left-bottom to right-top) */}
+            <g transform="translate(50, 50) rotate(-45) translate(-50, -50)">
               {/* Handle */}
-              <line x1="50" y1="60" x2="50" y2="82" stroke="#d49a6a" strokeWidth="3.5" strokeLinecap="round"/>
-              {/* Fork Head */}
-              <path d="M 46.5 50 L 53.5 50 L 54.5 39 C 54.5 36.5 45.5 36.5 45.5 39 Z" fill="#d49a6a"/>
-              {/* Tine cutouts */}
-              <line x1="48.5" y1="36" x2="48.5" y2="43" stroke="#1a1a1a" strokeWidth="1"/>
-              <line x1="50" y1="36" x2="50" y2="43" stroke="#1a1a1a" strokeWidth="1"/>
-              <line x1="51.5" y1="36" x2="51.5" y2="43" stroke="#1a1a1a" strokeWidth="1"/>
+              <line x1="50" y1="35" x2="50" y2="65" stroke="#d49a6a" strokeWidth="3.5" strokeLinecap="round"/>
+              {/* Head */}
+              <path d="M 46 32 C 46 25 54 25 54 32 Z" fill="#d49a6a"/>
+              {/* Prongs */}
+              <line x1="48" y1="28" x2="48" y2="33" stroke="#1a1a1a" strokeWidth="1"/>
+              <line x1="50" y1="28" x2="50" y2="33" stroke="#1a1a1a" strokeWidth="1"/>
+              <line x1="52" y1="28" x2="52" y2="33" stroke="#1a1a1a" strokeWidth="1"/>
             </g>
             
-            {/* Knife (Crossing bottom-right to top-left) */}
-            <g transform="translate(50, 60) rotate(35) translate(-50, -60)">
+            {/* Knife (Crossing from right-bottom to left-top) */}
+            <g transform="translate(50, 50) rotate(45) translate(-50, -50)">
               {/* Handle */}
-              <line x1="50" y1="60" x2="50" y2="82" stroke="#d49a6a" strokeWidth="3.5" strokeLinecap="round"/>
-              {/* Knife Blade */}
-              <path d="M 48 50 L 52 50 L 52 38 C 52 35 48 36 48 38 Z" fill="#d49a6a"/>
+              <line x1="50" y1="35" x2="50" y2="65" stroke="#d49a6a" strokeWidth="3.5" strokeLinecap="round"/>
+              {/* Blade */}
+              <path d="M 48 35 L 48 24 C 48 24 53 24 53 29 L 51 35 Z" fill="#d49a6a"/>
             </g>
           </svg>
           
           <span className="text-sm md:text-base tracking-[0.12em] font-black uppercase text-[#1a1a1a] font-sans flex items-center gap-[1px]">
             FOODI
-            <span className="w-[0.72em] h-[0.72em] border-[1.6px] md:border-[2px] border-[#1a1a1a] rounded-full flex items-center justify-center text-[#1a1a1a] shrink-0 translate-y-[-0.04em] ml-[0.06em]">
-              <Volume2 className="w-[0.44em] h-[0.44em] text-[#1a1a1a] stroke-[2.5]" />
+            <span className="w-[12px] h-[12px] md:w-[15px] md:h-[15px] bg-[#1a1a1a] rounded-full flex items-center justify-center text-[#fdfcf9] shrink-0 translate-y-[0.5px] ml-[1px]">
+              <Volume2 className="w-[7px] h-[7px] md:w-[9px] md:h-[9px] fill-current text-white stroke-[3.5]" />
             </span>
           </span>
         </div>
