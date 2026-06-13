@@ -1,36 +1,37 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Loader2, Pause, Play, RotateCcw, RotateCw, Search, Square } from 'lucide-react';
-import { translateText } from '../api/translateApi';
+import { createAudioGuideNarration } from '../api/audioGuideApi';
 
 type LanguageOption = {
   code: string;
   label: string;
   speechLangs: string[];
+  voiceTerms?: string[];
 };
 
 const LANGUAGE_OPTIONS: LanguageOption[] = [
-  { code: 'en', label: 'English', speechLangs: ['en-US', 'en-GB', 'en'] },
-  { code: 'ko', label: 'Korean', speechLangs: ['ko-KR', 'ko'] },
-  { code: 'ja', label: 'Japanese', speechLangs: ['ja-JP', 'ja'] },
-  { code: 'fr', label: 'French', speechLangs: ['fr-FR', 'fr-CA', 'fr'] },
-  { code: 'zh', label: 'Chinese', speechLangs: ['zh-CN', 'zh-TW', 'zh-HK', 'zh'] },
-  { code: 'vi', label: 'Vietnamese', speechLangs: ['vi-VN', 'vi'] },
-  { code: 'es', label: 'Spanish', speechLangs: ['es-ES', 'es-MX', 'es-US', 'es'] },
-  { code: 'de', label: 'German', speechLangs: ['de-DE', 'de'] },
-  { code: 'it', label: 'Italian', speechLangs: ['it-IT', 'it'] },
-  { code: 'pt', label: 'Portuguese', speechLangs: ['pt-BR', 'pt-PT', 'pt'] },
-  { code: 'ru', label: 'Russian', speechLangs: ['ru-RU', 'ru'] },
-  { code: 'ar', label: 'Arabic', speechLangs: ['ar-SA', 'ar-EG', 'ar'] },
-  { code: 'hi', label: 'Hindi', speechLangs: ['hi-IN', 'hi'] },
-  { code: 'bn', label: 'Bengali', speechLangs: ['bn-BD', 'bn-IN', 'bn'] },
-  { code: 'ur', label: 'Urdu', speechLangs: ['ur-PK', 'ur-IN', 'ur'] },
-  { code: 'id', label: 'Indonesian', speechLangs: ['id-ID', 'id'] },
-  { code: 'ms', label: 'Malay', speechLangs: ['ms-MY', 'ms'] },
-  { code: 'th', label: 'Thai', speechLangs: ['th-TH', 'th'] },
-  { code: 'lo', label: 'Lao', speechLangs: ['lo-LA', 'lo'] },
-  { code: 'km', label: 'Khmer', speechLangs: ['km-KH', 'km'] },
-  { code: 'my', label: 'Burmese', speechLangs: ['my-MM', 'my'] },
-  { code: 'tl', label: 'Filipino', speechLangs: ['fil-PH', 'tl-PH', 'fil', 'tl'] },
+  { code: 'en', label: 'English', speechLangs: ['en-US', 'en-GB', 'en'], voiceTerms: ['english'] },
+  { code: 'ko', label: 'Korean', speechLangs: ['ko-KR', 'ko'], voiceTerms: ['korean', '한국', '한국어'] },
+  { code: 'ja', label: 'Japanese', speechLangs: ['ja-JP', 'ja'], voiceTerms: ['japanese', '日本', '日本語'] },
+  { code: 'fr', label: 'French', speechLangs: ['fr-FR', 'fr-CA', 'fr'], voiceTerms: ['french', 'francais', 'français'] },
+  { code: 'zh', label: 'Chinese', speechLangs: ['zh-CN', 'zh-TW', 'zh-HK', 'zh'], voiceTerms: ['chinese', '中文', '普通话', '國語'] },
+  { code: 'vi', label: 'Vietnamese', speechLangs: ['vi-VN', 'vi'], voiceTerms: ['vietnamese', 'tiếng việt', 'viet'] },
+  { code: 'es', label: 'Spanish', speechLangs: ['es-ES', 'es-MX', 'es-US', 'es'], voiceTerms: ['spanish', 'espanol', 'español'] },
+  { code: 'de', label: 'German', speechLangs: ['de-DE', 'de'], voiceTerms: ['german', 'deutsch'] },
+  { code: 'it', label: 'Italian', speechLangs: ['it-IT', 'it'], voiceTerms: ['italian', 'italiano'] },
+  { code: 'pt', label: 'Portuguese', speechLangs: ['pt-BR', 'pt-PT', 'pt'], voiceTerms: ['portuguese', 'portugues', 'português'] },
+  { code: 'ru', label: 'Russian', speechLangs: ['ru-RU', 'ru'], voiceTerms: ['russian', 'русский'] },
+  { code: 'ar', label: 'Arabic', speechLangs: ['ar-SA', 'ar-EG', 'ar'], voiceTerms: ['arabic', 'العربية'] },
+  { code: 'hi', label: 'Hindi', speechLangs: ['hi-IN', 'hi'], voiceTerms: ['hindi', 'हिन्दी', 'हिंदी'] },
+  { code: 'bn', label: 'Bengali', speechLangs: ['bn-BD', 'bn-IN', 'bn'], voiceTerms: ['bengali', 'bangla', 'বাংলা'] },
+  { code: 'ur', label: 'Urdu', speechLangs: ['ur-PK', 'ur-IN', 'ur'], voiceTerms: ['urdu', 'اردو'] },
+  { code: 'id', label: 'Indonesian', speechLangs: ['id-ID', 'id'], voiceTerms: ['indonesian', 'bahasa indonesia'] },
+  { code: 'ms', label: 'Malay', speechLangs: ['ms-MY', 'ms'], voiceTerms: ['malay', 'bahasa melayu', 'melayu', 'malaysia'] },
+  { code: 'th', label: 'Thai', speechLangs: ['th-TH', 'th'], voiceTerms: ['thai', 'ไทย'] },
+  { code: 'lo', label: 'Lao', speechLangs: ['lo-LA', 'lo'], voiceTerms: ['lao', 'laos', 'ລາວ'] },
+  { code: 'km', label: 'Khmer', speechLangs: ['km-KH', 'km'], voiceTerms: ['khmer', 'cambodian', 'ខ្មែរ'] },
+  { code: 'my', label: 'Burmese', speechLangs: ['my-MM', 'my'], voiceTerms: ['burmese', 'myanmar', 'မြန်မာ'] },
+  { code: 'tl', label: 'Filipino', speechLangs: ['fil-PH', 'tl-PH', 'fil', 'tl'], voiceTerms: ['filipino', 'tagalog'] },
   { code: 'nl', label: 'Dutch', speechLangs: ['nl-NL', 'nl-BE', 'nl'] },
   { code: 'sv', label: 'Swedish', speechLangs: ['sv-SE', 'sv'] },
   { code: 'no', label: 'Norwegian', speechLangs: ['nb-NO', 'nn-NO', 'no'] },
@@ -73,6 +74,31 @@ const LANGUAGE_OPTIONS: LanguageOption[] = [
   { code: 'sl', label: 'Slovenian', speechLangs: ['sl-SI', 'sl'] }
 ];
 
+const narrationCache = new Map<string, {
+  translatedText: string;
+  audioSegments: string[];
+  audioMimeType: string;
+  provider: string;
+  locale: string;
+}>();
+
+const FALLBACK_LANGUAGE_FAMILIES: Record<string, string[]> = {
+  ms: ['id', 'fil', 'tl', 'en'],
+  id: ['ms', 'fil', 'tl', 'en'],
+  th: ['vi', 'id', 'en'],
+  lo: ['th', 'vi', 'en'],
+  km: ['th', 'vi', 'en'],
+  my: ['th', 'hi', 'en'],
+  ko: ['ja', 'zh', 'en'],
+  ja: ['ko', 'zh', 'en'],
+  zh: ['ja', 'ko', 'en'],
+  vi: ['id', 'ms', 'en'],
+  fa: ['ar', 'ur', 'en'],
+  ur: ['hi', 'ar', 'fa', 'en'],
+  hi: ['ur', 'bn', 'en'],
+  ar: ['fa', 'ur', 'en']
+};
+
 interface MultiLanguageAudioGuideProps {
   sourceText: string;
   title: string;
@@ -96,11 +122,15 @@ export default function MultiLanguageAudioGuide({
   const [isDragging, setIsDragging] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
   const [languageQuery, setLanguageQuery] = useState('');
-  const [translationNotice, setTranslationNotice] = useState('');
-  const [voiceNotice, setVoiceNotice] = useState('');
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const progressRef = useRef(progress);
   const languageMenuRef = useRef<HTMLDivElement | null>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const spokenTextRef = useRef('');
+  const spokenLangRef = useRef(defaultLang);
+  const playbackRunRef = useRef(0);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
   const cleanSourceText = useMemo(() => sourceText.trim(), [sourceText]);
   const selectedLanguage = useMemo(
@@ -121,47 +151,56 @@ export default function MultiLanguageAudioGuide({
     progressRef.current = progress;
   }, [progress]);
 
+  const getLanguageOption = (languageCode: string) =>
+    LANGUAGE_OPTIONS.find((language) => language.code === languageCode) ?? LANGUAGE_OPTIONS[0];
+
+  const getNarrationCacheKey = (languageCode: string, text: string) => `${languageCode}:${text}`;
+
   useEffect(() => {
+    playbackRunRef.current += 1;
+    audioElementRef.current?.pause();
+    audioElementRef.current = null;
     window.speechSynthesis?.cancel();
     utteranceRef.current = null;
     setIsPlaying(false);
     setIsPaused(false);
     setProgress(0);
     setIsTranslating(false);
-    setTranslationNotice('');
-    setVoiceNotice('');
 
     if (!cleanSourceText) {
       setTranslatedText('');
       return;
     }
 
-    const controller = new AbortController();
+    const cacheKey = getNarrationCacheKey(targetLang, cleanSourceText);
+    const cachedNarration = narrationCache.get(cacheKey);
+    if (cachedNarration) {
+      setTranslatedText(cachedNarration.translatedText);
+      return;
+    }
+
+    let isActive = true;
     setIsTranslating(true);
 
-    translateText(cleanSourceText, targetLang, controller.signal)
-      .then((text) => {
-        const nextText = text.trim();
-        setTranslatedText(nextText || cleanSourceText);
-        if (targetLang !== 'en' && nextText && nextText.toLowerCase() === cleanSourceText.toLowerCase()) {
-          setTranslationNotice('Translation returned the original text. Check the Gemini API key on the backend.');
-        }
+    createAudioGuideNarration(cleanSourceText, targetLang)
+      .then((narration) => {
+        if (!isActive) return;
+        narrationCache.set(cacheKey, narration);
+        setTranslatedText(narration.translatedText || cleanSourceText);
       })
       .catch((error) => {
-        if (error?.name !== 'CanceledError' && error?.code !== 'ERR_CANCELED') {
-          console.warn('Translation failed, using source text.', error);
-          setTranslatedText(cleanSourceText);
-          setTranslationNotice('Translation failed. Check the backend Gemini API key or network connection.');
-        }
+        if (!isActive) return;
+        console.warn('[Audio Guide] Cloud narration preview failed, using source text until playback:', error);
+        setTranslatedText(cleanSourceText);
       })
       .finally(() => {
-        if (!controller.signal.aborted) {
+        if (isActive) {
           setIsTranslating(false);
         }
       });
 
     return () => {
-      controller.abort();
+      isActive = false;
     };
   }, [cleanSourceText, targetLang]);
 
@@ -184,13 +223,38 @@ export default function MultiLanguageAudioGuide({
   useEffect(() => {
     if (!('speechSynthesis' in window)) return;
 
-    const warmVoices = () => window.speechSynthesis.getVoices();
-    warmVoices();
-    window.speechSynthesis.addEventListener('voiceschanged', warmVoices);
+    const synth = window.speechSynthesis;
+    const captureVoices = (voices: SpeechSynthesisVoice[]) => {
+      if (voices.length === 0) return;
+      voicesRef.current = voices;
+      setAvailableVoices(voices);
+    };
+
+    const forceLoadChromeVoices = () => {
+      const voices = synth.getVoices();
+      captureVoices(voices);
+
+      synth.onvoiceschanged = () => {
+        captureVoices(synth.getVoices());
+      };
+    };
+
+    forceLoadChromeVoices();
+
+    // Chrome can expose remote Google voices later than the event; poll briefly to catch those engines.
+    let attempts = 0;
+    const voicePoller = window.setInterval(() => {
+      attempts += 1;
+      forceLoadChromeVoices();
+      if (attempts >= 20 || voicesRef.current.length >= 50) {
+        window.clearInterval(voicePoller);
+      }
+    }, 250);
 
     return () => {
-      window.speechSynthesis.removeEventListener('voiceschanged', warmVoices);
-      window.speechSynthesis.cancel();
+      window.clearInterval(voicePoller);
+      synth.onvoiceschanged = null;
+      synth.cancel();
     };
   }, []);
 
@@ -207,88 +271,313 @@ export default function MultiLanguageAudioGuide({
 
   const clampProgress = (value: number) => Math.max(0, Math.min(100, value));
 
-  const findMatchingVoice = () => {
-    const voices = window.speechSynthesis.getVoices();
-    const preferredLangs = selectedLanguage.speechLangs.map((lang) => lang.toLowerCase());
+  const waitForVoices = () =>
+    new Promise<SpeechSynthesisVoice[]>((resolve) => {
+      if (!('speechSynthesis' in window)) {
+        resolve([]);
+        return;
+      }
+
+      const synth = window.speechSynthesis;
+      const existingVoices = voicesRef.current.length > 0 ? voicesRef.current : synth.getVoices();
+      if (existingVoices.length > 0) {
+        voicesRef.current = existingVoices;
+        setAvailableVoices(existingVoices);
+        resolve(existingVoices);
+        return;
+      }
+
+      const startedAt = Date.now();
+      const interval = window.setInterval(() => {
+        const voices = synth.getVoices();
+        if (voices.length > 0 || Date.now() - startedAt >= 2000) {
+          window.clearInterval(interval);
+          voicesRef.current = voices;
+          setAvailableVoices(voices);
+          resolve(voices);
+        }
+      }, 100);
+    });
+
+  const findMatchingVoice = (
+    languageCode: string,
+    voices = voicesRef.current.length > 0 ? voicesRef.current : window.speechSynthesis.getVoices()
+  ) => {
+    const language = getLanguageOption(languageCode);
+    const targetCode = languageCode.toLowerCase();
+    const preferredLangs = [targetCode, ...language.speechLangs.map((lang) => lang.toLowerCase())];
+    const voiceTerms = [
+      targetCode,
+      language.label.toLowerCase(),
+      ...language.speechLangs.map((lang) => lang.toLowerCase()),
+      ...(language.voiceTerms ?? []).map((term) => term.toLowerCase())
+    ];
+
+    const exactLanguageVoice = voices.find((voice) => {
+      const voiceLang = voice.lang.toLowerCase();
+      return preferredLangs.some(
+        (preferred) => voiceLang === preferred || voiceLang.startsWith(`${preferred}-`)
+      );
+    });
+
+    if (exactLanguageVoice) return exactLanguageVoice;
 
     return voices.find((voice) => {
       const voiceLang = voice.lang.toLowerCase();
-      return preferredLangs.some(
-        (preferred) => voiceLang === preferred || voiceLang.startsWith(preferred) || preferred.startsWith(voiceLang)
+      const voiceName = voice.name.toLowerCase();
+      return voiceTerms.some((term) =>
+        voiceLang.includes(term) ||
+        voiceName.includes(term)
       );
     });
   };
 
-  const createUtterance = (text: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    const matchingVoice = findMatchingVoice();
-    if (matchingVoice) utterance.voice = matchingVoice;
-    utterance.lang = matchingVoice?.lang || selectedLanguage.speechLangs[0] || targetLang;
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    utterance.onend = () => {
-      setProgress(100);
-      setIsPlaying(false);
-      setIsPaused(false);
-      utteranceRef.current = null;
-    };
-    utterance.onerror = () => {
-      setIsPlaying(false);
-      setIsPaused(false);
-      utteranceRef.current = null;
-    };
-    return utterance;
-  };
+  const findFallbackVoice = (languageCode: string, voices: SpeechSynthesisVoice[]) => {
+    const fallbackCodes = FALLBACK_LANGUAGE_FAMILIES[languageCode.toLowerCase()] ?? ['en'];
 
-  const startSpeakingFrom = (nextProgress: number) => {
-    if (!translatedText.trim() || !('speechSynthesis' in window) || isTranslating) return;
-    const matchingVoice = findMatchingVoice();
-    setVoiceNotice(
-      matchingVoice
-        ? ''
-        : `No ${selectedLanguage.label} voice is installed in this browser. The text is translated, but the browser may use its default voice.`
-    );
-
-    const normalizedProgress = clampProgress(nextProgress >= 100 ? 0 : nextProgress);
-    const startIndex = Math.floor((normalizedProgress / 100) * translatedText.length);
-    const textToSpeak = translatedText.substring(startIndex).trim();
-
-    if (!textToSpeak) {
-      setProgress(100);
-      setIsPlaying(false);
-      setIsPaused(false);
-      return;
+    for (const fallbackCode of fallbackCodes) {
+      const fallbackVoice = findMatchingVoice(fallbackCode, voices);
+      if (fallbackVoice) return fallbackVoice;
     }
 
-    window.speechSynthesis.cancel();
-    const utterance = createUtterance(textToSpeak);
+    return voices.find((voice) => voice.default) ?? voices[0] ?? null;
+  };
 
-    utteranceRef.current = utterance;
-    setProgress(normalizedProgress);
-    setIsPlaying(true);
-    setIsPaused(false);
-    window.speechSynthesis.speak(utterance);
+  const splitSpeechChunks = (textToSpeak: string) => {
+    const sentenceChunks = textToSpeak.match(/[^.!?。！？]+[.!?。！？]*|.{1,120}/g) ?? [textToSpeak];
+    return sentenceChunks
+      .map((chunk) => chunk.trim())
+      .filter(Boolean);
+  };
+
+  const speakChunk = (
+    chunk: string,
+    languageCode: string,
+    voice: SpeechSynthesisVoice | null,
+    normalizedProgress: number,
+    runId: number
+  ) =>
+    new Promise<void>((resolve) => {
+      if (!('speechSynthesis' in window) || playbackRunRef.current !== runId) {
+        resolve();
+        return;
+      }
+
+      const language = getLanguageOption(languageCode);
+      const utterance = new SpeechSynthesisUtterance(chunk);
+      utterance.lang = language.speechLangs[0] || languageCode;
+      utterance.rate = 0.95;
+      utterance.pitch = 1;
+
+      if (voice) {
+        utterance.voice = voice;
+      }
+
+      utterance.onend = () => resolve();
+      utterance.onerror = (event) => {
+        console.warn('[Audio Guide] Chunk playback warning, proceeding to next stream chunk:', event.error);
+        resolve();
+      };
+
+      utteranceRef.current = utterance;
+      setProgress(normalizedProgress);
+      setIsPlaying(true);
+      setIsPaused(false);
+      window.speechSynthesis.speak(utterance);
+    });
+
+  const executeSpeechEngine = async (
+    textToSpeak: string,
+    languageCode: string,
+    normalizedProgress: number,
+    voices?: SpeechSynthesisVoice[]
+  ) => {
+    if (!textToSpeak || !('speechSynthesis' in window)) return;
+
+    const language = getLanguageOption(languageCode);
+    const availableVoiceList = voices?.length ? voices : voicesRef.current;
+    const matchingVoice = findMatchingVoice(languageCode, voices);
+    const fallbackVoice = matchingVoice ? null : findFallbackVoice(languageCode, availableVoiceList);
+    const selectedVoice = matchingVoice ?? fallbackVoice;
+    const runId = playbackRunRef.current + 1;
+    playbackRunRef.current = runId;
+
+    window.speechSynthesis.cancel();
+
+    if (matchingVoice) {
+      console.info(`[Audio Guide] Speaking with matched voice: ${matchingVoice.name} (${matchingVoice.lang})`);
+    } else if (fallbackVoice) {
+      console.warn(
+        `[Audio Guide] Native voice package for '${languageCode}' not found. Using fallback voice: ${fallbackVoice.name} (${fallbackVoice.lang}).`
+      );
+    } else {
+      console.warn(`[Audio Guide] No voices exposed by this browser for '${languageCode}'. Speaking without explicit voice.`);
+    }
+
+    const chunks = splitSpeechChunks(textToSpeak);
+    console.info(`[Audio Guide] Starting chunked playback for ${language.label}: ${chunks.length} chunk(s).`);
+
+    try {
+      for (let index = 0; index < chunks.length; index += 1) {
+        if (playbackRunRef.current !== runId) break;
+        const chunkProgress = normalizedProgress + ((100 - normalizedProgress) * index) / Math.max(chunks.length, 1);
+        await speakChunk(chunks[index], languageCode, selectedVoice, chunkProgress, runId);
+      }
+    } catch (error) {
+      console.error('[Audio Guide Critical] Failed to execute speech stream:', error);
+    } finally {
+      if (playbackRunRef.current === runId) {
+        setProgress(100);
+        setIsPlaying(false);
+        setIsPaused(false);
+        utteranceRef.current = null;
+      }
+    }
+  };
+
+  const executeCloudAudioEngine = async (
+    audioSegments: string[],
+    mimeType: string,
+    normalizedProgress: number
+  ) => {
+    if (audioSegments.length === 0) return;
+
+    const runId = playbackRunRef.current + 1;
+    playbackRunRef.current = runId;
+    window.speechSynthesis?.cancel();
+
+    try {
+      for (let index = 0; index < audioSegments.length; index += 1) {
+        if (playbackRunRef.current !== runId) break;
+
+        const audio = new Audio(`data:${mimeType};base64,${audioSegments[index]}`);
+        audioElementRef.current = audio;
+        setIsPlaying(true);
+        setIsPaused(false);
+
+        await new Promise<void>((resolve) => {
+          audio.onloadedmetadata = () => {
+            if (Number.isFinite(audio.duration) && audio.duration > 0) {
+              setDurationSec((current) => Math.max(current, Math.ceil(audio.duration * audioSegments.length)));
+            }
+          };
+          audio.ontimeupdate = () => {
+            const segmentBase = index / audioSegments.length;
+            const segmentProgress = audio.duration > 0 ? audio.currentTime / audio.duration / audioSegments.length : 0;
+            setProgress(Math.min(100, normalizedProgress + (100 - normalizedProgress) * (segmentBase + segmentProgress)));
+          };
+          audio.onended = () => resolve();
+          audio.onerror = () => {
+            console.warn('[Audio Guide] Cloud audio segment failed, proceeding to next segment.');
+            resolve();
+          };
+          audio.play().catch((error) => {
+            console.warn('[Audio Guide] Browser blocked cloud audio segment playback:', error);
+            resolve();
+          });
+        });
+      }
+    } finally {
+      if (playbackRunRef.current === runId) {
+        setProgress(100);
+        setIsPlaying(false);
+        setIsPaused(false);
+        audioElementRef.current = null;
+      }
+    }
+  };
+
+  const startSpeakingFrom = async (nextProgress: number, languageCode = targetLang) => {
+    if (!cleanSourceText || isTranslating) return;
+
+    setIsTranslating(true);
+    window.speechSynthesis?.cancel();
+    audioElementRef.current?.pause();
+    audioElementRef.current = null;
+    utteranceRef.current = null;
+
+    try {
+      try {
+        const cacheKey = getNarrationCacheKey(languageCode, cleanSourceText);
+        const cloudNarration = narrationCache.get(cacheKey) ?? await createAudioGuideNarration(cleanSourceText, languageCode);
+        narrationCache.set(cacheKey, cloudNarration);
+        if (cloudNarration.audioSegments.length > 0) {
+          console.info(`[Audio Guide] Cloud narration ready via ${cloudNarration.provider} (${cloudNarration.locale}).`);
+          setTranslatedText(cloudNarration.translatedText);
+          spokenTextRef.current = cloudNarration.translatedText;
+          spokenLangRef.current = languageCode;
+          setIsTranslating(false);
+          await executeCloudAudioEngine(
+            cloudNarration.audioSegments,
+            cloudNarration.audioMimeType || 'audio/mpeg',
+            clampProgress(nextProgress >= 100 ? 0 : nextProgress)
+          );
+          return;
+        }
+      } catch (cloudError) {
+        console.warn('[Audio Guide] Cloud narration unavailable, falling back to browser speech synthesis:', cloudError);
+      }
+
+      const voices = await waitForVoices();
+      const fallbackText = translatedText.trim() || cleanSourceText;
+      console.info(`[Audio Guide] Browser fallback playback using available text (${fallbackText.length} chars).`);
+      setTranslatedText(fallbackText);
+      spokenTextRef.current = fallbackText;
+      spokenLangRef.current = languageCode;
+
+      const normalizedProgress = clampProgress(nextProgress >= 100 ? 0 : nextProgress);
+      const startIndex = Math.floor((normalizedProgress / 100) * fallbackText.length);
+      const textToSpeak = fallbackText.substring(startIndex).trim();
+
+      if (!textToSpeak) {
+        setProgress(100);
+        setIsPlaying(false);
+        setIsPaused(false);
+        return;
+      }
+
+      setIsTranslating(false);
+      void executeSpeechEngine(textToSpeak, languageCode, normalizedProgress, voices);
+    } catch (error: any) {
+      console.error('[Audio Guide] Audio guide stream failed:', error);
+      setTranslatedText(cleanSourceText);
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   const speak = () => {
-    if (!translatedText.trim() || !('speechSynthesis' in window) || isTranslating) return;
+    if (!cleanSourceText || !('speechSynthesis' in window) || isTranslating) return;
 
     if (isPlaying && !isPaused) {
-      window.speechSynthesis.pause();
+      if (audioElementRef.current) {
+        audioElementRef.current.pause();
+      } else {
+        window.speechSynthesis.pause();
+      }
       setIsPaused(true);
       return;
     }
 
     if (isPlaying && isPaused) {
-      window.speechSynthesis.resume();
+      if (audioElementRef.current) {
+        void audioElementRef.current.play().catch((error) => {
+          console.warn('[Audio Guide] Failed to resume cloud audio playback:', error);
+        });
+      } else {
+        window.speechSynthesis.resume();
+      }
       setIsPaused(false);
       return;
     }
 
-    startSpeakingFrom(progressRef.current);
+    void startSpeakingFrom(progressRef.current);
   };
 
   const stop = () => {
+    playbackRunRef.current += 1;
+    audioElementRef.current?.pause();
+    audioElementRef.current = null;
     window.speechSynthesis?.cancel();
     utteranceRef.current = null;
     setIsPlaying(false);
@@ -300,6 +589,9 @@ export default function MultiLanguageAudioGuide({
     const clampedProgress = clampProgress(nextProgress);
     const shouldKeepPlaying = isPlaying && !isPaused;
 
+    playbackRunRef.current += 1;
+    audioElementRef.current?.pause();
+    audioElementRef.current = null;
     window.speechSynthesis?.cancel();
     utteranceRef.current = null;
     setIsPlaying(false);
@@ -307,7 +599,7 @@ export default function MultiLanguageAudioGuide({
     setProgress(clampedProgress);
 
     if (shouldKeepPlaying) {
-      window.setTimeout(() => startSpeakingFrom(clampedProgress), 0);
+      window.setTimeout(() => void startSpeakingFrom(clampedProgress), 0);
     }
   };
 
@@ -323,9 +615,19 @@ export default function MultiLanguageAudioGuide({
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  const disabled = isTranslating || !translatedText.trim();
+  const disabled = isTranslating || !cleanSourceText;
   const currentSec = Math.floor((progress * durationSec) / 100);
   const selectLanguage = (language: LanguageOption) => {
+    playbackRunRef.current += 1;
+    audioElementRef.current?.pause();
+    audioElementRef.current = null;
+    window.speechSynthesis?.cancel();
+    utteranceRef.current = null;
+    setIsPlaying(false);
+    setIsPaused(false);
+    setProgress(0);
+    setDurationSec(Math.max(10, Math.ceil(cleanSourceText.length / 14)));
+    setTranslatedText(cleanSourceText);
     setTargetLang(language.code);
     setLanguageQuery('');
     setIsLanguageMenuOpen(false);
@@ -335,9 +637,6 @@ export default function MultiLanguageAudioGuide({
     <section className={`bg-white border border-[#1a1a1a]/15 p-3 flex flex-col gap-3 text-left ${className}`}>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#e2533b] font-extrabold">
-            AI multi-language audio
-          </p>
           <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] truncate">{title}</h3>
         </div>
         {isTranslating && <Loader2 size={16} className="animate-spin text-[#e2533b] shrink-0" />}
@@ -473,12 +772,6 @@ export default function MultiLanguageAudioGuide({
           {isTranslating ? 'Translating narration...' : translatedText || cleanSourceText}
         </p>
       </div>
-
-      {(translationNotice || voiceNotice) && (
-        <p className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b] leading-relaxed">
-          {translationNotice || voiceNotice}
-        </p>
-      )}
     </section>
   );
 }
