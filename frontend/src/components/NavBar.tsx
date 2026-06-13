@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Search, X, MapPin, Star, Map, Compass, Mail, User, Globe } from 'lucide-react';
+import { Search, X, MapPin, Star, Map, Compass, Mail, User, Globe, Volume2 } from 'lucide-react';
 import { Restaurant } from '../types';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
@@ -64,14 +64,57 @@ export default function NavBar({
           onClick={() => onChangeTab('map')}
           className="flex items-center gap-3 cursor-pointer group select-none"
         >
-          <div className="w-8 h-8 bg-[#1a1a1a] rounded-sm flex items-center justify-center text-white font-serif italic text-lg shadow-sm transition-transform group-hover:rotate-12 duration-200">
-            C
-          </div>
-          <span className="text-[10px] tracking-[0.35em] font-extrabold uppercase hidden sm:inline-block text-[#1a1a1a] font-sans">
-            CRAVEMAP // ARCHIVE
-          </span>
-          <span className="text-xs tracking-widest font-extrabold uppercase sm:hidden text-[#1a1a1a] font-sans">
-            CRAVEMAP
+          <svg viewBox="0 0 100 100" className="w-9 h-9 shrink-0 select-none transition-transform group-hover:scale-105 duration-200">
+            {/* Background round square */}
+            <rect width="100" height="100" rx="20" fill="#1a1a1a"/>
+            
+            {/* Sound waves left */}
+            <path d="M 28 35 A 18 18 0 0 0 28 65" fill="none" stroke="#d49a6a" strokeWidth="3.5" strokeLinecap="round"/>
+            <path d="M 21 28 A 28 28 0 0 0 21 72" fill="none" stroke="#d49a6a" strokeWidth="2.5" strokeLinecap="round" opacity="0.6"/>
+            
+            {/* Sound waves right */}
+            <path d="M 72 35 A 18 18 0 0 1 72 65" fill="none" stroke="#d49a6a" strokeWidth="3.5" strokeLinecap="round"/>
+            <path d="M 79 28 A 28 28 0 0 1 79 72" fill="none" stroke="#d49a6a" strokeWidth="2.5" strokeLinecap="round" opacity="0.6"/>
+            
+            {/* Microphone Capsule */}
+            <rect x="42" y="24" width="16" height="26" rx="8" fill="#d49a6a"/>
+            {/* Horizontal grilles */}
+            <line x1="45" y1="30" x2="55" y2="30" stroke="#1a1a1a" strokeWidth="2" />
+            <line x1="45" y1="36" x2="55" y2="36" stroke="#1a1a1a" strokeWidth="2" />
+            <line x1="45" y1="42" x2="55" y2="42" stroke="#1a1a1a" strokeWidth="2" />
+            
+            {/* Stand base & ring */}
+            <path d="M 36 37 A 14 14 0 0 0 64 37" fill="none" stroke="#d49a6a" strokeWidth="3.5" strokeLinecap="round"/>
+            <line x1="50" y1="51" x2="50" y2="65" stroke="#d49a6a" strokeWidth="4" />
+            <path d="M 38 66 L 62 66" stroke="#d49a6a" strokeWidth="4" strokeLinecap="round"/>
+            
+            {/* Fork & Knife crossing */}
+            {/* Fork (Crossing from left-bottom to right-top) */}
+            <g transform="translate(50, 50) rotate(-45) translate(-50, -50)">
+              {/* Handle */}
+              <line x1="50" y1="35" x2="50" y2="65" stroke="#d49a6a" strokeWidth="3.5" strokeLinecap="round"/>
+              {/* Head */}
+              <path d="M 46 32 C 46 25 54 25 54 32 Z" fill="#d49a6a"/>
+              {/* Prongs */}
+              <line x1="48" y1="28" x2="48" y2="33" stroke="#1a1a1a" strokeWidth="1"/>
+              <line x1="50" y1="28" x2="50" y2="33" stroke="#1a1a1a" strokeWidth="1"/>
+              <line x1="52" y1="28" x2="52" y2="33" stroke="#1a1a1a" strokeWidth="1"/>
+            </g>
+            
+            {/* Knife (Crossing from right-bottom to left-top) */}
+            <g transform="translate(50, 50) rotate(45) translate(-50, -50)">
+              {/* Handle */}
+              <line x1="50" y1="35" x2="50" y2="65" stroke="#d49a6a" strokeWidth="3.5" strokeLinecap="round"/>
+              {/* Blade */}
+              <path d="M 48 35 L 48 24 C 48 24 53 24 53 29 L 51 35 Z" fill="#d49a6a"/>
+            </g>
+          </svg>
+          
+          <span className="text-sm md:text-base tracking-[0.12em] font-black uppercase text-[#1a1a1a] font-sans flex items-center gap-1.5">
+            FOODIO
+            <span className="w-5 h-5 bg-[#1a1a1a] rounded-full flex items-center justify-center text-[#fdfcf9] shrink-0 shadow-xs">
+              <Volume2 size={11} className="fill-current text-white stroke-[2.5]" />
+            </span>
           </span>
         </div>
 
