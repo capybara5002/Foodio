@@ -110,10 +110,10 @@ export default function NavBar({
             </g>
           </svg>
           
-          <span className="text-sm md:text-base tracking-[0.12em] font-black uppercase text-[#1a1a1a] font-sans flex items-center gap-1.5">
-            FOODIO
-            <span className="w-5 h-5 bg-[#1a1a1a] rounded-full flex items-center justify-center text-[#fdfcf9] shrink-0 shadow-xs">
-              <Volume2 size={11} className="fill-current text-white stroke-[2.5]" />
+          <span className="text-sm md:text-base tracking-[0.12em] font-black uppercase text-[#1a1a1a] font-sans flex items-center gap-[1px]">
+            FOODI
+            <span className="w-[14px] h-[14px] md:w-[17px] md:h-[17px] bg-[#1a1a1a] rounded-full flex items-center justify-center text-[#fdfcf9] shrink-0 translate-y-[-0.5px] ml-[2px]">
+              <Volume2 className="w-[8px] h-[8px] md:w-[10px] md:h-[10px] fill-current text-white stroke-[3]" />
             </span>
           </span>
         </div>
