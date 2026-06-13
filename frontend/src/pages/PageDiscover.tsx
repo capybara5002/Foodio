@@ -4,8 +4,10 @@
  */
 
 import { useState, useEffect } from 'react';
-import { AudioTour, CommunityPost } from '../types';
+import { AudioTour, CommunityPost, PostComment } from '../types';
+import { getPostComments, createPostComment } from '../api/cravemapApi';
 import { Flame, MapPin, Star, Heart, MessageSquare, Bookmark, Volume2, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface PageDiscoverProps {
   tours: AudioTour[];
@@ -14,6 +16,7 @@ interface PageDiscoverProps {
 }
 
 export default function PageDiscover({ tours, onPlayTour, searchText }: PageDiscoverProps) {
+  const { t } = useTranslation();
   const [subTab, setSubTab] = useState<'tours' | 'feed'>('tours');
   const [feedFilter, setFeedFilter] = useState<'forYou' | 'following'>('forYou');
   const [tourFilter, setTourFilter] = useState('All');
@@ -21,6 +24,11 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+  const [postComments, setPostComments] = useState<Record<string, PostComment[]>>({});
+  const [commentInput, setCommentInput] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -86,6 +94,42 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
     );
   };
 
+  const handleToggleComments = async (postId: string) => {
+    if (expandedPostId === postId) {
+      setExpandedPostId(null);
+      return;
+    }
+    setExpandedPostId(postId);
+    if (!postComments[postId]) {
+      try {
+        const comments = await getPostComments(postId);
+        setPostComments(prev => ({ ...prev, [postId]: comments }));
+      } catch (err) {
+        console.error("Failed to load comments:", err);
+      }
+    }
+  };
+
+  const handleSubmitComment = async (postId: string) => {
+    if (!commentInput.trim() || isSubmittingComment) return;
+    setIsSubmittingComment(true);
+    try {
+      const newComment = await createPostComment(postId, commentInput.trim());
+      setPostComments(prev => ({
+        ...prev,
+        [postId]: [...(prev[postId] || []), newComment]
+      }));
+      setPosts(prev => prev.map(p => 
+        p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p
+      ));
+      setCommentInput('');
+    } catch (err) {
+      console.error("Failed to post comment:", err);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
   const tourCategories = ['All', 'Night Markets', 'Seafood', 'Street Food', 'Fine Dining'];
 
   return (
@@ -123,15 +167,15 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
 
           {/* Header Introduction Block */}
           <div className="flex flex-col gap-2 pt-2 border-b border-[#1a1a1a]/10 pb-6">
-            <span className="text-[10px] tracking-[0.3em] uppercase text-[#e2533b] font-extrabold">Collection // 02</span>
+            <span className="text-[10px] tracking-[0.3em] uppercase text-[#e2533b] font-extrabold">{t('discover.collection')} // 02</span>
             <h1 className="font-serif italic font-light text-headline-lg-mobile md:text-headline-lg text-[#1a1a1a] leading-none">
-              Curated Audio Tours
+              {t('discover.audio_tours_title')}
             </h1>
             <p className="font-sans text-xs md:text-sm text-[#1a1a1a]/60 leading-relaxed font-light max-w-xl">
-              Immersive, high-density culinary journeys guided by local culinary experts. Plug in your headphones and explore the sensory trace of street setups.
+              {t('discover.audio_tours_desc')}
             </p>
           </div>
-
+ 
           {/* Scollable Categories Horizon Filters */}
           <div className="flex overflow-x-auto no-scrollbar gap-2 py-1">
             {tourCategories.map((cat) => (
@@ -144,7 +188,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                     : 'bg-white text-[#1a1a1a] border-[#1a1a1a]/15 hover:bg-[#f9f7f2]'
                   }`}
               >
-                {cat === 'All' ? 'All Tours' : cat}
+                {cat === 'All' ? t('discover.all_tours') : cat}
               </button>
             ))}
           </div>
@@ -197,7 +241,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                       {tour.isTrending && (
                         <div className="absolute top-5 left-5 bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-sm flex items-center gap-1 shadow border border-transparent">
                           <Flame size={12} className="fill-[#e2533b] text-[#e2533b]" />
-                          <span className="text-[9px] font-mono uppercase tracking-widest font-bold">Trending</span>
+                          <span className="text-[9px] font-mono uppercase tracking-widest font-bold">{t('discover.trending')}</span>
                         </div>
                       )}
                     </div>
@@ -227,19 +271,19 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                       {/* Numeric meta counters */}
                       <div className="grid grid-cols-3 gap-2 border-y border-[#1a1a1a]/10 py-3 text-[10px]">
                         <div className="flex flex-col gap-0.5">
-                          <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">Duration</span>
+                          <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">{t('discover.duration')}</span>
                           <span className="font-mono font-bold text-[#1a1a1a]">
                             {tour.duration}
                           </span>
                         </div>
                         <div className="flex flex-col gap-0.5 border-l border-[#1a1a1a]/10 pl-2">
-                          <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">Stops</span>
+                          <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">{t('discover.stops')}</span>
                           <span className="font-mono font-bold text-[#1a1a1a]">
-                            {tour.stopsCount} Spots
+                            {tour.stopsCount} {t('discover.stops_suffix')}
                           </span>
                         </div>
                         <div className="flex flex-col gap-0.5 border-l border-[#1a1a1a]/10 pl-2">
-                          <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">Atmos</span>
+                          <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">{t('discover.atmos')}</span>
                           <span className="font-mono font-bold text-[#1a1a1a] truncate">
                             {tour.vibe}
                           </span>
@@ -252,7 +296,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                         onClick={() => onPlayTour(tour)}
                         className="w-full mt-auto bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest py-3 rounded-none shadow transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
                       >
-                        <Volume2 size={12} /> Start Audio Tour
+                        <Volume2 size={12} /> {t('discover.start_audio')}
                       </button>
                     </div>
                   </article>
@@ -275,7 +319,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                   : 'text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5'
                 }`}
             >
-              Dành cho bạn
+              {t('discover.for_you')}
             </button>
             <button
               type="button"
@@ -285,26 +329,26 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                   : 'text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5'
                 }`}
             >
-              Đang theo dõi
+              {t('discover.following')}
             </button>
           </div>
 
           {loading && (
             <div className="flex flex-col items-center justify-center py-12 text-[#1a1a1a]/60">
               <span className="animate-spin text-2xl">⏳</span>
-              <span className="font-mono text-[10px] mt-2 uppercase tracking-widest font-bold">Loading Feed...</span>
+              <span className="font-mono text-[10px] mt-2 uppercase tracking-widest font-bold">{t('discover.loading_feed')}</span>
             </div>
           )}
 
           {error && (
             <div className="text-center py-12 font-mono text-[10px] uppercase text-[#e2533b] font-bold">
-              ⚠️ {error}
+              ⚠️ {t('discover.error_feed')}
             </div>
           )}
 
           {!loading && !error && posts.length === 0 && (
             <div className="text-center py-12 font-mono text-[10px] uppercase text-[#1a1a1a]/40 font-bold">
-              No posts found.
+              {t('discover.no_posts')}
             </div>
           )}
 
@@ -312,7 +356,11 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
           {!loading && !error && posts.map((post) => (
             <article
               key={post.id}
-              className="bg-white rounded-none border border-[#1a1a1a]/15 shadow-sm overflow-hidden flex flex-col"
+              className={`bg-white rounded-none border-2 shadow-sm overflow-hidden flex flex-col transition-all duration-300 ${
+                post.isRestaurantPost
+                  ? 'border-[#e2533b] shadow-[4px_4px_0px_0px_rgba(226,83,59,0.15)] bg-amber-50/5'
+                  : 'border-[#1a1a1a]/15'
+              }`}
             >
               {/* User profile header badge row */}
               <div className="p-4 flex items-center gap-3 border-b border-[#1a1a1a]/5">
@@ -323,8 +371,13 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                 />
 
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-mono text-xs font-bold text-[#1a1a1a] truncate">
-                    {post.handle}
+                  <h3 className="font-mono text-xs font-bold text-[#1a1a1a] truncate flex items-center gap-1.5 flex-wrap">
+                    <span>{post.handle}</span>
+                    {post.isRestaurantPost && (
+                      <span className="bg-[#e2533b] text-white text-[8px] font-mono uppercase px-1 py-0.5 font-black tracking-wider flex items-center gap-0.5 select-none shrink-0 rounded-xs">
+                        👑 {t('owner.official_badge', 'CHÍNH THỨC')}
+                      </span>
+                    )}
                   </h3>
                   <p className="font-sans text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 mt-0.5">
                     {post.timeAgo}
@@ -373,7 +426,10 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                       <span className="font-mono text-[10px] font-bold">{post.likesCount}</span>
                     </button>
 
-                    <button className="flex items-center gap-1 text-[#1a1a1a]/55 hover:text-[#e2533b] px-1 py-1 cursor-pointer">
+                    <button 
+                      onClick={() => handleToggleComments(post.id)}
+                      className="flex items-center gap-1 text-[#1a1a1a]/55 hover:text-[#e2533b] px-1 py-1 cursor-pointer"
+                    >
                       <MessageSquare size={18} />
                       <span className="font-mono text-[10px] font-bold">{post.commentsCount}</span>
                     </button>
@@ -393,6 +449,50 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                   </button>
 
                 </div>
+
+                {/* Expanded Comments Section */}
+                {expandedPostId === post.id && (
+                  <div className="mt-2 border-t border-[#1a1a1a]/10 pt-3 flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="max-h-48 overflow-y-auto pr-2 flex flex-col gap-3">
+                      {(postComments[post.id] || []).length === 0 ? (
+                        <p className="font-sans text-[10px] text-[#1a1a1a]/40 text-center py-2">No comments yet. Be the first!</p>
+                      ) : (
+                        (postComments[post.id] || []).map(comment => (
+                          <div key={comment.id} className="flex gap-2 items-start">
+                            <img src={comment.avatar} alt={comment.author} className="w-6 h-6 rounded-full object-cover border border-[#1a1a1a]/10 bg-white" />
+                            <div className="flex-1 bg-[#f9f7f2] rounded-md p-2 border border-[#1a1a1a]/5">
+                              <div className="flex justify-between items-center mb-0.5">
+                                <span className="font-mono text-[9px] font-bold text-[#1a1a1a]">{comment.author}</span>
+                                <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                              </div>
+                              <p className="font-sans text-[10px] text-[#1a1a1a]/80 leading-relaxed">{comment.content}</p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-2 items-center mt-1">
+                      <input 
+                        type="text"
+                        value={commentInput}
+                        onChange={e => setCommentInput(e.target.value)}
+                        placeholder="Add a comment..."
+                        className="flex-1 border border-[#1a1a1a]/20 rounded-sm px-3 py-1.5 font-sans text-xs focus:outline-none focus:border-[#e2533b] transition-colors"
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleSubmitComment(post.id);
+                        }}
+                      />
+                      <button 
+                        onClick={() => handleSubmitComment(post.id)}
+                        disabled={!commentInput.trim() || isSubmittingComment}
+                        className="bg-[#1a1a1a] hover:bg-[#e2533b] disabled:bg-[#1a1a1a]/40 text-white px-3 py-1.5 rounded-sm font-mono text-[9px] font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </article>

@@ -21,9 +21,15 @@ import PageCreate from './pages/PageCreate';
 import PageInbox from './pages/PageInbox';
 import PageProfile from './pages/PageProfile';
 
+import OfflineBanner from './components/Common/OfflineBanner';
+import { getCachedRestaurants, saveRestaurants, getCachedAudioTours, saveAudioTours, saveLastSyncInfo } from './services/offlineStore';
+
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { stopNarration } from './services/narrationEngine';
 
 function AppContent() {
+  const { t, i18n } = useTranslation();
   const { user, qrLogin, logout } = useAuth();
   const [currentTab, setCurrentTab] = useState<'map' | 'discover' | 'create' | 'inbox' | 'profile'>('map');
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
@@ -46,7 +52,7 @@ function AppContent() {
   // QR verification status banner states
   const [qrStatus, setQrStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const userEmail = user ? user.email : 'Chưa đăng nhập';
+  const userEmail = user ? user.email : t('auth.not_logged_in');
   const activeChatUserId = user?.id ?? 'usr_3';
   const activeChatRestaurantId = user?.role === 'Owner' ? user.restaurantId : undefined;
 
@@ -79,6 +85,25 @@ function AppContent() {
     let cancelled = false;
 
     const loadData = async () => {
+      // Step 1: Attempt to load from IndexedDB cache first
+      try {
+        const [cachedRest, cachedTours] = await Promise.all([
+          getCachedRestaurants(),
+          getCachedAudioTours()
+        ]);
+        if (!cancelled) {
+          if (cachedRest && cachedRest.length > 0) {
+            setRestaurants(cachedRest);
+          }
+          if (cachedTours && cachedTours.length > 0) {
+            setAudioTours(cachedTours);
+          }
+        }
+      } catch (cacheErr) {
+        console.warn('Failed to load from IndexedDB cache on start:', cacheErr);
+      }
+
+      // Step 2: Fetch fresh data from remote API
       try {
         const [remoteRestaurants, remoteThreads, remoteTours] = await Promise.all([
           getRestaurants(),
@@ -92,11 +117,18 @@ function AppContent() {
 
         if (cancelled) return;
 
-        if (remoteRestaurants.length > 0) setRestaurants(remoteRestaurants);
+        if (remoteRestaurants.length > 0) {
+          setRestaurants(remoteRestaurants);
+          void saveRestaurants(remoteRestaurants);
+        }
         replaceChatThreads(remoteThreads);
-        if (remoteTours.length > 0) setAudioTours(remoteTours);
+        if (remoteTours.length > 0) {
+          setAudioTours(remoteTours);
+          void saveAudioTours(remoteTours);
+        }
+        void saveLastSyncInfo({ timestamp: Date.now() });
       } catch (error) {
-        console.warn('CraveMap API unavailable, using local seed data.', error);
+        console.warn('CraveMap API unavailable, using local/cached data.', error);
       }
     };
 
@@ -117,7 +149,7 @@ function AppContent() {
           const guestUser = await qrLogin(qrToken);
           setQrStatus({
             type: 'success',
-            message: `🎯 Quét mã QR thành công! Chào mừng bạn đến bàn ${guestUser.tableNumber}.`
+            message: t('qr.verify_success', { table: guestUser.tableNumber })
           });
           // Redirect to the restaurant scanned if possible
           if (guestUser.restaurantId) {
@@ -127,7 +159,7 @@ function AppContent() {
         } catch (err: any) {
           setQrStatus({
             type: 'error',
-            message: `❌ Không thể xác thực QR: ${err.message || 'Mã hết hạn hoặc không hợp lệ'}`
+            message: t('qr.verify_error', { error: err.message || (i18n.language === 'vi' ? 'Mã hết hạn hoặc không hợp lệ' : 'Code expired or invalid') })
           });
           setTimeout(() => setQrStatus(null), 5000);
         } finally {
@@ -182,7 +214,7 @@ function AppContent() {
   };
 
   const handleContactRestaurant = async (restaurantId: string) => {
-    requireAuth('Bạn cần đăng nhập bằng tài khoản để chat với quán ăn.', async () => {
+    requireAuth(t('auth.require_login_chat'), async () => {
       try {
         const thread = await ensureChatThread(restaurantId, activeChatUserId);
         upsertThread(thread);
@@ -220,7 +252,7 @@ function AppContent() {
     }
   };
 
-  const handleConfirmBooking = (bookingDetails: { date: string; time: string; guests: number; seating: string }) => {
+  const handleConfirmBooking = (bookingDetails: { date: string; time: string; guests: number; seating: string; tableNumber?: string }) => {
     const bookingRestaurant = selectedRestaurantId
       ? restaurants.find((r) => r.id === selectedRestaurantId) || restaurants[0]
       : restaurants.find((r) => r.id === 'oc_oanh') || restaurants[0];
@@ -231,7 +263,8 @@ function AppContent() {
       time: bookingDetails.time,
       guests: bookingDetails.guests,
       seating: bookingDetails.seating,
-      userId: activeChatUserId
+      userId: activeChatUserId,
+      tableNumber: bookingDetails.tableNumber
     })
       .then(() => handleRefreshThreads())
       .catch(() => undefined);
@@ -251,7 +284,7 @@ function AppContent() {
           restaurant={selectedRestaurant}
           onBack={() => setSelectedRestaurantId(null)}
           onOpenBooking={() => {
-            requireAuth('Bạn cần đăng nhập bằng tài khoản để đặt bàn ăn.', () => {
+            requireAuth(t('auth.require_login_booking'), () => {
               setIsBookingOpen(true);
             });
           }}
@@ -261,6 +294,7 @@ function AppContent() {
           }}
           onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
           requireAuth={requireAuth}
+          onRestaurantUpdated={handleRestaurantUpdated}
         />
       );
     }
@@ -306,7 +340,7 @@ function AppContent() {
           <PageProfile 
             userEmail={userEmail} 
             onLoginTrigger={() => {
-              setLoginMessage('Đăng nhập hệ thống Foodio');
+              setLoginMessage(t('auth.login_title'));
               setPendingAction(null);
               setIsLoginOpen(true);
             }} 
@@ -335,8 +369,11 @@ function AppContent() {
       <NavBar
         currentTab={currentTab}
         onChangeTab={(tab) => {
+          try {
+            stopNarration();
+          } catch (e) {}
           if (tab === 'create') {
-            requireAuth('Bạn cần đăng nhập bằng tài khoản để tạo bài viết hoặc đánh giá.', () => {
+            requireAuth(t('auth.require_login_post'), () => {
               setSelectedRestaurantId(null);
               setCurrentTab('create');
             });
@@ -352,6 +389,8 @@ function AppContent() {
         onSearchRestaurantSelect={handleMapSearchSelect}
       />
 
+      <OfflineBanner />
+
       {/* Floating QR scan notification banner */}
       {qrStatus && (
         <div className={`fixed top-20 left-1/2 -translate-x-1/2 px-6 py-3 border-2 border-[#1a1a1a] shadow-[4px_4px_0px_0px_#1a1a1a] font-mono text-xs font-bold z-[9999] animate-in slide-in-from-top-4 ${
@@ -365,12 +404,12 @@ function AppContent() {
       {user?.role === 'Guest' && (
         <div className="fixed bottom-20 left-4 md:bottom-6 md:left-4 z-[45] bg-[#ffe0b2] border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] px-3.5 py-1.5 font-mono text-[9px] font-bold uppercase tracking-wider text-[#e65100] flex items-center gap-1.5 select-none">
           <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-          <span>Bàn {user.tableNumber} (Chế độ Khách)</span>
+          <span>{t('auth.guest_mode', { table: user.tableNumber })}</span>
           <button 
             onClick={logout}
             className="ml-2 underline text-[#1a1a1a] hover:text-[#e2533b]"
           >
-            Đăng nhập
+            {t('auth.login')}
           </button>
         </div>
       )}
@@ -400,10 +439,10 @@ function AppContent() {
 
       {currentTab !== 'map' && (
         <footer className="hidden md:flex bg-surface-container-high text-on-surface-variant font-label-sm text-[11px] py-4 border-t border-outline-variant/20 items-center justify-center gap-2 select-none z-40 relative">
-          <span>© 2026 CraveMap Food Exploration System. Match visual mockup layouts.</span>
+          <span>{t('footer.copyright')}</span>
           <span className="w-1.5 h-1.5 bg-primary rounded-full" />
           <span>
-            User Active: <strong className="font-bold">{userEmail}</strong>
+            {t('auth.active_user')}: <strong className="font-bold">{userEmail}</strong>
           </span>
         </footer>
       )}

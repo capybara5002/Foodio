@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Restaurant, Category, BookingMessagePayload } from '../../types';
-import { Trash2, X, Plus, Store, Users, Calendar, Ban, QrCode, TrendingUp, Settings, Check, Clock, MapPin, Star, CheckCircle2, XCircle, FileText } from 'lucide-react';
+import { Restaurant, Category, BookingMessagePayload, Notification } from '../../types';
+import { Trash2, X, Plus, Store, Users, Calendar, Ban, QrCode, TrendingUp, Settings, Check, Clock, MapPin, Star, CheckCircle2, XCircle, FileText, Grid, Megaphone, Bell, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface OwnerDashboardProps {
   onRestaurantUpdated?: (updated: Restaurant) => void;
@@ -28,17 +29,21 @@ interface AnalyticsDto {
 }
 
 export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardProps) {
-  const { user } = useAuth();
+  const { user, syncUser } = useAuth();
+  const { t } = useTranslation();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [foodStreets, setFoodStreets] = useState<any[]>([]);
   const [bookings, setBookings] = useState<BookingDto[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsDto | null>(null);
-  const [activeTab, setActiveTab] = useState<'analytics' | 'bookings' | 'dishes' | 'settings' | 'qr'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'bookings' | 'tables' | 'dishes' | 'reviews' | 'posts' | 'settings' | 'qr'>('analytics');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [tablesSaveSuccess, setTablesSaveSuccess] = useState(false);
   const [requestStatus, setRequestStatus] = useState<{ status: string; note?: string } | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Edit Restaurant Form state
   const [restForm, setRestForm] = useState({
@@ -50,12 +55,21 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     address: '',
     area: '',
     openingHours: '',
+    description: '',
+    tableStatuses: '',
     image: '',
     isVerified: true,
     replySpeed: 'Usually replies in 5m',
     latitude: 10.759031,
     longitude: 106.706962
   });
+
+  // Table map status list
+  const [tablesList, setTablesList] = useState<any[]>([]);
+
+  // Feed Posts creator state
+  const [postContent, setPostContent] = useState('');
+  const [postImage, setPostImage] = useState('');
 
   // Create Restaurant Form state
   const [createForm, setCreateForm] = useState({
@@ -86,6 +100,38 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   const [generatedQrToken, setGeneratedQrToken] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
 
+  // TTS state for reading restaurant description
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const handleToggleTTS = () => {
+    if (!('speechSynthesis' in window)) {
+      alert('Trình duyệt của bạn không hỗ trợ đọc giọng nói.');
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const text = restForm.description?.trim();
+    if (!text) {
+      alert('Vui lòng nhập mô tả quán ăn trước khi nghe audio!');
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'vi-VN';
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
+  };
+
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   const activeRestaurantId = user?.restaurantId;
 
@@ -93,6 +139,21 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     setIsLoading(true);
     setError(null);
     try {
+      // Sync user profile first
+      if (user) {
+        try {
+          const profileRes = await fetch(`${baseUrl}/api/auth/me/${user.id}`);
+          if (profileRes.ok) {
+            const updatedUser = await profileRes.json();
+            if (updatedUser.restaurantId !== user.restaurantId || updatedUser.ownerStatus !== user.ownerStatus) {
+              syncUser(updatedUser);
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to sync user profile:", e);
+        }
+      }
+
       // Fetch categories and streets first
       const [catRes, streetRes] = await Promise.all([
         fetch(`${baseUrl}/api/cravemap/categories`),
@@ -109,15 +170,42 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       }
 
       if (activeRestaurantId) {
-        const [restRes, bookingsRes, analyticsRes] = await Promise.all([
+        const [restRes, bookingsRes, analyticsRes, notificationsRes] = await Promise.all([
           fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`),
           fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/bookings`),
-          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/analytics`)
+          fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}/analytics`),
+          fetch(`${baseUrl}/api/owner/notifications?ownerId=${user?.id}`)
         ]);
 
         if (!restRes.ok) throw new Error('Failed to load restaurant details.');
         const restData: Restaurant = await restRes.json();
         setRestaurant(restData);
+
+        // Setup tables list from DB or defaults
+        const defaultTables = [
+          { id: 1, name: 'Bàn 1', status: 'vacant', capacity: 2 },
+          { id: 2, name: 'Bàn 2', status: 'vacant', capacity: 2 },
+          { id: 3, name: 'Bàn 3', status: 'vacant', capacity: 4 },
+          { id: 4, name: 'Bàn 4', status: 'vacant', capacity: 4 },
+          { id: 5, name: 'Bàn 5', status: 'vacant', capacity: 4 },
+          { id: 6, name: 'Bàn 6', status: 'vacant', capacity: 4 },
+          { id: 7, name: 'Bàn 7', status: 'vacant', capacity: 6 },
+          { id: 8, name: 'Bàn 8', status: 'vacant', capacity: 6 },
+          { id: 9, name: 'Bàn 9', status: 'vacant', capacity: 8 },
+          { id: 10, name: 'Bàn 10', status: 'vacant', capacity: 8 },
+          { id: 11, name: 'Bàn 11', status: 'vacant', capacity: 10 },
+          { id: 12, name: 'Bàn 12', status: 'vacant', capacity: 12 },
+        ];
+
+        let parsedTables = defaultTables;
+        if (restData.tableStatuses) {
+          try {
+            parsedTables = JSON.parse(restData.tableStatuses);
+          } catch (e) {
+            console.error("Failed to parse table statuses:", e);
+          }
+        }
+        setTablesList(parsedTables);
 
         if (bookingsRes.ok) {
           const bookingsData = await bookingsRes.json();
@@ -129,6 +217,11 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
           setAnalytics(analyticsData);
         }
 
+        if (notificationsRes.ok) {
+          const notificationsData = await notificationsRes.json();
+          setNotifications(notificationsData);
+        }
+
         setRestForm({
           name: restData.name,
           priceRange: restData.priceRange,
@@ -138,6 +231,8 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
           address: restData.address,
           area: restData.area,
           openingHours: restData.openingHours,
+          description: restData.description || '',
+          tableStatuses: restData.tableStatuses || '',
           image: restData.image,
           isVerified: restData.isVerified,
           replySpeed: restData.replySpeed,
@@ -184,6 +279,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
       const requestData = await res.json();
       setRequestStatus({ status: requestData.status, note: requestData.adminNote });
+      syncUser({ ownerStatus: 'Pending' });
     } catch (err: any) {
       setError(err.message || 'Error submitting request.');
     } finally {
@@ -195,7 +291,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     e.preventDefault();
     setSaveSuccess(false);
     try {
-      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`, {
+      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}?ownerId=${user?.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -286,12 +382,117 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     }
   };
 
+  const handleSaveTablesList = async (updatedTables: any[]) => {
+    if (!activeRestaurantId) return;
+    setTablesSaveSuccess(false);
+    try {
+      const jsonString = JSON.stringify(updatedTables);
+      const res = await fetch(`${baseUrl}/api/owner/restaurant/${activeRestaurantId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...restForm,
+          tableStatuses: jsonString,
+          rating: restaurant?.rating || 4.8
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to save table layout.');
+      const updatedRest = await res.json();
+      setRestaurant(updatedRest);
+      onRestaurantUpdated?.(updatedRest);
+      setRestForm(prev => ({ ...prev, tableStatuses: jsonString }));
+      setTablesSaveSuccess(true);
+      setTimeout(() => setTablesSaveSuccess(false), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Error saving layout.');
+    }
+  };
+
+  const handleAddTable = () => {
+    const nextId = tablesList.length > 0 ? Math.max(...tablesList.map(t => t.id)) + 1 : 1;
+    const newTable = {
+      id: nextId,
+      name: `Bàn ${nextId}`,
+      status: 'vacant',
+      capacity: 4
+    };
+    const updated = [...tablesList, newTable];
+    setTablesList(updated);
+    void handleSaveTablesList(updated);
+  };
+
+  const handleDeleteTable = (id: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bàn này khỏi sơ đồ?')) return;
+    const updated = tablesList.filter(t => t.id !== id);
+    setTablesList(updated);
+    void handleSaveTablesList(updated);
+  };
+
+  const handleUpdateTableStatus = (id: number, status: 'vacant' | 'reserved' | 'occupied') => {
+    const updated = tablesList.map(t => t.id === id ? { ...t, status } : t);
+    setTablesList(updated);
+    void handleSaveTablesList(updated);
+  };
+
+  const handleUpdateTableCapacity = (id: number, capacity: number) => {
+    const updated = tablesList.map(t => t.id === id ? { ...t, capacity: Number(capacity) } : t);
+    setTablesList(updated);
+    void handleSaveTablesList(updated);
+  };
+
+  const handleUpdateTableName = (id: number, name: string) => {
+    const updated = tablesList.map(t => t.id === id ? { ...t, name } : t);
+    setTablesList(updated);
+    void handleSaveTablesList(updated);
+  };
+
+  const handlePublishPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!postContent.trim()) {
+      alert('Vui lòng nhập nội dung bài viết!');
+      return;
+    }
+    try {
+      const res = await fetch(`${baseUrl}/api/communityposts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: '',
+          author: restaurant?.name || user?.username || 'Quán ăn',
+          handle: restaurant ? `@${restaurant.id}` : '@quan_an_official',
+          avatar: restaurant?.image || 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b',
+          timeAgo: 'Just now',
+          rating: restaurant?.rating || 4.8,
+          image: postImage.trim() || restaurant?.image || 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b',
+          content: postContent,
+          locationName: restaurant?.name || 'Vĩnh Khánh',
+          likesCount: 0,
+          commentsCount: 0,
+          isLiked: false,
+          isSaved: false,
+          isRestaurantPost: true
+        })
+      });
+      if (!res.ok) throw new Error('Failed to publish post.');
+      alert(t('owner.publish_success', 'Đã đăng bài viết thành công lên Feed!'));
+      setPostContent('');
+      setPostImage('');
+    } catch (err: any) {
+      alert(err.message || 'Error publishing post.');
+    }
+  };
+
   const handleUpdateBookingStatus = async (bookingId: number, status: string) => {
     const actionLabel = status === 'Confirmed' ? 'duyệt' : status === 'Completed' ? 'hoàn thành' : 'từ chối';
     if (!window.confirm(`Bạn có chắc chắn muốn ${actionLabel} đơn đặt bàn này?`)) return;
 
     try {
-      const res = await fetch(`${baseUrl}/api/owner/bookings/${bookingId}/status`, {
+      const res = await fetch(`${baseUrl}/api/owner/bookings/${bookingId}/status?ownerId=${user?.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -310,6 +511,36 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       }
     } catch (err: any) {
       alert(err.message || 'Error updating status.');
+    }
+  };
+
+  const handleReportReview = async (reviewId: string) => {
+    if (!window.confirm("Bạn có chắc chắn muốn báo cáo đánh giá này không?")) return;
+    try {
+      const res = await fetch(`${baseUrl}/api/owner/reviews/${reviewId}/report?ownerId=${user?.id}`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        alert("Đã báo cáo đánh giá vi phạm thành công tới Admin!");
+      } else {
+        const msg = await res.text();
+        alert("Lỗi: " + msg);
+      }
+    } catch (e: any) {
+      alert("Lỗi báo cáo: " + e.message);
+    }
+  };
+
+  const handleMarkNotificationAsRead = async (id: number) => {
+    try {
+      const res = await fetch(`${baseUrl}/api/owner/notifications/${id}/read`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      }
+    } catch (e) {
+      console.error("Failed to mark notification as read", e);
     }
   };
 
@@ -555,8 +786,60 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
         </div>
 
         {/* Tab Headers */}
-        <div className="flex flex-wrap gap-2">
-          {(['analytics', 'bookings', 'dishes', 'settings', 'qr'] as const).map(tab => (
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Notifications Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="p-2 border-2 border-white hover:bg-white/10 text-white transition-all cursor-pointer font-bold relative flex items-center justify-center h-10 w-10 active:translate-y-0.5"
+              title="Thông báo"
+            >
+              <Bell size={16} />
+              {notifications.filter(n => !n.isRead).length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#e2533b] border border-[#1a1a1a] text-[9px] font-black text-white flex items-center justify-center rounded-none shadow-md">
+                  {notifications.filter(n => !n.isRead).length}
+                </span>
+              )}
+            </button>
+            
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-white border-3 border-[#1a1a1a] shadow-[6px_6px_0px_0px_#1a1a1a] text-[#1a1a1a] z-[1000] p-3 max-h-96 overflow-y-auto animate-in fade-in duration-150">
+                <div className="flex justify-between items-center border-b border-dashed border-[#1a1a1a]/15 pb-2 mb-2">
+                  <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#1a1a1a]/60">Thông báo cho Chủ quán</span>
+                  {notifications.length > 0 && (
+                    <button
+                      onClick={() => setNotifications([])}
+                      className="font-mono text-[8px] uppercase tracking-wider text-red-500 hover:underline font-bold"
+                    >
+                      Xóa tất cả
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  {notifications.length === 0 ? (
+                    <p className="text-center text-xs font-mono py-6 text-[#1a1a1a]/40 uppercase">Không có thông báo nào</p>
+                  ) : (
+                    notifications.map(n => (
+                      <div
+                        key={n.id}
+                        onClick={() => {
+                          if (!n.isRead) handleMarkNotificationAsRead(n.id);
+                        }}
+                        className={`p-2.5 border border-[#1a1a1a]/15 flex flex-col gap-1 cursor-pointer hover:bg-[#f9f7f2] transition-colors relative ${!n.isRead ? 'bg-amber-50/70 border-amber-300' : 'bg-white'}`}
+                      >
+                        {!n.isRead && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-amber-500 rounded-full"></span>}
+                        <h4 className="font-serif italic font-bold text-xs leading-tight pr-3">{n.title}</h4>
+                        <p className="font-sans text-[10px] text-[#1a1a1a]/70 leading-normal">{n.body}</p>
+                        <span className="font-mono text-[8px] text-slate-400 mt-1">{new Date(n.createdAt).toLocaleString()}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {(['analytics', 'bookings', 'tables', 'dishes', 'reviews', 'posts', 'settings', 'qr'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -566,10 +849,13 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                   : 'bg-white text-[#1a1a1a] border-white hover:bg-white/10 hover:text-white'
               }`}
             >
-              {tab === 'analytics' ? 'Thống kê' :
-               tab === 'bookings' ? 'Đặt bàn' :
-               tab === 'dishes' ? 'Món ăn' :
-               tab === 'settings' ? 'Cấu hình' : 'Mã QR'}
+              {tab === 'analytics' ? t('admin.tabs.accounts', 'Thống kê') :
+               tab === 'bookings' ? t('booking.title', 'Đặt bàn') :
+               tab === 'tables' ? t('owner.table_map', 'Sơ đồ bàn') :
+               tab === 'dishes' ? t('detail.signature_dishes', 'Món ăn') :
+               tab === 'reviews' ? t('admin.tabs.moderation', 'Đánh giá') :
+               tab === 'posts' ? t('owner.posts', 'Bài đăng') :
+               tab === 'settings' ? t('profile.owner_console', 'Cấu hình') : 'Mã QR'}
             </button>
           ))}
         </div>
@@ -797,6 +1083,187 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
         </div>
       )}
 
+      {activeTab === 'tables' && (
+        <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5 animate-in fade-in duration-200">
+          <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <h3 className="font-serif italic font-bold text-lg">{t('owner.table_layout', 'SƠ ĐỒ BÀN ĂN CHI TIẾT')}</h3>
+              <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">HOTEL-STYLE SEATING MANAGER</p>
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              {tablesSaveSuccess && (
+                <span className="bg-[#cbf3d2] text-green-900 border border-green-400 font-mono text-[9px] uppercase tracking-wider font-extrabold px-3 py-1 animate-pulse">
+                  💾 {t('owner.layout_saved_success', 'Đã lưu thành công!')}
+                </span>
+              )}
+              <span className="text-[10px] font-mono text-green-600 flex items-center gap-1.5 bg-green-50 border border-green-200 px-2.5 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping"></span>
+                Tự động đồng bộ // LIVE
+              </span>
+              <button
+                onClick={handleAddTable}
+                className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest px-4 py-2 border-2 border-[#1a1a1a] transition-all cursor-pointer shadow flex items-center gap-1.5 font-bold active:translate-y-0.5"
+              >
+                <Plus size={13} strokeWidth={3} /> {t('owner.add_table', 'Thêm bàn ăn')}
+              </button>
+            </div>
+          </div>
+
+          {/* Table Map Statistics bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 font-mono text-[9px] uppercase tracking-wider">
+            <div className="bg-[#f9f7f2] border border-[#1a1a1a]/10 p-3 flex flex-col gap-0.5">
+              <span className="text-[#1a1a1a]/55 font-bold">Tổng số bàn</span>
+              <span className="text-xl font-bold text-[#1a1a1a]">{tablesList.length}</span>
+            </div>
+            <div className="bg-[#e8fbf0] border border-emerald-200 p-3 flex flex-col gap-0.5 text-emerald-800">
+              <span className="font-bold">{t('owner.table_vacant', 'Bàn trống')}</span>
+              <span className="text-xl font-bold">{tablesList.filter(t => t.status === 'vacant').length}</span>
+            </div>
+            <div className="bg-[#fef8e7] border border-amber-200 p-3 flex flex-col gap-0.5 text-amber-800">
+              <span className="font-bold">{t('owner.table_reserved', 'Đã đặt')}</span>
+              <span className="text-xl font-bold">{tablesList.filter(t => t.status === 'reserved').length}</span>
+            </div>
+            <div className="bg-[#fff0f0] border border-rose-200 p-3 flex flex-col gap-0.5 text-rose-850">
+              <span className="font-bold">{t('owner.table_occupied', 'Có khách')}</span>
+              <span className="text-xl font-bold">{tablesList.filter(t => t.status === 'occupied').length}</span>
+            </div>
+          </div>
+
+          {/* Interactive Seating Layout Grid */}
+          {tablesList.length === 0 ? (
+            <div className="text-center py-16 font-mono text-xs text-[#1a1a1a]/40 uppercase border-2 border-dashed border-[#1a1a1a]/15 bg-[#f9f7f2]">
+              {t('owner.no_tables', 'Chưa thiết lập sơ đồ bàn. Nhấp \'Thêm bàn ăn\' để bắt đầu thiết kế!')}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {tablesList.map(t => {
+                const isVacant = t.status === 'vacant';
+                const isReserved = t.status === 'reserved';
+                const isOccupied = t.status === 'occupied';
+
+                return (
+                  <div
+                    key={t.id}
+                    className={`border-2 border-[#1a1a1a] p-3 flex flex-col justify-between gap-3 relative shadow-[3px_3px_0px_0px_#1a1a1a] transition-all duration-300 ${
+                      isVacant ? 'bg-[#e8fbf0]/65 border-emerald-700/80' :
+                      isReserved ? 'bg-[#fef8e7]/70 border-amber-600/80' :
+                      'bg-[#fff0f0]/65 border-rose-700/80'
+                    }`}
+                  >
+                    {/* Header: Name and capacity */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between items-start">
+                        <input
+                          type="text"
+                          value={t.name}
+                          onChange={(e) => handleUpdateTableName(t.id, e.target.value)}
+                          className="bg-transparent border-b border-dashed border-[#1a1a1a]/20 font-serif italic font-bold text-sm focus:outline-none w-24 text-[#1a1a1a] focus:border-[#e2533b]"
+                        />
+                        <button
+                          onClick={() => handleDeleteTable(t.id)}
+                          className="w-5 h-5 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white border border-transparent hover:border-[#1a1a1a] rounded-xs transition-colors cursor-pointer"
+                          title="Xóa bàn"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1 mt-1 text-[10px]">
+                        <span className="font-mono text-[#1a1a1a]/60">Sức chứa:</span>
+                        <select
+                          value={t.capacity}
+                          onChange={(e) => handleUpdateTableCapacity(t.id, Number(e.target.value))}
+                          className="bg-white border border-[#1a1a1a]/30 font-mono text-[10px] py-0.5 px-1 focus:outline-none"
+                        >
+                          {[2, 4, 6, 8, 10, 12, 16].map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Status control toggle */}
+                    <div className="flex border border-[#1a1a1a] overflow-hidden rounded-xs mt-1 text-[8px] font-mono font-bold">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateTableStatus(t.id, 'vacant')}
+                        className={`flex-1 py-1.5 text-center cursor-pointer transition-all ${
+                          isVacant ? 'bg-emerald-600 text-white font-black' : 'bg-white text-emerald-800 hover:bg-emerald-50'
+                        }`}
+                      >
+                        TRỐNG
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateTableStatus(t.id, 'reserved')}
+                        className={`flex-1 py-1.5 text-center cursor-pointer transition-all border-x border-[#1a1a1a] ${
+                          isReserved ? 'bg-amber-500 text-white font-black' : 'bg-white text-amber-800 hover:bg-amber-50'
+                        }`}
+                      >
+                        ĐẶT
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateTableStatus(t.id, 'occupied')}
+                        className={`flex-1 py-1.5 text-center cursor-pointer transition-all ${
+                          isOccupied ? 'bg-rose-600 text-white font-black' : 'bg-white text-rose-800 hover:bg-rose-50'
+                        }`}
+                      >
+                        KHÁCH
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'posts' && (
+        <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5 animate-in fade-in duration-200">
+          <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4">
+            <h3 className="font-serif italic font-bold text-lg">{t('owner.create_post', 'Đăng bài viết mới')}</h3>
+            <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">OFFICIAL RESTAURANT FEED PUBLISHER</p>
+          </div>
+
+          <form onSubmit={handlePublishPost} className="flex flex-col gap-4 max-w-xl">
+            <div className="flex flex-col gap-1">
+              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">{t('owner.post_content', 'Nội dung bài viết')}</label>
+              <textarea
+                value={postContent}
+                onChange={(e) => setPostContent(e.target.value)}
+                placeholder={t('owner.post_content_placeholder', 'Nhập thông báo, khuyến mãi hoặc tin tức từ quán của bạn...')}
+                className="bg-white border-2 border-[#1a1a1a] px-3 py-2 text-sm focus:outline-none h-32 focus:bg-[#f9f7f2]"
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">{t('owner.post_image', 'Link ảnh đính kèm (URL)')}</label>
+              <input
+                type="text"
+                value={postImage}
+                onChange={(e) => setPostImage(e.target.value)}
+                placeholder={t('owner.post_image_placeholder', 'Nhập link hình ảnh món ăn hoặc khuyến mãi (URL)...')}
+                className="bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none focus:bg-[#f9f7f2]"
+              />
+              <p className="text-[10px] text-[#1a1a1a]/40 italic font-sans mt-0.5">
+                Bỏ trống nếu muốn sử dụng ảnh đại diện mặc định của quán ăn.
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              className="bg-[#1a1a1a] text-white hover:bg-[#e2533b] py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md active:translate-y-0.5 flex items-center justify-center gap-1.5 font-bold"
+            >
+              <Megaphone size={14} /> {t('owner.publish_btn', 'Đăng lên bảng tin // 📢')}
+            </button>
+          </form>
+        </div>
+      )}
+
       {activeTab === 'settings' && (
         <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5 animate-in fade-in duration-200">
           <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4 flex justify-between items-center">
@@ -835,6 +1302,28 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                   required
                 />
               </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">{t('owner.description', 'Mô tả quán ăn')}</label>
+              <textarea
+                value={restForm.description}
+                onChange={(e) => setRestForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder={t('owner.description_placeholder', 'Nhập mô tả chi tiết của quán ăn...')}
+                className="bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none h-20"
+              />
+              <button
+                type="button"
+                onClick={handleToggleTTS}
+                className={`mt-1.5 flex items-center gap-2 px-4 py-2 border-2 border-[#1a1a1a] font-mono text-[10px] uppercase tracking-widest font-bold transition-all cursor-pointer shadow-xs active:translate-y-0.5 self-start ${
+                  isSpeaking
+                    ? 'bg-[#e2533b] text-white hover:bg-red-600'
+                    : 'bg-white text-[#1a1a1a] hover:bg-[#f9f7f2]'
+                }`}
+              >
+                {isSpeaking ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                {isSpeaking ? 'Dừng đọc' : '🔊 Nghe mô tả quán'}
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -998,6 +1487,56 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                   📲 Giả lập quét mã QR
                 </a>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'reviews' && (
+        <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5 animate-in fade-in duration-200">
+          <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4">
+            <h3 className="font-serif italic font-bold text-lg">Đánh giá từ khách hàng</h3>
+            <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">CUSTOMER REVIEWS & FEEDBACK</p>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {!restaurant?.reviews || restaurant.reviews.length === 0 ? (
+              <div className="text-center py-12 font-mono text-xs text-[#1a1a1a]/40 uppercase">
+                Chưa có đánh giá nào cho quán ăn của bạn.
+              </div>
+            ) : (
+              restaurant.reviews.map((rev: any) => (
+                <div key={rev.id} className="p-4 border-2 border-[#1a1a1a] bg-[#fdfcf9] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-[#e2533b] transition-all">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-serif italic font-bold text-sm">{rev.author}</span>
+                      <span className="text-xs font-mono text-slate-400">({rev.role})</span>
+                      <div className="flex text-[#e2533b] ml-2">
+                        {Array.from({ length: 5 }).map((_, st) => (
+                          <Star 
+                            key={st} 
+                            size={12} 
+                            className={`select-none ${st < Math.floor(rev.rating) ? 'fill-[#e2533b] text-[#e2533b]' : 'text-slate-300'}`} 
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#1a1a1a]/80 mt-1 leading-relaxed italic">"{rev.comment}"</p>
+                    {rev.imageUrl && (
+                      <img src={rev.imageUrl} alt="Attachment" className="mt-2 w-32 h-20 object-cover border border-[#1a1a1a]/20" />
+                    )}
+                    <span className="text-[10px] font-mono text-slate-400 mt-2 block">
+                      {rev.createdAt ? new Date(rev.createdAt).toLocaleString() : ''}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleReportReview(rev.id)}
+                    className="px-3 py-1.5 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-amber-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5 text-amber-600 shrink-0"
+                  >
+                    <AlertTriangle size={11} className="text-amber-500" /> Báo cáo vi phạm
+                  </button>
+                </div>
+              ))
             )}
           </div>
         </div>

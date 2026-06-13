@@ -27,9 +27,33 @@ export interface User {
   email: string;
   role: 'Admin' | 'Owner' | 'User' | 'Guest';
   restaurantId?: string;
+  ownerStatus?: string;
   tableNumber?: number;
   isActive: boolean;
   createdAt?: string;
+  avatar?: string;
+}
+
+export interface Notification {
+  id: number;
+  userId: string;
+  restaurantId?: string;
+  type: string;
+  title: string;
+  body: string;
+  payloadJson?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface AuditLog {
+  id: number;
+  actor: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  timestamp: string;
+  details?: string;
 }
 
 export interface Restaurant {
@@ -42,6 +66,8 @@ export interface Restaurant {
   address: string;
   area: string;
   openingHours: string;
+  description?: string;
+  tableStatuses?: string;
   image: string;
   isVerified: boolean;
   replySpeed: string;
@@ -49,6 +75,10 @@ export interface Restaurant {
   longitude?: number;
   dishes: Dish[];
   reviews: FoodieReview[];
+  audioPriority?: number;
+  geofenceRadiusMeters?: number;
+  audioUrl?: string;
+  updatedAt?: string;
 }
 
 export interface CommunityPost {
@@ -65,6 +95,17 @@ export interface CommunityPost {
   commentsCount: number;
   isLiked: boolean;
   isSaved: boolean;
+  isRestaurantPost?: boolean;
+  isApproved?: boolean;
+}
+
+export interface PostComment {
+  id: string;
+  communityPostId: string;
+  author: string;
+  avatar: string;
+  content: string;
+  createdAt: string;
 }
 
 export interface ChatMessage {
@@ -119,11 +160,24 @@ export interface AudioTour {
   stopsCount: number;
   vibe: string;
   description: string;
+  audioData?: string;
 }
 
 export interface Category {
   id: number;
   name: string;
+  slug?: string;
+  icon?: string;
+}
+
+export interface FoodStreet {
+  id: number;
+  name: string;
+  district: string;
+  description: string;
+  centerLatitude: number;
+  centerLongitude: number;
+  openingWindow: string;
 }
 
 export interface RestaurantRequest {

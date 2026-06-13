@@ -93,6 +93,7 @@ public class CraveMapController : ControllerBase
     {
         var posts = await _db.CommunityPosts
             .AsNoTracking()
+            .Where(post => post.IsApproved)
             .OrderByDescending(post => post.CreatedAt)
             .ToListAsync();
 
@@ -103,28 +104,75 @@ public class CraveMapController : ControllerBase
     [HttpPost("/api/communityposts")]
     public async Task<ActionResult<CommunityPostDto>> CreateCommunityPost(CommunityPostDto dto)
     {
-        var post = new CommunityPost
+        try
         {
-            Id = string.IsNullOrWhiteSpace(dto.Id) ? $"post_{Guid.NewGuid():N}" : dto.Id,
-            Author = dto.Author,
-            Handle = dto.Handle,
-            Avatar = dto.Avatar,
-            TimeAgo = string.IsNullOrWhiteSpace(dto.TimeAgo) ? "Just now" : dto.TimeAgo,
-            Rating = dto.Rating,
-            Image = dto.Image,
+            var post = new CommunityPost
+            {
+                Id = string.IsNullOrWhiteSpace(dto.Id) ? $"post_{Guid.NewGuid():N}" : dto.Id,
+                Author = dto.Author,
+                Handle = dto.Handle,
+                Avatar = dto.Avatar,
+                TimeAgo = string.IsNullOrWhiteSpace(dto.TimeAgo) ? "Just now" : dto.TimeAgo,
+                Rating = dto.Rating,
+                Image = dto.Image,
+                Content = dto.Content,
+                LocationName = dto.LocationName,
+                LikesCount = dto.LikesCount,
+                CommentsCount = dto.CommentsCount,
+                IsLiked = dto.IsLiked,
+                IsSaved = dto.IsSaved,
+                IsRestaurantPost = dto.IsRestaurantPost,
+                IsApproved = dto.IsRestaurantPost, // Restaurant posts are auto-approved, guest posts are false by default
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            _db.CommunityPosts.Add(post);
+            await _db.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetCommunityPosts), post.ToDto());
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[CreateCommunityPost ERROR] {ex.GetBaseException().Message}");
+            return StatusCode(500, $"Failed to create post: {ex.GetBaseException().Message}");
+        }
+    }
+
+    [HttpGet("community-posts/{postId}/comments")]
+    [HttpGet("/api/communityposts/{postId}/comments")]
+    public async Task<ActionResult<IReadOnlyList<PostCommentDto>>> GetPostComments(string postId)
+    {
+        var comments = await _db.PostComments
+            .AsNoTracking()
+            .Where(c => c.CommunityPostId == postId)
+            .OrderBy(c => c.CreatedAt)
+            .ToListAsync();
+
+        return Ok(comments.Select(c => c.ToDto()).ToList());
+    }
+
+    [HttpPost("community-posts/{postId}/comments")]
+    [HttpPost("/api/communityposts/{postId}/comments")]
+    public async Task<ActionResult<PostCommentDto>> CreatePostComment(string postId, CreatePostCommentDto dto)
+    {
+        var post = await _db.CommunityPosts.FindAsync(postId);
+        if (post is null) return NotFound("Post not found.");
+
+        var comment = new PostComment
+        {
+            Id = $"pcom_{Guid.NewGuid():N}",
+            CommunityPostId = postId,
+            Author = "Current User",
+            Avatar = "https://ui-avatars.com/api/?name=User&background=random",
             Content = dto.Content,
-            LocationName = dto.LocationName,
-            LikesCount = dto.LikesCount,
-            CommentsCount = dto.CommentsCount,
-            IsLiked = dto.IsLiked,
-            IsSaved = dto.IsSaved,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
-        _db.CommunityPosts.Add(post);
+        _db.PostComments.Add(comment);
+        post.CommentsCount++;
         await _db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetCommunityPosts), post.ToDto());
+        return CreatedAtAction(nameof(GetPostComments), new { postId }, comment.ToDto());
     }
 
     [HttpGet("chat-threads")]
@@ -283,10 +331,28 @@ public class CraveMapController : ControllerBase
             Guests = dto.Guests,
             Seating = dto.Seating,
             Status = "Confirmed",
+            UserId = dto.UserId ?? "usr_3",
+            TableNumber = dto.TableNumber,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         _db.Bookings.Add(booking);
+
+        var owner = await _db.Users.FirstOrDefaultAsync(u => u.RestaurantId == dto.RestaurantId && u.Role == "Owner");
+        if (owner != null)
+        {
+            var notification = new Notification
+            {
+                UserId = owner.Id,
+                RestaurantId = dto.RestaurantId,
+                Type = "Booking",
+                Title = "Đơn đặt bàn mới",
+                Body = $"Nhận được đơn đặt bàn mới từ khách hàng cho {dto.Guests} khách vào lúc {dto.Time} ngày {dto.Date}.",
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            _db.Notifications.Add(notification);
+        }
+
         await _db.SaveChangesAsync();
 
         var threadDto = await _chatService.EnsureThreadAsync(dto.RestaurantId, dto.UserId ?? "usr_3");
@@ -304,7 +370,7 @@ public class CraveMapController : ControllerBase
             }
         }
 
-        var response = new BookingDto(booking.Id, booking.RestaurantId, booking.Date, booking.Time, booking.Guests, booking.Seating, booking.Status);
+        var response = new BookingDto(booking.Id, booking.RestaurantId, booking.Date, booking.Time, booking.Guests, booking.Seating, booking.Status, booking.TableNumber);
         return CreatedAtAction(nameof(CreateBooking), response);
     }
 }

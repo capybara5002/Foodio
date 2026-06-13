@@ -74,3 +74,6 @@ desktop.ini
 # User configuration
 backend/Foodio.API/appsettings.json
 backend/Foodio.API/appsettings.Development.json
+
+# Local documentation / planning notes
+Docs/

@@ -5,12 +5,16 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 
 import { Restaurant } from '../types';
-import { X, BadgeCheck, Star, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, MessageSquare } from 'lucide-react';
+import { X, BadgeCheck, Star, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, MessageSquare, Volume2, VolumeX, Compass, Keyboard } from 'lucide-react';
+import { startLocationTracking, stopLocationTracking, LocationMode } from '../services/locationService';
+import { checkGeofences } from '../services/geofenceEngine';
+import { playNarration, stopNarration, onNarrationStart, onNarrationEnd, getMuted, setMuted } from '../services/narrationEngine';
 
 // Standard Leaflet asset fixes for Vite builds to prevent broken image references
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -94,7 +98,10 @@ function RoutingControl({ userLocation, destination }: RoutingControlProps) {
     if (!map) return;
 
     if (routingControlRef.current) {
-      map.removeControl(routingControlRef.current);
+      try {
+        routingControlRef.current.setWaypoints([]);
+        map.removeControl(routingControlRef.current);
+      } catch (e) {}
       routingControlRef.current = null;
     }
 
@@ -106,6 +113,9 @@ function RoutingControl({ userLocation, destination }: RoutingControlProps) {
           L.latLng(userLocation[0], userLocation[1]),
           L.latLng(destination[0], destination[1])
         ],
+        router: (L as any).Routing.osrmv1({
+          serviceUrl: 'https://router.project-osrm.org/route/v1'
+        }),
         routeWhileDragging: false,
         addWaypoints: false,
         fitSelectedRoutes: false,
@@ -128,7 +138,10 @@ function RoutingControl({ userLocation, destination }: RoutingControlProps) {
 
     return () => {
       if (map && routingControlRef.current) {
-        map.removeControl(routingControlRef.current);
+        try {
+          routingControlRef.current.setWaypoints([]);
+          map.removeControl(routingControlRef.current);
+        } catch (e) {}
         routingControlRef.current = null;
       }
     };
@@ -172,36 +185,32 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
   useEffect(() => {
     if (selectedRestaurant) {
       const coords = getCoordinates(selectedRestaurant);
-      const bounds = L.latLngBounds([userLocation[0], userLocation[1]], coords);
 
       const wasNull = prevSelectedRef.current === null;
       prevSelectedRef.current = selectedRestaurant;
 
-      const performFitBounds = () => {
+      const performPan = () => {
         map.invalidateSize();
 
         const isMobile = window.innerWidth < 768;
-        // Shift visible center upward on mobile bottom sheet (50vh bottom padding)
-        const paddingBottom = isMobile ? Math.floor(window.innerHeight * 0.5) + 40 : 80;
+        // Shift visible center upward on mobile bottom sheet (offset latitude by about -0.0018 degrees)
+        const offsetLat = isMobile ? -0.0018 : 0;
 
-        map.fitBounds(bounds, {
-          paddingTopLeft: [80, 80],
-          paddingBottomRight: [80, paddingBottom],
-          maxZoom: 17,
+        map.setView([coords[0] + offsetLat, coords[1]], 17, {
           animate: true,
           duration: 0.8
         });
       };
 
       if (wasNull && window.innerWidth >= 768) {
-        // Desktop transition width (100% -> 70%) takes 300ms. Delay fitBounds until map resizing finishes.
+        // Desktop transition width (100% -> 70%) takes 300ms. Delay pan until map resizing finishes.
         const timer = setTimeout(() => {
-          performFitBounds();
+          performPan();
         }, 300);
         return () => clearTimeout(timer);
       } else {
-        // Fit immediately when selecting a restaurant on mobile
-        performFitBounds();
+        // Pan immediately when selecting a restaurant on mobile
+        performPan();
       }
     } else {
       prevSelectedRef.current = null;
@@ -213,8 +222,6 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
         return () => clearTimeout(timer);
       }
     }
-    // NOTE: userLocation intentionally excluded — arrow-key walking must NOT re-trigger fitBounds.
-    // fitBounds should only fire when selectedRestaurant changes (marker click / close).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRestaurant, map, getCoordinates]);
 
@@ -222,6 +229,7 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
 }
 
 export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, onContactRestaurant, searchSelection }: PageMapProps) {
+  const { t } = useTranslation();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [locateTrigger, setLocateTrigger] = useState(false);
   const [gpsNotification, setGpsNotification] = useState(false);
@@ -243,8 +251,11 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
     }
   }, [selectedRestaurant]);
 
-  // Keyboard movement state
+  // Location and narration guide states
   const [userLocation, setUserLocation] = useState<[number, number]>(VINH_KHANH_CENTER);
+  const [locationMode, setLocationMode] = useState<LocationMode>('mock');
+  const [currentNarration, setCurrentNarration] = useState<{ restaurant: Restaurant; text: string } | null>(null);
+  const [isAudioMuted, setIsAudioMuted] = useState(getMuted());
 
   // Freeze layouts and disable background scrolling dynamically when Map mounts
   useEffect(() => {
@@ -260,47 +271,48 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
     };
   }, []);
 
-  // Listen to keyboard arrow key movements
+  // Hook location service tracking
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault(); // Prevent standard page scroll behavior
+    startLocationTracking(locationMode, (pos) => {
+      setUserLocation([pos.lat, pos.lng]);
+
+      // Verify geofence trigger
+      const triggered = checkGeofences(pos, restaurants);
+      if (triggered) {
+        const lang = localStorage.getItem('app_lang') || 'vi';
+        void playNarration(triggered, lang);
       }
+    });
 
-      setUserLocation((prev) => {
-        let [lat, lng] = prev;
-        const delta = 0.00015;
-
-        switch (e.key) {
-          case 'ArrowUp':
-            lat += delta;
-            break;
-          case 'ArrowDown':
-            lat -= delta;
-            break;
-          case 'ArrowLeft':
-            lng -= delta;
-            break;
-          case 'ArrowRight':
-            lng += delta;
-            break;
-          default:
-            return prev;
-        }
-
-        // Lock boundaries [10.7500, 106.6950] (SW) to [10.7650, 106.7150] (NE)
-        lat = Math.max(10.7500, Math.min(10.7650, lat));
-        lng = Math.max(106.6950, Math.min(106.7150, lng));
-
-        return [lat, lng];
-      });
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      stopLocationTracking();
+    };
+  }, [locationMode, restaurants]);
+
+  // Subscribe to active audio guide narrations
+  useEffect(() => {
+    const unsubStart = onNarrationStart((res, text) => {
+      setCurrentNarration({ restaurant: res, text });
+    });
+    const unsubEnd = onNarrationEnd(() => {
+      setCurrentNarration(null);
+    });
+
+    return () => {
+      unsubStart();
+      unsubEnd();
     };
   }, []);
+
+  const toggleMute = () => {
+    const nextMuted = !isAudioMuted;
+    setIsAudioMuted(nextMuted);
+    setMuted(nextMuted);
+  };
+
+  const toggleLocationMode = () => {
+    setLocationMode((prev) => (prev === 'real' ? 'mock' : 'real'));
+  };
 
   // Project coordinates of items onto Vinh Khanh Food Street if they are seeded outside maps bounds
   const getCoordinates = (r: Restaurant): [number, number] => {
@@ -318,6 +330,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
   };
 
   const handleGeoLocate = () => {
+    setLocationMode('real');
     setGpsNotification(true);
     setLocateTrigger(true);
     setTimeout(() => setLocateTrigger(false), 50);
@@ -341,6 +354,41 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
 
   return (
     <div className="fixed inset-x-0 bottom-0 top-[72px] bottom-16 md:bottom-0 flex bg-[#fdfcf9] overflow-hidden text-[#1a1a1a] z-40 transition-all duration-300">
+
+      {/* Live Audio Narration Guide Overlay (Glassmorphism + mini player styling) */}
+      {currentNarration && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-[#1a1a1a]/95 backdrop-blur-md border border-white/20 text-white p-4 shadow-2xl flex items-start gap-3.5 z-[1005] animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="w-12 h-12 shrink-0 overflow-hidden border border-white/10 bg-white/5">
+            <img 
+              src={currentNarration.restaurant.image} 
+              alt={currentNarration.restaurant.name} 
+              className="w-full h-full object-cover grayscale brightness-90"
+            />
+          </div>
+          <div className="flex-1 min-w-0 text-left">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="font-mono text-[8px] font-bold tracking-widest text-[#e2533b] bg-white/10 px-1.5 py-0.5 rounded-none uppercase select-none">
+                  {t('map.narration_active', 'Audio Narration')}
+                </span>
+                <h4 className="font-serif italic font-bold text-xs text-white mt-1 truncate">
+                  {currentNarration.restaurant.name}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => stopNarration()}
+                className="text-white/60 hover:text-white transition-colors p-1 cursor-pointer"
+              >
+                <X size={14} strokeWidth={3} />
+              </button>
+            </div>
+            <p className="font-sans text-[10px] leading-relaxed text-white/80 line-clamp-3 mt-1.5 font-light">
+              {currentNarration.text}
+            </p>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .leaflet-container {
@@ -488,7 +536,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                   onClick={() => onSelectRestaurant(activeRestaurant.id)}
                   className="w-full flex items-center justify-center gap-1 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3 px-4 rounded-none shadow-md active:scale-98 transition-all font-mono text-[9px] uppercase tracking-widest cursor-pointer"
                 >
-                  View Full Info & Book // 🔗
+                  {t('map.view_full_info')}
                 </button>
 
                 <button
@@ -497,7 +545,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                   className="w-full flex items-center justify-center gap-2 bg-white hover:bg-[#f9f7f2] text-[#1a1a1a] py-3 px-4 rounded-none shadow-sm border-2 border-[#1a1a1a] active:scale-98 transition-all font-mono text-[9px] uppercase tracking-widest cursor-pointer"
                 >
                   <MessageSquare size={15} />
-                  Liên hệ quán
+                  {t('map.contact_restaurant')}
                 </button>
 
                 {/* Address Card details */}
@@ -596,8 +644,8 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           <Marker position={userLocation} icon={userIcon}>
             <Popup>
               <div className="font-mono text-[10px] text-center uppercase tracking-wider">
-                <strong>Your Position</strong><br />
-                Walk with Arrow Keys
+                <strong>{t('map.your_position')}</strong><br />
+                {t('map.walk_instruction')}
               </div>
             </Popup>
           </Marker>
@@ -605,7 +653,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           {/* Render every backend restaurant marker regardless of active search text. */}
           {restaurants.map((restaurant) => {
             const coords = getCoordinates(restaurant);
-            const isSelected = selectedRestaurant?.id === restaurant.id;
+            const isSelected = selectedRestaurant?.id === restaurant.id || currentNarration?.restaurant.id === restaurant.id;
 
             return (
               <Marker
@@ -643,20 +691,43 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
         {/* Live GPS Tracker Notification Popup */}
         {gpsNotification && (
           <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-[#e2533b] text-white font-mono text-[9px] uppercase tracking-wider px-3.5 py-2.5 rounded-none shadow-lg z-[1000] border border-white/15 animate-bounce">
-            🎯 Recycled tracking on Vinh Khanh street...
+            {t('map.gps_toast')}
           </div>
         )}
 
-        {/* Bottom Left GPS control button & Tour Card overlay */}
+        {/* Bottom Right Controls (Narration, Mode Toggle, GPS Locator) & Tour Card overlay */}
         <div className="absolute bottom-6 left-0 w-full px-4 z-[1000] pointer-events-none flex flex-col items-end gap-3">
-          <button
-            type="button"
-            onClick={handleGeoLocate}
-            aria-label="Align camera to current GPS location"
-            className="w-12 h-12 bg-white text-[#1a1a1a] hover:text-[#e2533b] rounded-none shadow-xl flex items-center justify-center border-2 border-[#1a1a1a] hover:bg-[#f9f7f2] active:scale-90 transition-all pointer-events-auto cursor-pointer group"
-          >
-            <LocateFixed size={24} className="group-hover:scale-110 transition-transform" />
-          </button>
+          <div className="flex flex-col gap-2.5">
+            {/* Narration Mute/Unmute */}
+            <button
+              type="button"
+              onClick={toggleMute}
+              title={isAudioMuted ? t('map.narration_unmuted', 'Enable Audio Guide') : t('map.narration_muted', 'Disable Audio Guide')}
+              className={`w-12 h-12 ${isAudioMuted ? 'bg-[#e2533b] text-white border-[#e2533b] hover:bg-[#e2533b]/90' : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2]'} rounded-none shadow-xl flex items-center justify-center border-2 active:scale-90 transition-all pointer-events-auto cursor-pointer`}
+            >
+              {isAudioMuted ? <VolumeX size={22} /> : <Volume2 size={22} />}
+            </button>
+
+            {/* Tracking Mode Switcher */}
+            <button
+              type="button"
+              onClick={toggleLocationMode}
+              title={locationMode === 'real' ? t('map.mode_walk', 'Switch to Walk Mode') : t('map.mode_gps', 'Switch to GPS Mode')}
+              className={`w-12 h-12 ${locationMode === 'real' ? 'bg-[#1a1a1a] text-white border-[#1a1a1a] hover:bg-black' : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2]'} rounded-none shadow-xl flex items-center justify-center border-2 active:scale-90 transition-all pointer-events-auto cursor-pointer`}
+            >
+              {locationMode === 'real' ? <Compass size={22} /> : <Keyboard size={22} />}
+            </button>
+
+            {/* GPS Recenter View */}
+            <button
+              type="button"
+              onClick={handleGeoLocate}
+              aria-label="Align camera to current location"
+              className="w-12 h-12 bg-white text-[#1a1a1a] hover:text-[#e2533b] rounded-none shadow-xl flex items-center justify-center border-2 border-[#1a1a1a] hover:bg-[#f9f7f2] active:scale-90 transition-all pointer-events-auto cursor-pointer group"
+            >
+              <LocateFixed size={22} className="group-hover:scale-110 transition-transform" />
+            </button>
+          </div>
 
           <div
             onClick={onSelectTour}
@@ -668,9 +739,9 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
             />
             <div className="flex-1 min-w-0 text-left">
               <div className="flex items-center gap-1.5 mb-1 text-[9px] select-none font-semibold">
-                <span className="px-1.5 py-0.5 bg-[#e2533b] text-white rounded-none font-mono uppercase tracking-wider text-[8px]">Curated</span>
+                <span className="px-1.5 py-0.5 bg-[#e2533b] text-white rounded-none font-mono uppercase tracking-wider text-[8px]">{t('map.curated')}</span>
                 <span className="flex items-center text-[#e2533b] font-mono uppercase tracking-wider text-[8px] font-extrabold">
-                  <Flame size={11} className="mr-1 inline-block align-middle fill-current" />Hot
+                  <Flame size={11} className="mr-1 inline-block align-middle fill-current" />{t('map.hot')}
                 </span>
               </div>
               <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] mb-0.5 truncate">Vinh Khanh Night Tour</h3>

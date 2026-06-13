@@ -15,12 +15,15 @@ public class AppDbContext : DbContext
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<CommunityPost> CommunityPosts => Set<CommunityPost>();
+    public DbSet<PostComment> PostComments => Set<PostComment>();
     public DbSet<ChatThread> ChatThreads => Set<ChatThread>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<AudioTour> AudioTours => Set<AudioTour>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<User> Users => Set<User>();
     public DbSet<RestaurantRequest> RestaurantRequests => Set<RestaurantRequest>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -74,6 +77,12 @@ public class AppDbContext : DbContext
             .HasOne(booking => booking.Restaurant)
             .WithMany(restaurant => restaurant.Bookings)
             .HasForeignKey(booking => booking.RestaurantId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PostComment>()
+            .HasOne(comment => comment.CommunityPost)
+            .WithMany()
+            .HasForeignKey(comment => comment.CommunityPostId)
             .OnDelete(DeleteBehavior.Cascade);
 
         Seed(modelBuilder);
@@ -142,7 +151,10 @@ public class AppDbContext : DbContext
                 Longitude = 106.688515m,
                 CategoryId = 1,
                 FoodStreetId = 3,
-                CreatedAt = createdAt
+                AudioPriority = 70,
+                GeofenceRadiusMeters = 35,
+                CreatedAt = createdAt,
+                UpdatedAt = createdAt
             },
             new Restaurant
             {
@@ -161,7 +173,10 @@ public class AppDbContext : DbContext
                 Longitude = 106.706962m,
                 CategoryId = 1,
                 FoodStreetId = 1,
-                CreatedAt = createdAt
+                AudioPriority = 100,
+                GeofenceRadiusMeters = 45,
+                CreatedAt = createdAt,
+                UpdatedAt = createdAt
             },
             new Restaurant
             {
@@ -180,7 +195,10 @@ public class AppDbContext : DbContext
                 Longitude = 106.693385m,
                 CategoryId = 2,
                 FoodStreetId = 2,
-                CreatedAt = createdAt
+                AudioPriority = 55,
+                GeofenceRadiusMeters = 30,
+                CreatedAt = createdAt,
+                UpdatedAt = createdAt
             },
             new Restaurant
             {
@@ -199,7 +217,10 @@ public class AppDbContext : DbContext
                 Longitude = 106.695142m,
                 CategoryId = 3,
                 FoodStreetId = 3,
-                CreatedAt = createdAt
+                AudioPriority = 40,
+                GeofenceRadiusMeters = 30,
+                CreatedAt = createdAt,
+                UpdatedAt = createdAt
             });
 
         modelBuilder.Entity<MenuItem>().HasData(
@@ -222,6 +243,11 @@ public class AppDbContext : DbContext
             new CommunityPost { Id = "post_1", Author = "foodie_explorer", Handle = "@foodie_explorer", Avatar = seafoodImage, TimeAgo = "2 hours ago", Rating = 4.8m, Image = seafoodImage, Content = "A tiny alley stall with bold seafood flavors and a packed local crowd.", LocationName = "Oc Dao", LikesCount = 245, CommentsCount = 18, IsLiked = false, IsSaved = false, CreatedAt = createdAt },
             new CommunityPost { Id = "post_2", Author = "street_bites", Handle = "@street_bites", Avatar = phoImage, TimeAgo = "5 hours ago", Rating = 4.0m, Image = phoImage, Content = "Rich broth, springy noodles, tight seating, and the right late-night energy.", LocationName = "Pho Quynh", LikesCount = 892, CommentsCount = 45, IsLiked = true, IsSaved = false, CreatedAt = createdAt });
 
+        modelBuilder.Entity<PostComment>().HasData(
+            new PostComment { Id = "pcom_1", CommunityPostId = "post_1", Author = "local_guide_jane", Avatar = "https://ui-avatars.com/api/?name=Jane&background=random", Content = "I completely agree! The snails here are to die for.", CreatedAt = createdAt.AddHours(1) },
+            new PostComment { Id = "pcom_2", CommunityPostId = "post_1", Author = "mike_eats_world", Avatar = "https://ui-avatars.com/api/?name=Mike&background=random", Content = "Is it hard to find a table on weekends?", CreatedAt = createdAt.AddHours(1.5) }
+        );
+
         modelBuilder.Entity<ChatThread>().HasData(
             new ChatThread { Id = "oc_oanh_thread", RestaurantId = "oc_oanh", UserId = "usr_3", Name = "Oc Oanh", Avatar = seafoodImage, StatusText = "Usually replies in 5m", LastMessageText = "Perfect. We will hold an outdoor table for you.", LastMessageTime = createdAt.AddMinutes(3).ToString("O"), UnreadCount = 0 },
             new ChatThread { Id = "pho_quynh_thread", RestaurantId = "pho_quynh", UserId = "usr_3", Name = "Pho Quynh", Avatar = phoImage, StatusText = "Replies in standard hours", LastMessageText = "Your reservation is confirmed!", LastMessageTime = createdAt.AddMinutes(4).ToString("O"), UnreadCount = 1 },
@@ -240,9 +266,9 @@ public class AppDbContext : DbContext
             new AudioTour { Id = "tour_2", Title = "Seafood Heaven Tour", Location = "Vinh Khanh Food Street", Image = seafoodImage, MapImage = seafoodImage, IsTrending = false, Rating = 4.7m, Duration = "1.5 hrs", StopsCount = 4, Vibe = "Premium", Description = "Fresh shellfish, grilled oysters, and local ordering tips from the canal-side stalls." });
 
         modelBuilder.Entity<User>().HasData(
-            new User { Id = "usr_1", Username = "admin", Email = "admin@foodio.com", PasswordHash = "admin123", Role = "Admin", IsActive = true, CreatedAt = createdAt },
-            new User { Id = "usr_2", Username = "owner_ocdao", Email = "owner@foodio.com", PasswordHash = "owner123", Role = "Owner", RestaurantId = "oc_dao", IsActive = true, CreatedAt = createdAt },
-            new User { Id = "usr_3", Username = "customer", Email = "customer@foodio.com", PasswordHash = "customer123", Role = "User", IsActive = true, CreatedAt = createdAt }
+            new User { Id = "usr_1", Username = "admin", Email = "admin@foodio.com", PasswordHash = "123456", Role = "Admin", IsActive = true, CreatedAt = createdAt },
+            new User { Id = "usr_2", Username = "owner_ocdao", Email = "owner@foodio.com", PasswordHash = "123456", Role = "Owner", RestaurantId = "oc_dao", IsActive = true, CreatedAt = createdAt },
+            new User { Id = "usr_3", Username = "customer", Email = "customer@foodio.com", PasswordHash = "123456", Role = "User", IsActive = true, CreatedAt = createdAt }
         );
     }
 }

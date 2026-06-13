@@ -1,7 +1,10 @@
 using Foodio.API.Data;
 using Foodio.API.DTOs;
 using Foodio.API.Models;
+using Foodio.API.Hubs;
+using Foodio.API.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Foodio.API.Controllers;
@@ -11,10 +14,14 @@ namespace Foodio.API.Controllers;
 public class OwnerController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IHubContext<ChatHub> _chatHub;
+    private readonly IChatService _chatService;
 
-    public OwnerController(AppDbContext db)
+    public OwnerController(AppDbContext db, IHubContext<ChatHub> chatHub, IChatService chatService)
     {
         _db = db;
+        _chatHub = chatHub;
+        _chatService = chatService;
     }
 
     [HttpGet("restaurant/{restaurantId}")]
@@ -35,8 +42,17 @@ public class OwnerController : ControllerBase
     }
 
     [HttpPut("restaurant/{restaurantId}")]
-    public async Task<ActionResult<RestaurantDto>> UpdateRestaurant(string restaurantId, RestaurantUpsertDto dto)
+    public async Task<ActionResult<RestaurantDto>> UpdateRestaurant(string restaurantId, [FromBody] RestaurantUpsertDto dto, [FromQuery] string? ownerId = null)
     {
+        if (!string.IsNullOrEmpty(ownerId))
+        {
+            var user = await _db.Users.FindAsync(ownerId);
+            if (user == null || user.RestaurantId != restaurantId)
+            {
+                return BadRequest("You do not have permission to update this restaurant.");
+            }
+        }
+
         var restaurant = await _db.Restaurants
             .Include(r => r.Category)
             .Include(r => r.Dishes)
@@ -48,6 +64,24 @@ public class OwnerController : ControllerBase
             return NotFound("Restaurant not found.");
         }
 
+        var actorName = "Owner";
+        if (!string.IsNullOrEmpty(ownerId))
+        {
+            var user = await _db.Users.FindAsync(ownerId);
+            if (user != null) actorName = user.Username;
+        }
+
+        var audit = new AuditLog
+        {
+            Actor = actorName,
+            Action = "Cập nhật thông tin quán ăn",
+            EntityType = "Restaurant",
+            EntityId = restaurantId,
+            Timestamp = DateTimeOffset.UtcNow,
+            Details = $"Cập nhật thông tin quán '{restaurant.Name}'"
+        };
+        _db.AuditLogs.Add(audit);
+
         restaurant.Name = dto.Name;
         restaurant.Rating = dto.Rating;
         restaurant.PriceRange = dto.PriceRange;
@@ -57,6 +91,8 @@ public class OwnerController : ControllerBase
         restaurant.Address = dto.Address;
         restaurant.Area = dto.Area;
         restaurant.OpeningHours = dto.OpeningHours;
+        restaurant.Description = dto.Description ?? string.Empty;
+        restaurant.TableStatuses = dto.TableStatuses;
         restaurant.Image = dto.Image;
         restaurant.IsVerified = dto.IsVerified;
         restaurant.ReplySpeed = dto.ReplySpeed;
@@ -163,6 +199,7 @@ public class OwnerController : ControllerBase
             CreatedAt = DateTimeOffset.UtcNow
         };
 
+        owner.OwnerStatus = "Pending";
         _db.RestaurantRequests.Add(request);
         await _db.SaveChangesAsync();
 
@@ -205,7 +242,7 @@ public class OwnerController : ControllerBase
     }
 
     [HttpPost("bookings/{bookingId}/status")]
-    public async Task<IActionResult> UpdateBookingStatus(int bookingId, [FromBody] BookingStatusUpdateDto dto)
+    public async Task<IActionResult> UpdateBookingStatus(int bookingId, [FromBody] BookingStatusUpdateDto dto, [FromQuery] string? ownerId = null)
     {
         var booking = await _db.Bookings.FindAsync(bookingId);
         if (booking == null)
@@ -213,10 +250,138 @@ public class OwnerController : ControllerBase
             return NotFound("Booking not found.");
         }
 
+        var oldStatus = booking.Status;
         booking.Status = dto.Status;
+
+        var actorName = "Owner";
+        if (!string.IsNullOrEmpty(ownerId))
+        {
+            var user = await _db.Users.FindAsync(ownerId);
+            if (user != null) actorName = user.Username;
+        }
+
+        var audit = new AuditLog
+        {
+            Actor = actorName,
+            Action = "Cập nhật trạng thái đặt bàn",
+            EntityType = "Booking",
+            EntityId = bookingId.ToString(),
+            Timestamp = DateTimeOffset.UtcNow,
+            Details = $"Đổi trạng thái đơn đặt bàn #{bookingId} từ '{oldStatus}' thành '{dto.Status}'"
+        };
+        _db.AuditLogs.Add(audit);
+
+        await _db.SaveChangesAsync();
+
+        // System message in chat thread if thread exists
+        var thread = await _db.ChatThreads
+            .FirstOrDefaultAsync(t => t.RestaurantId == booking.RestaurantId && t.UserId == booking.UserId);
+        if (thread != null)
+        {
+            var statusVi = dto.Status switch
+            {
+                "Pending" => "Chờ duyệt",
+                "Confirmed" => "Đã nhận",
+                "Rejected" => "Bị từ chối",
+                "Completed" => "Hoàn thành",
+                "Cancelled" => "Đã hủy",
+                _ => dto.Status
+            };
+
+            var message = new ChatMessage
+            {
+                Id = $"msg_{Guid.NewGuid():N}",
+                ChatThreadId = thread.Id,
+                Sender = "system",
+                SenderId = "system",
+                Text = $"Đơn đặt bàn #{bookingId} của bạn đã được cập nhật thành: {statusVi}",
+                Timestamp = DateTimeOffset.UtcNow.ToString("h:mm tt"),
+                MessageType = "Text",
+                IsSystemNotification = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            _db.ChatMessages.Add(message);
+
+            thread.LastMessageText = message.Text;
+            thread.LastMessageTime = DateTimeOffset.UtcNow.ToString("O");
+            await _db.SaveChangesAsync();
+
+            // Broadcast via SignalR
+            var messageDto = message.ToDto();
+            await _chatHub.Clients.Group(thread.Id).SendAsync("ReceiveMessage", messageDto);
+            
+            var updatedThread = await _chatService.GetThreadAsync(thread.Id);
+            if (updatedThread != null)
+            {
+                await _chatHub.Clients.Group(thread.Id).SendAsync("ThreadUpdated", updatedThread);
+                await _chatHub.Clients.Group($"restaurant:{updatedThread.RestaurantId}").SendAsync("ThreadUpdated", updatedThread);
+            }
+        }
+
+        return NoContent();
+    }
+
+    [HttpGet("notifications")]
+    public async Task<ActionResult<IReadOnlyList<NotificationDto>>> GetNotifications([FromQuery] string ownerId)
+    {
+        var notifications = await _db.Notifications
+            .Where(n => n.UserId == ownerId)
+            .OrderByDescending(n => n.CreatedAt)
+            .ToListAsync();
+
+        return Ok(notifications.Select(n => n.ToDto()).ToList());
+    }
+
+    [HttpPost("notifications/{id}/read")]
+    public async Task<IActionResult> MarkAsRead(int id)
+    {
+        var notification = await _db.Notifications.FindAsync(id);
+        if (notification == null) return NotFound("Notification not found.");
+
+        notification.IsRead = true;
         await _db.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    [HttpPost("reviews/{reviewId}/report")]
+    public async Task<IActionResult> ReportReview(string reviewId, [FromQuery] string ownerId)
+    {
+        var review = await _db.Reviews.Include(r => r.Restaurant).FirstOrDefaultAsync(r => r.Id == reviewId);
+        if (review == null) return NotFound("Review not found.");
+
+        var owner = await _db.Users.FindAsync(ownerId);
+        if (owner == null || owner.RestaurantId != review.RestaurantId)
+        {
+            return BadRequest("You do not have permission to report reviews for this restaurant.");
+        }
+
+        // Create notification for Admin ("usr_1")
+        var adminNotif = new Notification
+        {
+            UserId = "usr_1", // Admin
+            RestaurantId = review.RestaurantId,
+            Type = "ReportReview",
+            Title = "Đánh giá bị báo cáo",
+            Body = $"Chủ quán '{owner.Username}' báo cáo đánh giá của '{review.Author}' tại quán '{review.Restaurant?.Name}': \"{review.Comment}\"",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        _db.Notifications.Add(adminNotif);
+
+        // Audit log
+        var log = new AuditLog
+        {
+            Actor = owner.Username,
+            Action = "Báo cáo đánh giá",
+            EntityType = "Review",
+            EntityId = reviewId,
+            Timestamp = DateTimeOffset.UtcNow,
+            Details = $"Báo cáo đánh giá của '{review.Author}'"
+        };
+        _db.AuditLogs.Add(log);
+
+        await _db.SaveChangesAsync();
+        return Ok(new { message = "Review reported successfully." });
     }
 
     [HttpGet("restaurant/{restaurantId}/analytics")]

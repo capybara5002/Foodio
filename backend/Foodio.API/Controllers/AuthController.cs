@@ -84,6 +84,17 @@ public class AuthController : ControllerBase
         return Ok(user.ToDto());
     }
 
+    [HttpGet("me/{userId}")]
+    public async Task<ActionResult<UserDto>> GetProfile(string userId)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+        return Ok(user.ToDto());
+    }
+
     [HttpPost("qr/generate")]
     public async Task<ActionResult<string>> GenerateQrToken(QrGenerateRequestDto request)
     {
@@ -141,6 +152,62 @@ public class AuthController : ControllerBase
         {
             return BadRequest("Failed to decrypt or verify QR session.");
         }
+    }
+
+    [HttpPost("update-password")]
+    public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequestDto request)
+    {
+        var user = await _db.Users
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
+
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        bool isValid = false;
+        if (user.PasswordHash.StartsWith("$2a$") || user.PasswordHash.StartsWith("$2b$") || user.PasswordHash.StartsWith("$2y$"))
+        {
+            try
+            {
+                isValid = BC.Verify(request.CurrentPassword, user.PasswordHash);
+            }
+            catch
+            {
+                isValid = false;
+            }
+        }
+        else
+        {
+            isValid = user.PasswordHash == request.CurrentPassword;
+        }
+
+        if (!isValid)
+        {
+            return BadRequest("Mật khẩu hiện tại không chính xác.");
+        }
+
+        user.PasswordHash = BC.HashPassword(request.NewPassword);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Password updated successfully." });
+    }
+
+    [HttpPost("update-avatar")]
+    public async Task<ActionResult<UserDto>> UpdateAvatar([FromBody] UpdateAvatarRequestDto request)
+    {
+        var user = await _db.Users
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
+
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        user.Avatar = request.Avatar;
+        await _db.SaveChangesAsync();
+
+        return Ok(user.ToDto());
     }
 
     private class QrPayload

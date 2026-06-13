@@ -51,6 +51,8 @@ public class RestaurantsController : ControllerBase
             Address = dto.Address,
             Area = dto.Area,
             OpeningHours = dto.OpeningHours,
+            Description = dto.Description ?? string.Empty,
+            TableStatuses = dto.TableStatuses,
             Image = dto.Image,
             IsVerified = dto.IsVerified,
             ReplySpeed = dto.ReplySpeed,
@@ -87,6 +89,8 @@ public class RestaurantsController : ControllerBase
         restaurant.Address = dto.Address;
         restaurant.Area = dto.Area;
         restaurant.OpeningHours = dto.OpeningHours;
+        restaurant.Description = dto.Description ?? string.Empty;
+        restaurant.TableStatuses = dto.TableStatuses;
         restaurant.Image = dto.Image;
         restaurant.IsVerified = dto.IsVerified;
         restaurant.ReplySpeed = dto.ReplySpeed;
@@ -110,6 +114,42 @@ public class RestaurantsController : ControllerBase
         _db.Restaurants.Remove(restaurant);
         await _db.SaveChangesAsync();
         return NoContent();
+    }
+
+    [HttpPost("{id}/reviews")]
+    public async Task<ActionResult<FoodieReviewDto>> CreateReview(string id, FoodieReviewDto dto)
+    {
+        var restaurant = await _db.Restaurants
+            .Include(r => r.Reviews)
+            .FirstOrDefaultAsync(r => r.Id == id);
+            
+        if (restaurant is null)
+        {
+            return NotFound("Restaurant not found.");
+        }
+
+        var review = new Review
+        {
+            Id = string.IsNullOrWhiteSpace(dto.Id) ? $"rev_{Guid.NewGuid():N}" : dto.Id,
+            RestaurantId = id,
+            Author = string.IsNullOrWhiteSpace(dto.Author) ? "Anonymous" : dto.Author,
+            Role = string.IsNullOrWhiteSpace(dto.Role) ? "Foodie" : dto.Role,
+            Rating = dto.Rating,
+            Comment = dto.Comment,
+            Avatar = string.IsNullOrWhiteSpace(dto.Avatar) ? "AN" : dto.Avatar,
+            ImageUrl = dto.ImageUrl,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _db.Reviews.Add(review);
+
+        var allReviews = restaurant.Reviews.ToList();
+        allReviews.Add(review);
+        restaurant.Rating = Math.Round(allReviews.Average(r => r.Rating), 1);
+
+        await _db.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetById), new { id = restaurant.Id }, review.ToDto());
     }
 
     private static IQueryable<Restaurant> IncludeRestaurantGraph(IQueryable<Restaurant> query) =>

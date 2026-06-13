@@ -19,7 +19,7 @@ public record DishDto(
     string? Description);
 
 public record FoodieReviewDto(
-    string Id,
+    string? Id,
     string Author,
     string Role,
     decimal Rating,
@@ -37,6 +37,8 @@ public record RestaurantDto(
     string Address,
     string Area,
     string OpeningHours,
+    string Description,
+    string? TableStatuses,
     string Image,
     bool IsVerified,
     string ReplySpeed,
@@ -45,7 +47,11 @@ public record RestaurantDto(
     int CategoryId,
     int FoodStreetId,
     IReadOnlyList<DishDto> Dishes,
-    IReadOnlyList<FoodieReviewDto> Reviews);
+    IReadOnlyList<FoodieReviewDto> Reviews,
+    int AudioPriority,
+    int GeofenceRadiusMeters,
+    string? AudioUrl,
+    DateTimeOffset UpdatedAt);
 
 public record RestaurantUpsertDto(
     string Name,
@@ -57,6 +63,8 @@ public record RestaurantUpsertDto(
     string Address,
     string Area,
     string OpeningHours,
+    string Description,
+    string? TableStatuses,
     string Image,
     bool IsVerified,
     string ReplySpeed,
@@ -77,7 +85,20 @@ public record CommunityPostDto(
     int LikesCount,
     int CommentsCount,
     bool IsLiked,
-    bool IsSaved);
+    bool IsSaved,
+    bool IsRestaurantPost = false,
+    bool IsApproved = false);
+
+public record PostCommentDto(
+    string Id,
+    string CommunityPostId,
+    string Author,
+    string Avatar,
+    string Content,
+    DateTimeOffset CreatedAt);
+
+public record CreatePostCommentDto(
+    string Content);
 
 public record ChatMessageDto(
     string Id,
@@ -138,7 +159,8 @@ public record AudioTourDto(
     string Duration,
     int StopsCount,
     string Vibe,
-    string Description);
+    string Description,
+    string? AudioData = null);
 
 public record BookingRequestDto(
     string RestaurantId,
@@ -146,7 +168,8 @@ public record BookingRequestDto(
     string Time,
     int Guests,
     string Seating,
-    string? UserId = null);
+    string? UserId = null,
+    string? TableNumber = null);
 
 public record BookingDto(
     int Id,
@@ -155,7 +178,8 @@ public record BookingDto(
     TimeOnly Time,
     int Guests,
     string Seating,
-    string Status);
+    string Status,
+    string? TableNumber = null);
 
 public record UserDto(
     string Id,
@@ -163,20 +187,47 @@ public record UserDto(
     string Email,
     string Role,
     string? RestaurantId,
+    string OwnerStatus,
     bool IsActive,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? Avatar);
 
 public record UserLoginRequestDto(string Email, string Password);
 
 public record UserRegisterRequestDto(string Username, string Email, string Password);
+
+public record UpdatePasswordRequestDto(string Email, string CurrentPassword, string NewPassword);
+
+public record UpdateAvatarRequestDto(string Email, string Avatar);
 
 public record UserCreateUpdateDto(
     string Username,
     string Email,
     string Role,
     string? RestaurantId,
+    string OwnerStatus,
     string? Password,
     bool IsActive);
+
+public record NotificationDto(
+    int Id,
+    string UserId,
+    string? RestaurantId,
+    string Type,
+    string Title,
+    string Body,
+    string? PayloadJson,
+    bool IsRead,
+    DateTimeOffset CreatedAt);
+
+public record AuditLogDto(
+    int Id,
+    string Actor,
+    string Action,
+    string EntityType,
+    string EntityId,
+    DateTimeOffset Timestamp,
+    string? Details);
 
 public record QrGenerateRequestDto(string RestaurantId, int TableNumber);
 
@@ -223,3 +274,12 @@ public record RestaurantRequestDto(
     DateTimeOffset? ReviewedAt);
 
 public record RestaurantRequestReviewDto(string? AdminNote);
+
+public record NarrationRequestDto(string RestaurantId, string? Language = null);
+
+public record NarrationResponseDto(
+    string RestaurantId,
+    string Language,
+    string Text,
+    string? AudioUrl,
+    string Source);
