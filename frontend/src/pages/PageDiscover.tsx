@@ -6,22 +6,42 @@
 import { useState, useEffect } from 'react';
 import { AudioTour, CommunityPost, PostComment } from '../types';
 import { getPostComments, createPostComment } from '../api/cravemapApi';
-import { Flame, MapPin, Star, Heart, MessageSquare, Bookmark, Volume2, Users } from 'lucide-react';
+import { initialCommunityFeed } from '../data';
+import { Flame, MapPin, Star, Heart, MessageSquare, Bookmark, Volume2, Users, Plus, Camera } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import ImageGallery from '../components/Common/ImageGallery';
 
 interface PageDiscoverProps {
   tours: AudioTour[];
   onPlayTour: (tour: AudioTour) => void;
   searchText: string;
+  sessionCommunityPosts?: CommunityPost[];
+  onCreatePost?: () => void;
 }
 
-export default function PageDiscover({ tours, onPlayTour, searchText }: PageDiscoverProps) {
+const mergeFeedPosts = (...groups: CommunityPost[][]) => {
+  const seen = new Set<string>();
+  return groups.flat().filter((post) => {
+    if (seen.has(post.id)) return false;
+    seen.add(post.id);
+    return true;
+  });
+};
+
+const emptySessionPosts: CommunityPost[] = [];
+
+const getPostImages = (post: CommunityPost) =>
+  post.images && post.images.length > 0 ? post.images : post.image ? [post.image] : [];
+
+export default function PageDiscover({ tours, onPlayTour, searchText, sessionCommunityPosts = emptySessionPosts, onCreatePost }: PageDiscoverProps) {
   const { t } = useTranslation();
   const [subTab, setSubTab] = useState<'tours' | 'feed'>('tours');
   const [feedFilter, setFeedFilter] = useState<'forYou' | 'following'>('forYou');
   const [tourFilter, setTourFilter] = useState('All');
 
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [posts, setPosts] = useState<CommunityPost[]>(() =>
+    mergeFeedPosts(sessionCommunityPosts, initialCommunityFeed)
+  );
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +49,12 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
   const [postComments, setPostComments] = useState<Record<string, PostComment[]>>({});
   const [commentInput, setCommentInput] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  useEffect(() => {
+    if (sessionCommunityPosts.length === 0) return;
+    setPosts((prevPosts) => mergeFeedPosts(sessionCommunityPosts, prevPosts, initialCommunityFeed));
+    setSubTab('feed');
+  }, [sessionCommunityPosts]);
 
   useEffect(() => {
     let active = true;
@@ -44,12 +70,26 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
           }
           const data = await response.json();
           if (active) {
-            setPosts(data);
+            setPosts((currentPosts) =>
+              mergeFeedPosts(
+                sessionCommunityPosts,
+                data,
+                initialCommunityFeed,
+                currentPosts.filter((post) => post.id.startsWith('post_user_'))
+              )
+            );
           }
         } catch (err: any) {
           console.error("Error fetching community posts:", err);
           if (active) {
-            setError("Could not load posts. Please try again later.");
+            setPosts((currentPosts) =>
+              mergeFeedPosts(
+                sessionCommunityPosts,
+                currentPosts,
+                initialCommunityFeed
+              )
+            );
+            setError("Showing local feed while the community server is unavailable.");
           }
         } finally {
           if (active) {
@@ -62,7 +102,12 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
     return () => {
       active = false;
     };
-  }, [subTab]);
+  }, [subTab, sessionCommunityPosts]);
+
+  const savedPostsCount = posts.filter((post) => post.isSaved).length;
+  const visiblePosts = feedFilter === 'following'
+    ? posts.filter((post) => post.isSaved)
+    : posts;
 
   const handleLikePost = (postId: string) => {
     setPosts((prevPosts) =>
@@ -324,16 +369,48 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
             <button
               type="button"
               onClick={() => setFeedFilter('following')}
-              className={`flex-1 py-1.5 text-center rounded-none font-sans text-[10px] tracking-wider uppercase transition-all cursor-pointer ${feedFilter === 'following'
+              className={`flex-1 py-1.5 text-center rounded-none font-sans text-[10px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 ${feedFilter === 'following'
                   ? 'bg-[#2c211b] text-white font-bold rounded-full'
                   : 'text-[#6f655b] hover:bg-white/70 rounded-full'
                 }`}
             >
-              {t('discover.following')}
+              <span>{t('discover.saved_feed', 'Saved')}</span>
+              {savedPostsCount > 0 && (
+                <span className={`min-w-4 rounded-full px-1.5 py-0.5 text-[8px] leading-none ${
+                  feedFilter === 'following' ? 'bg-white/20 text-white' : 'bg-[#2c211b]/10 text-[#2c211b]'
+                }`}>
+                  {savedPostsCount}
+                </span>
+              )}
             </button>
           </div>
 
-          {loading && (
+          {onCreatePost && (
+            <button
+              type="button"
+              onClick={onCreatePost}
+              className="group overflow-hidden rounded-[2rem] border border-white/70 bg-[#fffaf4]/92 p-4 text-left shadow-[0_18px_46px_rgba(77,49,31,0.1)] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 hover:bg-white cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#2c211b] text-white shadow-[0_12px_28px_rgba(77,49,31,0.18)]">
+                  <Camera size={16} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-serif text-lg font-bold tracking-[-0.04em] text-[#2c211b]">
+                    {t('discover.create_prompt_title', 'Share a food moment')}
+                  </p>
+                  <p className="mt-0.5 truncate font-sans text-xs text-[#6f655b]">
+                    {t('discover.create_prompt_desc', 'Post a dish, rate the place, and save it to your local trail.')}
+                  </p>
+                </div>
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#b76548] text-white transition-transform group-hover:rotate-90">
+                  <Plus size={16} strokeWidth={3} />
+                </span>
+              </div>
+            </button>
+          )}
+
+          {loading && posts.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-[#1a1a1a]/60">
               <span className="animate-spin text-2xl">⏳</span>
               <span className="font-mono text-[10px] mt-2 uppercase tracking-widest font-bold">{t('discover.loading_feed')}</span>
@@ -341,19 +418,31 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
           )}
 
           {error && (
-            <div className="text-center py-12 font-mono text-[10px] uppercase text-[#e2533b] font-bold">
-              ⚠️ {t('discover.error_feed')}
+            <div className="rounded-2xl border border-[#b76548]/20 bg-[#fffaf4]/80 px-4 py-3 text-center font-mono text-[9px] uppercase tracking-wider text-[#8f4f3b] font-bold">
+              {t('discover.local_feed_notice', error)}
             </div>
           )}
 
-          {!loading && !error && posts.length === 0 && (
-            <div className="text-center py-12 font-mono text-[10px] uppercase text-[#1a1a1a]/40 font-bold">
-              {t('discover.no_posts')}
+          {!loading && visiblePosts.length === 0 && (
+            <div className="rounded-[2rem] border border-white/70 bg-[#fffaf4]/88 px-6 py-10 text-center shadow-[0_18px_46px_rgba(77,49,31,0.08)]">
+              <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-[#f0e5d8] text-[#8f4f3b]">
+                <Bookmark size={18} />
+              </div>
+              <p className="font-serif text-xl font-bold tracking-[-0.04em] text-[#2c211b]">
+                {feedFilter === 'following'
+                  ? t('discover.no_saved_posts_title', 'No saved posts yet')
+                  : t('discover.no_posts')}
+              </p>
+              <p className="mx-auto mt-2 max-w-xs font-sans text-xs leading-relaxed text-[#6f655b]">
+                {feedFilter === 'following'
+                  ? t('discover.no_saved_posts_desc', 'Tap the bookmark on any post and it will appear here.')
+                  : t('discover.no_posts_desc', 'Start the board with your own food story.')}
+              </p>
             </div>
           )}
 
           {/* Social Posts lists */}
-          {!loading && !error && posts.map((post) => (
+          {visiblePosts.map((post) => (
             <article
               key={post.id}
               className={`bg-[#fffaf4] rounded-[2rem] border shadow-[0_24px_70px_rgba(77,49,31,0.12)] overflow-hidden flex flex-col transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
@@ -384,17 +473,17 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                   </p>
                 </div>
 
-                <div className="flex items-center gap-0.5 bg-[#e2533b] text-white px-2 py-0.5 rounded-xs">
-                  <Star size={11} className="fill-white text-white" />
-                  <span className="font-mono text-[10px] font-bold">{post.rating}</span>
+                <div className="rounded-full bg-[#f0e5d8] px-2.5 py-1 font-mono text-[8px] font-black uppercase tracking-wider text-[#8f4f3b]">
+                  {post.postType === 'promotion' ? 'Offer' : 'Post'}
                 </div>
               </div>
 
-              {/* Delicious Loaded Food Picture area */}
-              <div className="relative w-full aspect-[4/3] bg-[#f9f7f2] overflow-hidden">
-                <img src={post.image} alt="Vietnam food street dish mockup visual" className="w-full h-full object-cover" />
-
-                {/* Embedded Floating coordinate chip */}
+              <div className="relative">
+                <ImageGallery
+                  images={getPostImages(post)}
+                  alt={`${post.locationName} post photos`}
+                  className="aspect-[4/3]"
+                />
                 <div className="absolute bottom-3 left-3 bg-[#1a1a1a] text-white px-3 py-1 rounded-sm flex items-center gap-1 border border-white/5 select-none">
                   <MapPin size={12} className="text-[#e2533b]" />
                   <span className="font-mono text-[9px] uppercase tracking-wider font-bold">{post.locationName}</span>
@@ -403,8 +492,8 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
 
               {/* Text review comment block & Action bars */}
               <div className="p-4 flex flex-col gap-3">
-                <p className="font-serif italic text-xs md:text-sm text-[#1a1a1a]/90 leading-relaxed line-clamp-4 font-light">
-                  "{post.content}"
+                <p className="font-sans text-sm text-[#2c211b] leading-relaxed line-clamp-5">
+                  {post.content}
                 </p>
 
                 <hr className="border-[#1a1a1a]/10 mt-1" />

@@ -5,11 +5,12 @@
 
 import { useState, useRef } from 'react';
 import { Restaurant } from '../types';
-import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera } from 'lucide-react';
+import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { createReview } from '../api/cravemapApi';
 import MultiLanguageAudioGuide from '../components/MultiLanguageAudioGuide';
+import ImageGallery from '../components/Common/ImageGallery';
 
 interface PageDetailProps {
   restaurant: Restaurant;
@@ -31,7 +32,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [newRating, setNewRating] = useState(5);
-  const [newPhotoBase64, setNewPhotoBase64] = useState<string | null>(null);
+  const [newPhotoBase64s, setNewPhotoBase64s] = useState<string[]>([]);
   const { user } = useAuth();
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -44,13 +45,15 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
     });
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []).filter((file) => file.type.startsWith('image/'));
+    if (files.length === 0) return;
     try {
-      const base64 = await fileToBase64(file);
-      setNewPhotoBase64(base64);
+      const base64Photos = await Promise.all(files.map(fileToBase64));
+      setNewPhotoBase64s((currentPhotos) => [...currentPhotos, ...base64Photos]);
     } catch (err) {
-      console.error("Failed to read image file", err);
+      console.error("Failed to read image files", err);
+    } finally {
+      if (photoInputRef.current) photoInputRef.current.value = '';
     }
   };
 
@@ -69,10 +72,16 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
         rating: newRating,
         comment: newComment.trim(),
         avatar: (user?.username || 'AN').slice(0, 2).toUpperCase(),
-        imageUrl: newPhotoBase64 || undefined,
+        imageUrl: newPhotoBase64s[0] || undefined,
+        imageUrls: newPhotoBase64s.length > 0 ? newPhotoBase64s : undefined,
       };
 
-      const addedReview = await createReview(restaurant.id, reviewPayload);
+      const addedReviewFromApi = await createReview(restaurant.id, reviewPayload);
+      const addedReview = {
+        ...addedReviewFromApi,
+        imageUrl: addedReviewFromApi.imageUrl || newPhotoBase64s[0],
+        imageUrls: newPhotoBase64s.length > 0 ? newPhotoBase64s : addedReviewFromApi.imageUrl ? [addedReviewFromApi.imageUrl] : undefined
+      };
 
       // Append review locally
       const updatedReviews = [addedReview, ...(restaurant.reviews || [])];
@@ -91,7 +100,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
       // Reset form
       setNewComment('');
       setNewRating(5);
-      setNewPhotoBase64(null);
+      setNewPhotoBase64s([]);
       if (photoInputRef.current) photoInputRef.current.value = '';
       setShowReviewForm(false);
       setToastMessage(t('review_form.success_toast'));
@@ -107,9 +116,16 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
   const [starFilter, setStarFilter] = useState<number | 'All'>('All');
   const [hasImageFilter, setHasImageFilter] = useState<boolean>(false);
 
+  const getReviewImages = (review: { imageUrl?: string; imageUrls?: string[] }) =>
+    review.imageUrls && review.imageUrls.length > 0
+      ? review.imageUrls
+      : review.imageUrl
+        ? [review.imageUrl]
+        : [];
+
   const filteredReviews = (restaurant.reviews || []).filter((rev) => {
     if (starFilter !== 'All' && Math.floor(rev.rating) !== starFilter) return false;
-    if (hasImageFilter && !rev.imageUrl) return false;
+    if (hasImageFilter && getReviewImages(rev).length === 0) return false;
     return true;
   });
 
@@ -371,11 +387,11 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                   <span className="font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold select-none">
                     {t('review_form.photo_attachment')}
                   </span>
-                  {newPhotoBase64 !== null && (
+                  {newPhotoBase64s.length > 0 && (
                     <button 
                       type="button" 
                       onClick={() => {
-                        setNewPhotoBase64(null);
+                        setNewPhotoBase64s([]);
                         if (photoInputRef.current) photoInputRef.current.value = '';
                       }}
                       className="text-red-500 font-mono text-[9px] uppercase font-bold tracking-wider hover:underline"
@@ -385,10 +401,10 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                   )}
                 </div>
                 
-                {newPhotoBase64 !== null ? (
+                {newPhotoBase64s.length > 0 ? (
                   <div className="relative aspect-video w-full max-w-[200px] border border-[#1a1a1a]/15 overflow-hidden group cursor-pointer" onClick={() => photoInputRef.current?.click()}>
                     <img 
-                      src={newPhotoBase64} 
+                      src={newPhotoBase64s[0]} 
                       alt="Uploaded Food" 
                       className="w-full h-full object-cover" 
                     />
@@ -406,10 +422,28 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                     <span>Tải ảnh từ thiết bị</span>
                   </button>
                 )}
+                {newPhotoBase64s.length > 1 && (
+                  <div className="grid grid-cols-4 gap-2 pt-1 sm:grid-cols-6">
+                    {newPhotoBase64s.map((photo, index) => (
+                      <div key={`${photo}-${index}`} className="relative aspect-square overflow-hidden rounded-xl border border-[#1a1a1a]/10 bg-[#f9f7f2]">
+                        <img src={photo} alt={`Review upload ${index + 1}`} className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setNewPhotoBase64s((photos) => photos.filter((_, currentIndex) => currentIndex !== index))}
+                          className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-[#2c211b]/80 text-white hover:bg-[#e2533b]"
+                          aria-label="Remove review photo"
+                        >
+                          <X size={11} strokeWidth={3} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <input
                   ref={photoInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
                   onChange={handlePhotoUpload}
                 />
@@ -509,13 +543,13 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                     "{rev.comment}"
                   </p>
 
-                  {/* Review Image Preview */}
-                  {rev.imageUrl && (
+                  {getReviewImages(rev).length > 0 && (
                     <div className="mt-2 w-full max-w-sm overflow-hidden rounded-2xl border border-[#1a1a1a]/10 bg-[#f9f7f2]">
-                      <img 
-                        src={rev.imageUrl} 
-                        alt="Review Attachment" 
-                        className="h-40 w-full object-cover grayscale hover:grayscale-0 transition-all duration-300"
+                      <ImageGallery
+                        images={getReviewImages(rev)}
+                        alt={`${rev.author} review photos`}
+                        className="h-40"
+                        imageClassName="grayscale hover:grayscale-0"
                       />
                     </div>
                   )}

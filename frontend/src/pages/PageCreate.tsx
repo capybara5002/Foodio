@@ -3,29 +3,43 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, FormEvent, useRef } from 'react';
+import { useEffect, useRef, useState, FormEvent } from 'react';
 import { PRESET_IMAGES } from '../data';
-import { X, Camera, MapPin, Star, Utensils, Tag, Store } from 'lucide-react';
+import { Restaurant } from '../types';
+import { X, Camera, MapPin, Utensils, Tag, Store, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import ImageGallery from '../components/Common/ImageGallery';
 
 interface PageCreateProps {
+  restaurants: Restaurant[];
   onAddPost: (newPost: {
     content: string;
     image: string;
-    rating: number;
+    images: string[];
     locationName: string;
+    restaurantId?: string;
+    postType: 'story' | 'promotion';
   }) => void;
   onCancel: () => void;
 }
 
-export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
+export default function PageCreate({ restaurants, onAddPost, onCancel }: PageCreateProps) {
   const { t } = useTranslation();
-  const [photoBase64, setPhotoBase64] = useState<string>(PRESET_IMAGES[0]);
-  const [rating, setRating] = useState(4);
+  const [photos, setPhotos] = useState<string[]>([PRESET_IMAGES[0]]);
   const [content, setContent] = useState('');
-  const [hasLocation, setHasLocation] = useState(true);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState(restaurants[0]?.id ?? '');
+  const [showRestaurantPicker, setShowRestaurantPicker] = useState(false);
+  const [postType, setPostType] = useState<'story' | 'promotion'>('story');
   const [toast, setToast] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedRestaurant = restaurants.find((restaurant) => restaurant.id === selectedRestaurantId) ?? restaurants[0];
+
+  useEffect(() => {
+    if (!selectedRestaurantId && restaurants[0]) {
+      setSelectedRestaurantId(restaurants[0].id);
+    }
+  }, [restaurants, selectedRestaurantId]);
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -35,60 +49,69 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
       reader.readAsDataURL(file);
     });
 
-  // Dynamic feedback phrase mapping
-  const getRatingLabel = (stars: number) => {
-    switch (stars) {
-      case 1: return t('create.rating_label_1');
-      case 2: return t('create.rating_label_2');
-      case 3: return t('create.rating_label_3');
-      case 4: return t('create.rating_label_4');
-      case 5: return t('create.rating_label_5');
-      default: return t('create.select_stars');
-    }
-  };
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith('image/'));
+    if (files.length === 0) return;
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
     try {
-      const base64 = await fileToBase64(file);
-      setPhotoBase64(base64);
-      setToast("Đã tải ảnh lên thành công!");
+      const base64Photos = await Promise.all(files.map(fileToBase64));
+      setPhotos((currentPhotos) => {
+        const withoutPreset = currentPhotos.length === 1 && currentPhotos[0] === PRESET_IMAGES[0]
+          ? []
+          : currentPhotos;
+        return [...withoutPreset, ...base64Photos];
+      });
+      setToast(`Added ${files.length} photo${files.length > 1 ? 's' : ''}`);
       setTimeout(() => setToast(null), 2000);
     } catch (err) {
-      console.error("Failed to read image file", err);
+      console.error("Failed to read image files", err);
+    } finally {
+      if (photoInputRef.current) photoInputRef.current.value = '';
     }
   };
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
+  const removePhoto = (index: number) => {
+    setPhotos((currentPhotos) => {
+      const nextPhotos = currentPhotos.filter((_, currentIndex) => currentIndex !== index);
+      return nextPhotos.length > 0 ? nextPhotos : [PRESET_IMAGES[0]];
+    });
+  };
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
     if (!content.trim()) {
       setToast(t('create.toast_write_experience'));
       setTimeout(() => setToast(null), 2000);
       return;
     }
 
+    const finalPhotos = photos.length > 0 ? photos : [PRESET_IMAGES[0]];
+
     onAddPost({
       content: content.trim(),
-      image: photoBase64,
-      rating: rating + 0.8, // align to foodie fractional ranges, e.g. 4.8
-      locationName: hasLocation ? 'Phở Quỳnh' : 'Hẻm Bùi Viện'
+      image: finalPhotos[0],
+      images: finalPhotos,
+      locationName: selectedRestaurant?.name || 'Foodio',
+      restaurantId: selectedRestaurant?.id,
+      postType
     });
   };
 
   return (
     <div className="foodio-page w-full min-h-[calc(100vh-72px)] pb-32 pt-8 text-on-surface">
-      
-      {/* Visual top app bar structure for sub-view layout */}
       <div className="max-w-2xl mx-auto px-4 flex justify-between items-center py-3 bg-[#fffaf4]/88 border border-white/70 rounded-[1.75rem] shadow-[0_18px_46px_rgba(77,49,31,0.12)] mb-8 backdrop-blur-xl foodio-reveal">
-        <button 
+        <button
+          type="button"
           onClick={onCancel}
           className="text-[#6f655b] hover:text-[#8f4f3b] hover:bg-[#f0e5d8] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] p-2 active:scale-95 flex items-center justify-center cursor-pointer rounded-full"
         >
           <X size={14} strokeWidth={3} className="select-none" />
         </button>
-        <span className="font-serif font-bold text-xl tracking-[-0.04em] text-[#2c211b]">{t('create.new_post_title')}</span>
-        <button 
+        <span className="font-serif font-bold text-xl tracking-[-0.04em] text-[#2c211b]">
+          {t('create.new_post_title', 'Create Post')}
+        </span>
+        <button
+          type="button"
           onClick={handleSubmit}
           className="foodio-btn foodio-btn-primary py-2 px-5 font-mono text-[10px] uppercase tracking-widest cursor-pointer"
         >
@@ -97,159 +120,166 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
       </div>
 
       <main className="w-full max-w-2xl mx-auto px-4 flex flex-col gap-6 foodio-reveal foodio-reveal-delay-1">
-        
-        {/* Image Preview and Upload */}
-        <div 
-          onClick={() => photoInputRef.current?.click()}
-          className="relative w-full aspect-[16/10] rounded-[2rem] overflow-hidden bg-[#f0e5d8] group cursor-pointer shadow-[0_24px_70px_rgba(77,49,31,0.15)] border border-white/70"
-        >
-          <img 
-            src={photoBase64} 
-            alt={t('create.alt_food')} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]" 
-          />
-          
-          {/* Upload overlay */}
-          <div className="absolute inset-0 bg-[#2c211b]/45 opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] flex items-center justify-center">
-            <div className="bg-[#fffaf4] text-on-surface px-4 py-2 rounded-full flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider font-bold shadow-[0_18px_46px_rgba(77,49,31,0.18)] border border-white/70">
-              <Camera size={16} />
-              <span>Tải ảnh lên từ thiết bị</span>
+        <div className="relative rounded-[2rem] overflow-hidden shadow-[0_24px_70px_rgba(77,49,31,0.15)] border border-white/70">
+          <ImageGallery images={photos} alt={t('create.alt_food')} className="aspect-[16/10]" />
+
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            className="absolute left-4 top-4 bg-[#fffaf4]/92 text-on-surface px-4 py-2 rounded-full flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider font-bold shadow-[0_18px_46px_rgba(77,49,31,0.18)] border border-white/70 backdrop-blur-xl cursor-pointer"
+          >
+            <Camera size={16} />
+            <span>Add photos</span>
+          </button>
+
+          {selectedRestaurant && (
+            <div className="absolute bottom-4 right-4 bg-[#fffaf4]/90 text-[#2c211b] px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-[0_12px_30px_rgba(77,49,31,0.14)] border border-white/60 backdrop-blur-xl">
+              <MapPin size={16} className="text-[#e2533b]" />
+              <span className="font-mono text-[9px] uppercase tracking-wider font-bold">{selectedRestaurant.name}</span>
             </div>
-          </div>
- 
-          {/* Snail location tag badges matches image */}
-          <div className="absolute bottom-4 right-4 bg-[#fffaf4]/90 text-[#2c211b] px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-[0_12px_30px_rgba(77,49,31,0.14)] border border-white/60 backdrop-blur-xl">
-            <MapPin size={16} className="text-[#e2533b]" />
-            <span className="font-mono text-[9px] uppercase tracking-wider font-bold">{t('create.near_bui_vien')}</span>
-          </div>
+          )}
+
           <input
             ref={photoInputRef}
             type="file"
             accept="image/*"
+            multiple
             className="hidden"
             onChange={handlePhotoUpload}
           />
         </div>
 
-        {/* Rating Stars specification */}
-        <div className="bg-[#fffaf4]/92 rounded-[2rem] p-6 shadow-[0_18px_46px_rgba(77,49,31,0.1)] border border-white/70 flex flex-col items-center gap-3">
-          <span className="foodio-eyebrow select-none">
-            {t('create.rating_question')}
-          </span>
-          
-          <div className="flex gap-2">
-            {[1, 2, 3, 4, 5].map((stars) => (
-              <button
-                key={stars}
-                type="button"
-                onClick={() => setRating(stars)}
-                className="hover:scale-110 active:scale-95 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer"
-              >
-                <Star 
-                  size={28} 
-                  className={`select-none transition-all ${
-                    stars <= rating ? 'fill-[#e2533b] text-[#e2533b]' : 'text-[#1a1a1a]/25'
-                  }`} 
-                />
-              </button>
-            ))}
+        <div className="bg-[#fffaf4]/92 rounded-[1.5rem] p-4 border border-white/70 shadow-[0_18px_46px_rgba(77,49,31,0.1)]">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-mono text-[9px] uppercase tracking-wider text-[#6f655b] font-extrabold">Photos</p>
+              <p className="font-sans text-xs text-[#6f655b] mt-0.5">Upload as many images as you need. Feed will preview a few and open the full gallery.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#2c211b] text-white hover:bg-[#8f4f3b] transition-colors cursor-pointer"
+              aria-label="Add more photos"
+            >
+              <Plus size={16} strokeWidth={3} />
+            </button>
           </div>
 
-          <span className="font-serif font-bold text-base text-[#8f4f3b] mt-1">
-            {getRatingLabel(rating)}
-          </span>
+          <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+            {photos.map((photo, index) => (
+              <div key={`${photo}-${index}`} className="relative aspect-square overflow-hidden rounded-xl border border-[#4b362a]/10 bg-[#f0e5d8]">
+                <img src={photo} alt={`Selected ${index + 1}`} className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(index)}
+                  className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-[#2c211b]/80 text-white hover:bg-[#e2533b]"
+                  aria-label="Remove photo"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Review Input Box section */}
         <div className="bg-[#fffaf4]/92 rounded-[2rem] shadow-[0_18px_46px_rgba(77,49,31,0.1)] border border-white/70 overflow-hidden transition-all">
-          <textarea 
+          <textarea
             value={content}
-            onChange={(e) => setContent(e.target.value.slice(0, 500))}
-            className="w-full bg-transparent border-0 p-5 font-sans text-sm text-[#2c211b] placeholder:text-[#8d8074] resize-none focus:ring-0 min-h-[160px] leading-relaxed" 
-            placeholder={t('create.placeholder')}
+            onChange={(e) => setContent(e.target.value.slice(0, 700))}
+            className="w-full bg-transparent border-0 p-5 font-sans text-sm text-[#2c211b] placeholder:text-[#8d8074] resize-none focus:ring-0 min-h-[180px] leading-relaxed"
+            placeholder={t('create.placeholder', 'Share a food story, a new dish, or a restaurant promotion...')}
           />
-          
-          {/* Metadata action tools row */}
-          <div className="bg-[#f5eadf] px-4 py-3 flex items-center justify-between border-t border-[#4b362a]/10 select-none text-xs">
-            <div className="flex gap-2">
-              <button 
+
+          <div className="bg-[#f5eadf] px-4 py-3 flex flex-col gap-3 border-t border-[#4b362a]/10 select-none text-xs sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-2">
+              <button
                 type="button"
-                onClick={() => {
-                  setToast(t('create.toast_tag_restaurant'));
-                  setTimeout(() => setToast(null), 2000);
-                }}
+                onClick={() => setShowRestaurantPicker((current) => !current)}
                 className="flex items-center gap-1.5 bg-[#fffaf4] rounded-full px-3 py-1.5 text-[#2c211b] border border-[#4b362a]/10 hover:bg-white transition-colors shadow-xs cursor-pointer text-[9px] font-mono uppercase tracking-wider font-extrabold"
               >
                 <Utensils size={14} className="text-[#e2533b]" />
-                <span>{t('create.tag_restaurant_btn')}</span>
+                <span>{selectedRestaurant ? selectedRestaurant.name : t('create.tag_restaurant_btn')}</span>
               </button>
- 
-              <button 
+
+              <button
                 type="button"
-                onClick={() => {
-                  setToast(t('create.toast_select_category'));
-                  setTimeout(() => setToast(null), 2000);
-                }}
+                onClick={() => setPostType((current) => current === 'story' ? 'promotion' : 'story')}
                 className="flex items-center gap-1.5 bg-[#fffaf4] rounded-full px-3 py-1.5 text-[#2c211b] border border-[#4b362a]/10 hover:bg-white transition-colors shadow-xs cursor-pointer text-[9px] font-mono uppercase tracking-wider font-extrabold"
               >
                 <Tag size={14} className="text-secondary" />
-                <span>{t('create.category_btn')}</span>
+                <span>{postType === 'story' ? 'Story' : 'Promotion'}</span>
               </button>
             </div>
 
             <span className="font-mono text-[9px] text-[#1a1a1a]/40 font-bold">
-              {content.length}/500
+              {content.length}/700
             </span>
           </div>
-
         </div>
 
-        {/* Selected location context block attachment, interactive */}
-        {hasLocation && (
+        {showRestaurantPicker && (
+          <div className="bg-[#fffaf4] rounded-[1.5rem] border border-white/70 shadow-[0_18px_46px_rgba(77,49,31,0.12)] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-[#4b362a]/10 px-4 py-3">
+              <div>
+                <p className="font-serif text-lg font-bold tracking-[-0.04em] text-[#2c211b]">Tag restaurant</p>
+                <p className="font-mono text-[9px] uppercase tracking-wider text-[#6f655b]">{restaurants.length} places available</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRestaurantPicker(false)}
+                className="grid h-8 w-8 place-items-center rounded-full bg-[#f0e5d8] text-[#2c211b] hover:bg-[#2c211b] hover:text-white"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="max-h-80 overflow-y-auto p-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {restaurants.map((restaurant) => (
+                <button
+                  key={restaurant.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedRestaurantId(restaurant.id);
+                    setShowRestaurantPicker(false);
+                  }}
+                  className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition-all hover:bg-white cursor-pointer ${
+                    selectedRestaurantId === restaurant.id
+                      ? 'border-[#b76548] bg-[#fff8ef]'
+                      : 'border-[#4b362a]/10 bg-[#fffaf4]'
+                  }`}
+                >
+                  <img src={restaurant.image} alt={restaurant.name} className="h-11 w-11 rounded-xl object-cover" />
+                  <div className="min-w-0">
+                    <p className="truncate font-serif text-sm font-bold text-[#2c211b]">{restaurant.name}</p>
+                    <p className="truncate font-sans text-[10px] text-[#6f655b]">{restaurant.category} - {restaurant.area}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {selectedRestaurant && (
           <div className="bg-[#f5eadf] rounded-[1.5rem] p-4 flex items-center justify-between border border-[#4b362a]/10 shadow-xs relative overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]">
-            {/* Left accent border */}
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#b76548]" />
-            
             <div className="flex items-center gap-3 pl-2">
               <div className="w-10 h-10 rounded-2xl bg-[#2c211b] text-white flex items-center justify-center shrink-0 select-none">
                 <Store size={14} className="text-white" />
               </div>
               <div>
-                <h4 className="font-serif italic font-bold text-xs text-[#1a1a1a] leading-tight">Phở Quỳnh</h4>
-                <p className="font-sans text-[10px] text-[#1a1a1a]/60 mt-0.5 max-w-xs truncate">323 Phạm Ngũ Lão, Quận 1</p>
+                <h4 className="font-serif italic font-bold text-xs text-[#1a1a1a] leading-tight">{selectedRestaurant.name}</h4>
+                <p className="font-sans text-[10px] text-[#1a1a1a]/60 mt-0.5 max-w-xs truncate">{selectedRestaurant.address}</p>
               </div>
             </div>
-
-            <button 
-              type="button"
-              onClick={() => setHasLocation(false)}
-              className="text-[#1a1a1a]/60 hover:text-[#e2533b] transition-colors p-1 rounded-full cursor-pointer"
-            >
-              <X size={16} />
-            </button>
           </div>
         )}
-
-        {/* Re-attach custom store attachment */}
-        {!hasLocation && (
-          <button
-            type="button"
-            onClick={() => setHasLocation(true)}
-            className="text-[#8f4f3b] hover:underline font-mono text-[10px] uppercase tracking-wider font-extrabold text-left self-start"
-          >
-            {t('create.re_tag_location')}
-          </button>
-        )}
-
       </main>
 
-      {/* Floating alert toast notifications */}
       {toast && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-[#2c211b] text-white px-5 py-3 rounded-full text-xs font-semibold tracking-wider border border-white/10 shadow-[0_18px_46px_rgba(77,49,31,0.22)] z-50 animate-in fade-in slide-in-from-bottom-3">
           {toast}
         </div>
       )}
-
     </div>
   );
 }

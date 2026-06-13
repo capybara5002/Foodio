@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/Admin/AdminDashboard';
 import OwnerDashboard from '../components/Owner/OwnerDashboard';
-import { Restaurant } from '../types';
+import { CommunityPost, Restaurant } from '../types';
 import { UserCircle, BadgeCheck, FileText, Star, Globe, LogOut, User, Shield, Store, Edit2, Key, ChevronRight, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
@@ -10,6 +10,7 @@ import { useLanguage } from '../hooks/useLanguage';
 interface PageProfileProps {
   userEmail: string;
   onLoginTrigger: () => void;
+  sessionCommunityPosts?: CommunityPost[];
   onRestaurantUpdated?: (updated: Restaurant) => void;
 }
 
@@ -22,12 +23,12 @@ const AVATAR_PRESETS = [
   "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=150&auto=format&fit=crop&q=60"  // Seafood/Snails
 ];
 
-export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: PageProfileProps) {
+export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = [], onRestaurantUpdated }: PageProfileProps) {
   const { user, logout, updateAvatar, updatePassword } = useAuth();
   const { t } = useTranslation();
   const { language, changeLanguage } = useLanguage();
   const [showStatus, setShowStatus] = useState<string | null>(null);
-  const [postsCount, setPostsCount] = useState<number>(0);
+  const [remotePostIds, setRemotePostIds] = useState<Set<string>>(new Set());
   
   // Tab control: profile, admin (if admin), owner (if owner)
   const [activeConsole, setActiveConsole] = useState<'profile' | 'admin' | 'owner'>('profile');
@@ -76,11 +77,18 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
     const fetchPostsCount = async () => {
       try {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const response = await fetch(`${baseUrl}/api/communityposts`);
+        let response = await fetch(`${baseUrl}/api/admin/posts`);
+        if (!response.ok) {
+          response = await fetch(`${baseUrl}/api/communityposts`);
+        }
         if (!response.ok) throw new Error("Failed to fetch posts count");
         const data = await response.json();
-        const userPosts = data.filter((p: any) => p.author === user.username);
-        setPostsCount(userPosts.length);
+        const userPosts = data.filter((p: any) =>
+          p.author === user.username ||
+          p.handle === `@${user.username}` ||
+          (user.restaurantId && p.handle === `@${user.restaurantId}`)
+        );
+        setRemotePostIds(new Set(userPosts.map((post: any) => post.id)));
       } catch (error) {
         console.error("Failed to load user posts count in profile:", error);
       }
@@ -168,6 +176,12 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
   const isOwner = user.role === 'Owner';
   const isAdmin = user.role === 'Admin';
 
+  const sessionUserPosts = sessionCommunityPosts.filter((post) =>
+    post.author === user.username ||
+    post.handle === `@${user.username}` ||
+    (user.restaurantId && (post.restaurantId === user.restaurantId || post.handle === `@${user.restaurantId}`))
+  );
+  const postsCount = remotePostIds.size + sessionUserPosts.filter((post) => !remotePostIds.has(post.id)).length;
   const defaultAvatar = "https://ui-avatars.com/api/?name=" + encodeURIComponent(user.username) + "&background=1a1a1a&color=ffffff&size=128";
 
   return (

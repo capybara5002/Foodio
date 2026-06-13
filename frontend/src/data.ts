@@ -144,6 +144,36 @@ export const initialCommunityFeed: CommunityPost[] = [
     commentsCount: 45,
     isLiked: true,
     isSaved: false
+  },
+  {
+    id: 'post_3',
+    author: 'local_table',
+    handle: '@local_table',
+    avatar: 'https://ui-avatars.com/api/?name=LT&background=2c211b&color=ffffff&size=128',
+    timeAgo: 'Yesterday',
+    rating: 4.6,
+    image: initialRestaurants[1].image,
+    content: 'Saved this late-night snail spot for a rainy evening. Tamarind sauce, fast service, and a street-side table with real energy.',
+    locationName: 'Oc Oanh',
+    likesCount: 128,
+    commentsCount: 9,
+    isLiked: false,
+    isSaved: true
+  },
+  {
+    id: 'post_4',
+    author: 'breakfast_walk',
+    handle: '@breakfast_walk',
+    avatar: 'https://ui-avatars.com/api/?name=BW&background=b76548&color=ffffff&size=128',
+    timeAgo: 'This morning',
+    rating: 4.5,
+    image: initialRestaurants[2].image,
+    content: 'A quick bowl before the city wakes up. Clean broth, generous herbs, and enough comfort to bookmark for another morning.',
+    locationName: 'Pho Quynh',
+    likesCount: 74,
+    commentsCount: 6,
+    isLiked: false,
+    isSaved: false
   }
 ];
 
