@@ -469,16 +469,16 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
             </div>
           </div>
 
-          <div className="flex overflow-x-auto gap-3 hide-scrollbar -mx-5 px-5 pb-2">
+          <div className="flex flex-col gap-4 pb-2">
             {filteredReviews.length === 0 ? (
-              <div className="min-w-full text-center py-8 font-mono text-[10px] uppercase text-[#1a1a1a]/40 font-bold">
+              <div className="w-full text-center py-8 font-mono text-[10px] uppercase text-[#1a1a1a]/40 font-bold">
                 {t('detail.no_reviews')}
               </div>
             ) : (
               filteredReviews.map((rev) => (
                 <div 
                   key={rev.id}
-                  className="min-w-[280px] md:min-w-[340px] bg-[#fffdf8] p-5 rounded-[1.5rem] shadow-[0_18px_46px_rgba(77,49,31,0.1)] border border-[#4b362a]/10 flex flex-col gap-2 shrink-0 relative text-left"
+                  className="w-full bg-[#fffdf8] p-5 rounded-[1.5rem] shadow-[0_18px_46px_rgba(77,49,31,0.1)] border border-[#4b362a]/10 flex flex-col gap-3 relative text-left overflow-hidden"
                 >
                   {/* Visual quotation mark mark */}
                   <span className="absolute right-3 top-3 font-serif italic text-6xl text-[#1a1a1a]/5 select-none font-black leading-none">“</span>
@@ -505,17 +505,17 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                     </div>
                   </div>
 
-                  <p className="font-serif italic text-[11px] md:text-xs text-[#1a1a1a]/70 leading-relaxed font-light mt-1 flex-1">
+                  <p className="font-serif italic text-sm text-[#1a1a1a]/70 leading-relaxed font-light mt-1">
                     "{rev.comment}"
                   </p>
 
                   {/* Review Image Preview */}
                   {rev.imageUrl && (
-                    <div className="mt-2 border border-[#1a1a1a]/10 overflow-hidden aspect-video w-full bg-[#f9f7f2]">
+                    <div className="mt-2 w-full max-w-sm overflow-hidden rounded-2xl border border-[#1a1a1a]/10 bg-[#f9f7f2]">
                       <img 
                         src={rev.imageUrl} 
                         alt="Review Attachment" 
-                        className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-300"
+                        className="h-40 w-full object-cover grayscale hover:grayscale-0 transition-all duration-300"
                       />
                     </div>
                   )}
