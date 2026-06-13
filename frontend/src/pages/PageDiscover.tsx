@@ -133,17 +133,17 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
   const tourCategories = ['All', 'Night Markets', 'Seafood', 'Street Food', 'Fine Dining'];
 
   return (
-    <div className="w-full min-h-[calc(100vh-72px)] bg-[#fdfcf9] pb-24">
+    <div className="foodio-page w-full min-h-[calc(100vh-72px)] pb-32">
 
       {/* Dynamic Sub Tab Toggle Controller */}
-      <div className="sticky top-[12px] z-30 max-w-md mx-auto px-4 pt-3">
-        <div className="flex p-1.5 bg-[#f9f7f2] border border-[#1a1a1a]/10 rounded shadow-sm backdrop-blur-md">
+      <div className="sticky top-[84px] z-30 max-w-md mx-auto px-4 pt-4">
+        <div className="flex p-1.5 bg-[#fffaf4]/88 border border-white/70 rounded-full shadow-[0_18px_46px_rgba(77,49,31,0.12)] backdrop-blur-xl">
           <button
             type="button"
             onClick={() => setSubTab('tours')}
-            className={`flex-grow py-2 rounded font-extrabold text-[10px] uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center justify-center gap-1.5 ${subTab === 'tours'
-                ? 'bg-[#1a1a1a] text-white shadow-md font-black'
-                : 'text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5'
+            className={`flex-grow py-2.5 rounded-full font-extrabold text-[10px] uppercase tracking-[0.16em] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer flex items-center justify-center gap-1.5 ${subTab === 'tours'
+                ? 'bg-[#2c211b] text-white shadow-[0_12px_28px_rgba(77,49,31,0.16)] font-black'
+                : 'text-[#6f655b] hover:bg-white/70'
               }`}
           >
             <Volume2 size={12} /> Tours
@@ -151,9 +151,9 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
           <button
             type="button"
             onClick={() => setSubTab('feed')}
-            className={`flex-grow py-2 rounded font-extrabold text-[10px] uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center justify-center gap-1.5 ${subTab === 'feed'
-                ? 'bg-[#1a1a1a] text-white shadow-md font-black'
-                : 'text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5'
+            className={`flex-grow py-2.5 rounded-full font-extrabold text-[10px] uppercase tracking-[0.16em] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer flex items-center justify-center gap-1.5 ${subTab === 'feed'
+                ? 'bg-[#2c211b] text-white shadow-[0_12px_28px_rgba(77,49,31,0.16)] font-black'
+                : 'text-[#6f655b] hover:bg-white/70'
               }`}
           >
             <Users size={12} /> Feed
@@ -163,15 +163,15 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
 
       {subTab === 'tours' ? (
         /* ==================== SCREEN 3: CURATED AUDIO TOURS ==================== */
-        <div className="max-w-4xl mx-auto px-4 py-8 flex flex-col gap-6 animate-in fade-in duration-350">
+        <div className="max-w-6xl mx-auto px-4 py-12 md:py-16 flex flex-col gap-8 foodio-reveal">
 
           {/* Header Introduction Block */}
-          <div className="flex flex-col gap-2 pt-2 border-b border-[#1a1a1a]/10 pb-6">
-            <span className="text-[10px] tracking-[0.3em] uppercase text-[#e2533b] font-extrabold">{t('discover.collection')} // 02</span>
-            <h1 className="font-serif italic font-light text-headline-lg-mobile md:text-headline-lg text-[#1a1a1a] leading-none">
+          <div className="flex flex-col gap-4 pt-4 border-b border-[#4b362a]/10 pb-8">
+            <span className="foodio-eyebrow self-start">{t('discover.collection')}</span>
+            <h1 className="font-serif font-bold text-5xl md:text-7xl tracking-[-0.07em] text-[#2c211b] leading-[0.92] max-w-5xl">
               {t('discover.audio_tours_title')}
             </h1>
-            <p className="font-sans text-xs md:text-sm text-[#1a1a1a]/60 leading-relaxed font-light max-w-xl">
+            <p className="font-sans text-sm md:text-base text-[#6f655b] leading-relaxed max-w-2xl">
               {t('discover.audio_tours_desc')}
             </p>
           </div>
@@ -183,9 +183,9 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                 key={cat}
                 type="button"
                 onClick={() => setTourFilter(cat)}
-                className={`whitespace-nowrap px-4 py-2 font-mono text-[10px] uppercase tracking-wider border rounded-none transition-all cursor-pointer ${(cat === 'All' && tourFilter === 'All') || tourFilter === cat
-                    ? 'bg-[#e2533b] text-white border-transparent shadow-sm font-black'
-                    : 'bg-white text-[#1a1a1a] border-[#1a1a1a]/15 hover:bg-[#f9f7f2]'
+                className={`whitespace-nowrap px-4 py-2.5 font-mono text-[10px] uppercase tracking-wider border rounded-full transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer ${(cat === 'All' && tourFilter === 'All') || tourFilter === cat
+                    ? 'bg-[#2c211b] text-white border-transparent shadow-[0_12px_28px_rgba(77,49,31,0.16)] font-black'
+                    : 'bg-[#fffaf4] text-[#6f655b] border-[#4b362a]/10 hover:bg-white hover:text-[#2c211b]'
                   }`}
               >
                 {cat === 'All' ? t('discover.all_tours') : cat}
@@ -194,7 +194,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
           </div>
 
           {/* Cards Stack */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4 grid-flow-dense">
             {tours
               .filter((tour) => {
                 // Category match simulation
@@ -219,27 +219,27 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                 return (
                   <article
                     key={tour.id}
-                    className="bg-white border border-[#1a1a1a]/10 rounded shadow-sm overflow-hidden flex flex-col group transition-transform hover:-translate-y-1 duration-300 relative"
+                    className="bg-[#fffaf4] border border-white/70 rounded-[2rem] shadow-[0_24px_70px_rgba(77,49,31,0.12)] overflow-hidden flex flex-col group transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 relative"
                   >
                     {/* Decorative faint background trace */}
-                    <div className="absolute top-2 right-2 text-[#1a1a1a]/5 font-serif text-8xl italic select-none pointer-events-none font-bold">
+                    <div className="absolute top-2 right-4 text-[#2c211b]/5 font-serif text-8xl select-none pointer-events-none font-bold">
                       T
                     </div>
 
-                    <div className="relative h-48 w-full overflow-hidden bg-[#f9f7f2]">
+                    <div className="relative h-56 w-full overflow-hidden bg-[#f0e5d8]">
                       <img
                         src={tour.mapImage}
                         alt="Local explorer street trace route"
-                        className="absolute inset-0 w-full h-full object-cover opacity-15 mix-blend-multiply filter grayscale"
+                        className="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-multiply filter grayscale contrast-125"
                       />
 
                       {/* Floating image preview */}
-                      <div className="absolute inset-3 rounded shadow-inner overflow-hidden border border-[#1a1a1a]/5">
-                        <img src={tour.image} alt={tour.title} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500" />
+                      <div className="absolute inset-3 rounded-[1.5rem] shadow-inner overflow-hidden border border-white/35">
+                        <img src={tour.image} alt={tour.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]" />
                       </div>
 
                       {tour.isTrending && (
-                        <div className="absolute top-5 left-5 bg-[#1a1a1a] text-white px-2.5 py-0.5 rounded-sm flex items-center gap-1 shadow border border-transparent">
+                        <div className="absolute top-5 left-5 bg-[#2c211b]/92 text-white px-3 py-1 rounded-full flex items-center gap-1 shadow border border-white/10 backdrop-blur-xl">
                           <Flame size={12} className="fill-[#e2533b] text-[#e2533b]" />
                           <span className="text-[9px] font-mono uppercase tracking-widest font-bold">{t('discover.trending')}</span>
                         </div>
@@ -247,29 +247,29 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                     </div>
 
                     {/* Body textual information */}
-                    <div className="p-5 flex flex-col gap-4 flex-1">
+                    <div className="p-6 flex flex-col gap-5 flex-1">
                       <div className="flex justify-between items-start gap-3">
                         <div>
-                          <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a] group-hover:text-[#e2533b] transition-colors leading-tight">
+                          <h2 className="font-serif font-bold text-xl md:text-2xl tracking-[-0.045em] text-[#2c211b] group-hover:text-[#8f4f3b] transition-colors leading-tight">
                             {tour.title}
                           </h2>
-                          <p className="font-sans text-[10px] text-[#1a1a1a]/50 flex items-center gap-1 mt-1 font-medium tracking-wide">
-                            <MapPin size={12} className="text-[#1a1a1a]/50" />
+                          <p className="font-sans text-xs text-[#6f655b] flex items-center gap-1 mt-1 font-medium tracking-wide">
+                            <MapPin size={12} className="text-[#6f655b]" />
                             {tour.location}
                           </p>
                         </div>
-                        <div className="flex items-center gap-1 bg-[#e2533b] text-white px-2 py-0.5 rounded-sm font-semibold select-none">
+                        <div className="flex items-center gap-1 bg-[#b76548] text-white px-2.5 py-1 rounded-full font-semibold select-none">
                           <Star size={11} className="fill-white text-white" />
                           <span className="font-mono text-[10px]">{tour.rating}</span>
                         </div>
                       </div>
 
-                      <p className="font-sans text-xs text-[#1a1a1a]/70 leading-relaxed font-light">
+                      <p className="font-sans text-sm text-[#4c4038] leading-relaxed">
                         {tour.description}
                       </p>
 
                       {/* Numeric meta counters */}
-                      <div className="grid grid-cols-3 gap-2 border-y border-[#1a1a1a]/10 py-3 text-[10px]">
+                      <div className="grid grid-cols-3 gap-2 border-y border-[#4b362a]/10 py-4 text-[10px]">
                         <div className="flex flex-col gap-0.5">
                           <span className="font-sans text-[8px] text-[#1a1a1a]/40 uppercase tracking-widest font-extrabold">{t('discover.duration')}</span>
                           <span className="font-mono font-bold text-[#1a1a1a]">
@@ -294,7 +294,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
                       <button
                         type="button"
                         onClick={() => onPlayTour(tour)}
-                        className="w-full mt-auto bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest py-3 rounded-none shadow transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
+                        className="foodio-btn foodio-btn-primary w-full mt-auto font-mono text-[10px] uppercase tracking-widest cursor-pointer flex items-center justify-center gap-1.5"
                       >
                         <Volume2 size={12} /> {t('discover.start_audio')}
                       </button>
@@ -307,16 +307,16 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
         </div>
       ) : (
         /* ==================== SCREEN 5: COMMUNITY FOOD FEED ==================== */
-        <div className="max-w-md mx-auto px-4 py-6 flex flex-col gap-6 animate-in fade-in duration-350">
+        <div className="max-w-md mx-auto px-4 py-8 flex flex-col gap-6 foodio-reveal">
 
           {/* Feed Local Secondary Toggle Links */}
-          <div className="flex p-0.5 bg-[#f9f7f2] rounded border border-[#1a1a1a]/10 shadow-inner">
+          <div className="flex p-1 bg-[#fffaf4]/88 rounded-full border border-white/70 shadow-[0_18px_46px_rgba(77,49,31,0.1)]">
             <button
               type="button"
               onClick={() => setFeedFilter('forYou')}
               className={`flex-1 py-1.5 text-center rounded-none font-sans text-[10px] tracking-wider uppercase transition-all cursor-pointer ${feedFilter === 'forYou'
-                  ? 'bg-[#1a1a1a] text-white font-bold'
-                  : 'text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5'
+                  ? 'bg-[#2c211b] text-white font-bold rounded-full'
+                  : 'text-[#6f655b] hover:bg-white/70 rounded-full'
                 }`}
             >
               {t('discover.for_you')}
@@ -325,8 +325,8 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
               type="button"
               onClick={() => setFeedFilter('following')}
               className={`flex-1 py-1.5 text-center rounded-none font-sans text-[10px] tracking-wider uppercase transition-all cursor-pointer ${feedFilter === 'following'
-                  ? 'bg-[#1a1a1a] text-white font-bold'
-                  : 'text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5'
+                  ? 'bg-[#2c211b] text-white font-bold rounded-full'
+                  : 'text-[#6f655b] hover:bg-white/70 rounded-full'
                 }`}
             >
               {t('discover.following')}
@@ -356,10 +356,10 @@ export default function PageDiscover({ tours, onPlayTour, searchText }: PageDisc
           {!loading && !error && posts.map((post) => (
             <article
               key={post.id}
-              className={`bg-white rounded-none border-2 shadow-sm overflow-hidden flex flex-col transition-all duration-300 ${
+              className={`bg-[#fffaf4] rounded-[2rem] border shadow-[0_24px_70px_rgba(77,49,31,0.12)] overflow-hidden flex flex-col transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                 post.isRestaurantPost
-                  ? 'border-[#e2533b] shadow-[4px_4px_0px_0px_rgba(226,83,59,0.15)] bg-amber-50/5'
-                  : 'border-[#1a1a1a]/15'
+                  ? 'border-[#b76548]/35 bg-amber-50/20'
+                  : 'border-white/70'
               }`}
             >
               {/* User profile header badge row */}

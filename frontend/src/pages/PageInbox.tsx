@@ -239,16 +239,16 @@ export default function PageInbox({
   };
 
   return (
-    <div className="w-full h-[calc(100vh-72px)] flex bg-[#fdfcf9] overflow-hidden text-[#1a1a1a]">
+    <div className="w-full h-[calc(100vh-72px)] flex bg-[#f7efe4] overflow-hidden text-[#2c211b]">
       
       {/* Left Column Sidebar: Conversations List (Hidden on mobile if actively chatting) */}
-      <aside className={`w-[320px] lg:w-[380px] bg-[#fdfcf9] border-r border-[#1a1a1a]/15 flex-col shrink-0 h-full ${
+      <aside className={`w-[320px] lg:w-[390px] bg-[#fffaf4]/86 border-r border-[#4b362a]/10 flex-col shrink-0 h-full shadow-[18px_0_46px_rgba(77,49,31,0.08)] ${
         mobileView === 'chat' ? 'hidden md:flex' : 'flex'
       }`}>
         {/* Sidebar Header */}
-        <div className="px-5 py-3 bg-[#fdfcf9] border-b border-[#1a1a1a]/15 flex justify-between items-center h-[72px]">
-          <h1 className="font-serif italic font-bold text-lg text-[#1a1a1a]">Inbox // Conversations</h1>
-          <span className="bg-[#e2533b] text-white font-mono text-[9px] uppercase font-bold px-2 py-0.5 rounded-none shadow-xs">
+        <div className="px-5 py-3 bg-[#fffaf4]/94 border-b border-[#4b362a]/10 flex justify-between items-center h-[72px]">
+          <h1 className="font-serif font-bold text-2xl tracking-[-0.05em] text-[#2c211b]">Inbox</h1>
+          <span className="bg-[#b76548] text-white font-mono text-[9px] uppercase font-bold px-3 py-1 rounded-full shadow-xs">
             {threads.filter(t => t.unreadCount > 0).length} New
           </span>
         </div>
@@ -266,30 +266,30 @@ export default function PageInbox({
                     onSelectThread(thread.id);
                     setMobileView('chat');
                   }}
-                  className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-[#f9f7f2] transition-colors select-none ${
-                    isSelected ? 'bg-[#f9f7f2] border-l-4 border-[#e2533b]' : 'border-l-4 border-transparent'
+                  className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-white/70 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] select-none ${
+                    isSelected ? 'bg-white/82 border-l-4 border-[#b76548]' : 'border-l-4 border-transparent'
                   }`}
                 >
                   {/* Channel Avatar badge */}
-                  <div className="relative w-11 h-11 rounded-none overflow-hidden shrink-0 border border-[#1a1a1a]/15 bg-white">
-                    <img src={identity.avatar} alt={identity.name} className="w-full h-full object-cover grayscale" />
+                  <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-white/70 bg-white shadow-[0_12px_30px_rgba(77,49,31,0.1)]">
+                    <img src={identity.avatar} alt={identity.name} className="w-full h-full object-cover" />
                     {thread.id === 'oc_oanh_thread' && (
-                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#e2533b] rounded-full border border-white" />
+                    <div className="absolute bottom-1 right-1 w-2.5 h-2.5 bg-[#b76548] rounded-full border border-white" />
                     )}
                   </div>
 
                   {/* Info Text snippet previews */}
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-0.5">
-                      <h3 className="font-serif italic font-bold text-xs text-[#1a1a1a] truncate">
+                      <h3 className="font-serif font-bold text-sm tracking-[-0.03em] text-[#2c211b] truncate">
                         {identity.name}
                       </h3>
-                      <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 shrink-0">
+                      <span className="font-mono text-[9px] uppercase tracking-wider text-[#8d8074] shrink-0">
                         {formatThreadTime(thread.lastMessageTime)}
                       </span>
                     </div>
                     <p className={`font-sans text-[11px] truncate font-light ${
-                      thread.unreadCount > 0 ? 'text-[#1a1a1a] font-black' : 'text-[#1a1a1a]/60'
+                      thread.unreadCount > 0 ? 'text-[#2c211b] font-black' : 'text-[#6f655b]'
                     }`}>
                       {thread.lastMessageText}
                     </p>
@@ -297,7 +297,7 @@ export default function PageInbox({
 
                   {/* Unread circle bubble */}
                   {thread.unreadCount > 0 && (
-                    <div className="w-2 h-2 bg-[#e2533b] rounded-none shrink-0" />
+                    <div className="w-2 h-2 bg-[#b76548] rounded-full shrink-0" />
                   )}
                 </div>
               );
@@ -305,8 +305,8 @@ export default function PageInbox({
           </div>
 
           {canStartRestaurantThread && visibleRestaurants.length > 0 && (
-            <div className="border-t border-[#1a1a1a]/15 p-4">
-              <p className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/45 mb-3">
+            <div className="border-t border-[#4b362a]/10 p-4">
+              <p className="font-mono text-[9px] uppercase tracking-wider text-[#8d8074] mb-3">
                 Contact another restaurant
               </p>
               <div className="space-y-2">
@@ -316,12 +316,12 @@ export default function PageInbox({
                     type="button"
                     onClick={() => void handleStartThread(restaurant.id)}
                     disabled={startingRestaurantId !== null}
-                    className="w-full bg-white border border-[#1a1a1a]/15 hover:border-[#e2533b] disabled:opacity-60 text-left p-2.5 flex items-center gap-2.5 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                    className="w-full bg-[#fffdf8] border border-[#4b362a]/10 hover:border-[#b76548]/40 disabled:opacity-60 text-left p-3 flex items-center gap-2.5 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer disabled:cursor-not-allowed rounded-2xl"
                   >
                     <img
                       src={restaurant.image}
                       alt={restaurant.name}
-                      className="w-10 h-10 object-cover grayscale border border-[#1a1a1a]/15 shrink-0"
+                      className="w-10 h-10 object-cover rounded-xl border border-[#4b362a]/10 shrink-0"
                     />
                     <div className="min-w-0 flex-1">
                       <h3 className="font-serif italic font-bold text-xs text-[#1a1a1a] truncate">{restaurant.name}</h3>
@@ -348,15 +348,15 @@ export default function PageInbox({
       </aside>
 
       {/* Main Column Chat Window Frame */}
-      <section className={`flex-1 flex flex-col h-full bg-surface relative ${
+      <section className={`flex-1 flex flex-col h-full bg-[#f7efe4] relative ${
         mobileView === 'threads' ? 'hidden md:flex' : 'flex'
       }`}>
         {!activeThread ? (
-          <div className="flex-1 flex flex-col bg-[#fcfbfa]">
-            <div className="h-[72px] px-5 border-b border-[#1a1a1a]/15 bg-white flex items-center justify-between shrink-0">
+          <div className="flex-1 flex flex-col bg-[#f7efe4]">
+            <div className="h-[72px] px-5 border-b border-[#4b362a]/10 bg-[#fffaf4]/88 flex items-center justify-between shrink-0">
               <div>
-                <h2 className="font-serif italic font-bold text-sm text-[#1a1a1a]">Start a conversation</h2>
-                <p className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b]">
+                <h2 className="font-serif font-bold text-xl tracking-[-0.04em] text-[#2c211b]">Start a conversation</h2>
+                <p className="font-mono text-[9px] uppercase tracking-wider text-[#b76548]">
                   {canStartRestaurantThread ? 'Choose a restaurant to inbox' : 'No customer conversations yet'}
                 </p>
               </div>
@@ -371,12 +371,12 @@ export default function PageInbox({
                       type="button"
                       onClick={() => void handleStartThread(restaurant.id)}
                       disabled={startingRestaurantId !== null}
-                      className="bg-white border border-[#1a1a1a]/15 hover:border-[#e2533b] disabled:opacity-60 text-left p-3 flex items-center gap-3 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                      className="bg-[#fffaf4] border border-white/70 hover:border-[#b76548]/40 disabled:opacity-60 text-left p-4 flex items-center gap-3 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer disabled:cursor-not-allowed rounded-[1.5rem] shadow-[0_18px_46px_rgba(77,49,31,0.1)]"
                     >
                       <img
                         src={restaurant.image}
                         alt={restaurant.name}
-                        className="w-12 h-12 object-cover grayscale border border-[#1a1a1a]/15 shrink-0"
+                        className="w-12 h-12 object-cover rounded-2xl border border-white/70 shrink-0"
                       />
                       <div className="min-w-0 flex-1">
                         <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] truncate">{restaurant.name}</h3>
@@ -402,31 +402,31 @@ export default function PageInbox({
           <>
         
         {/* Chat Header panel, matches layout specs */}
-        <div className="h-[72px] px-5 border-b border-[#1a1a1a]/15 bg-white flex items-center justify-between shrink-0 z-10 shadow-xs">
+        <div className="h-[72px] px-5 border-b border-[#4b362a]/10 bg-[#fffaf4]/90 flex items-center justify-between shrink-0 z-10 shadow-xs">
           
           <div className="flex items-center gap-3 min-w-0">
             {/* Mobile Back button */}
             <button 
               onClick={() => setMobileView('threads')}
-              className="md:hidden p-1.5 -ml-1 text-[#1a1a1a]/70 hover:bg-[#f9f7f2] rounded-none transition-colors flex items-center justify-center cursor-pointer"
+              className="md:hidden p-1.5 -ml-1 text-[#6f655b] hover:bg-[#f0e5d8] rounded-full transition-colors flex items-center justify-center cursor-pointer"
             >
               <ArrowLeft size={18} />
             </button>
 
             {/* User header avatar */}
-            <div className="relative w-10 h-10 rounded-none overflow-hidden shrink-0 border border-[#1a1a1a]/15 bg-white">
-              <img src={activeIdentity?.avatar} alt={activeIdentity?.name} className="w-full h-full object-cover grayscale" />
+            <div className="relative w-11 h-11 rounded-2xl overflow-hidden shrink-0 border border-white/70 bg-white shadow-[0_12px_30px_rgba(77,49,31,0.1)]">
+              <img src={activeIdentity?.avatar} alt={activeIdentity?.name} className="w-full h-full object-cover" />
             </div>
 
             <div className="min-w-0">
-              <h2 className="font-serif italic font-bold text-xs text-[#1a1a1a] flex items-center gap-1.5">
+              <h2 className="font-serif font-bold text-base tracking-[-0.035em] text-[#2c211b] flex items-center gap-1.5">
                 {activeIdentity?.name}
                 {!isOwnerView && activeThread.restaurantId === 'oc_oanh' && (
-                  <BadgeCheck size={15} className="fill-[#e2533b] text-white inline-block select-none" />
+                  <BadgeCheck size={15} className="fill-[#b76548] text-white inline-block select-none" />
                 )}
               </h2>
-              <p className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-[#e2533b] rounded-full animate-pulse" />
+              <p className="font-mono text-[9px] uppercase tracking-wider text-[#b76548] flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-[#b76548] rounded-full animate-pulse" />
                 {activeIdentity?.statusText}
               </p>
             </div>
@@ -436,11 +436,11 @@ export default function PageInbox({
           <div className="flex gap-1.5">
             <button 
               onClick={startMockCall}
-              className="p-2 text-[#1a1a1a] hover:text-[#e2533b] hover:bg-[#f9f7f2] rounded-none transition-all flex items-center justify-center cursor-pointer"
+              className="p-2 text-[#2c211b] hover:text-[#8f4f3b] hover:bg-[#f0e5d8] rounded-full transition-all flex items-center justify-center cursor-pointer"
             >
               <Phone size={18} />
             </button>
-            <button className="p-2 text-[#1a1a1a]/60 hover:text-[#1a1a1a] hover:bg-[#f9f7f2] rounded-none transition-colors flex items-center justify-center cursor-pointer">
+            <button className="p-2 text-[#6f655b] hover:text-[#2c211b] hover:bg-[#f0e5d8] rounded-full transition-colors flex items-center justify-center cursor-pointer">
               <MoreVertical size={18} />
             </button>
           </div>
@@ -448,11 +448,11 @@ export default function PageInbox({
         </div>
 
         {/* Messages Stream viewport area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col bg-[#fcfbfa]">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 flex flex-col bg-[radial-gradient(circle_at_12%_0%,rgba(183,101,72,0.08),transparent_28rem),#f7efe4]">
           
           {/* Calendar separator */}
           <div className="flex justify-center my-1 select-none">
-            <span className="bg-[#f9f7f2] text-[#1a1a1a]/60 font-mono text-[9px] uppercase tracking-wider px-3.5 py-1 rounded-none shadow-xs border border-[#1a1a1a]/10">
+            <span className="bg-[#fffaf4]/88 text-[#6f655b] font-mono text-[9px] uppercase tracking-wider px-4 py-1.5 rounded-full shadow-xs border border-white/70">
               Today
             </span>
           </div>
@@ -488,8 +488,8 @@ export default function PageInbox({
                 className={`flex flex-col group ${isSystem ? 'items-center' : isOwnMessage ? 'items-end' : 'items-start'}`}
               >
                 {isBooking ? (
-                  <div className="w-full max-w-[360px] bg-[#fff7ed] text-[#1a1a1a] border-2 border-[#e2533b] p-3.5 shadow-xs rounded-none">
-                    <p className="font-mono text-[9px] uppercase tracking-widest text-[#e2533b] font-black mb-2">
+                  <div className="w-full max-w-[360px] bg-[#fff7ed] text-[#2c211b] border border-[#b76548]/30 p-4 shadow-[0_18px_46px_rgba(77,49,31,0.1)] rounded-3xl">
+                    <p className="font-mono text-[9px] uppercase tracking-widest text-[#8f4f3b] font-black mb-2">
                       Booking Confirmed
                     </p>
                     <div className="grid grid-cols-2 gap-2 font-sans text-xs">
@@ -507,10 +507,10 @@ export default function PageInbox({
                     </p>
                   </div>
                 ) : isImage ? (
-                  <div className={`max-w-[85%] md:max-w-[70%] p-2 shadow-xs rounded-none border ${
+                  <div className={`max-w-[85%] md:max-w-[70%] p-2 shadow-[0_18px_46px_rgba(77,49,31,0.1)] rounded-3xl border ${
                     isOwnMessage
-                      ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
-                      : 'bg-white text-[#1a1a1a] border-[#1a1a1a]/15'
+                      ? 'bg-[#2c211b] text-white border-[#2c211b]'
+                      : 'bg-[#fffaf4] text-[#2c211b] border-white/70'
                   }`}>
                     <img
                       src={msg.imageData!}
@@ -524,10 +524,10 @@ export default function PageInbox({
                     )}
                   </div>
                 ) : (
-                  <div className={`max-w-[85%] md:max-w-[70%] text-xs md:text-sm p-3.5 shadow-xs transition-transform transform origin-bottom rounded-none border ${
+                  <div className={`max-w-[85%] md:max-w-[70%] text-xs md:text-sm px-4 py-3 shadow-[0_18px_46px_rgba(77,49,31,0.1)] transition-transform transform origin-bottom rounded-3xl border ${
                     isOwnMessage 
-                      ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]' 
-                      : 'bg-white text-[#1a1a1a] border-[#1a1a1a]/15'
+                      ? 'bg-[#2c211b] text-white border-[#2c211b]' 
+                      : 'bg-[#fffaf4] text-[#2c211b] border-white/70'
                   }`}>
                     <p className="font-sans leading-relaxed font-light">{msg.text}</p>
                   </div>
@@ -550,12 +550,12 @@ export default function PageInbox({
         </div>
 
         {/* Input layout frame text-input box, matches screenshot fully */}
-        <div className="p-3 bg-[#fdfcf9] border-t border-[#1a1a1a]/15 shrink-0">
-          <form onSubmit={handleSend} className="flex items-center gap-2 bg-white rounded-none border border-[#1a1a1a]/15 pr-2 pl-3 py-1 shadow-xs transition-all">
+        <div className="p-3 md:p-4 bg-[#fffaf4]/88 border-t border-white/70 shrink-0 backdrop-blur-xl">
+          <form onSubmit={handleSend} className="flex items-center gap-2 bg-white/88 rounded-full border border-[#4b362a]/10 pr-2 pl-3 py-1.5 shadow-[0_12px_30px_rgba(77,49,31,0.1)] transition-all">
             <button 
               type="button"
               onClick={() => imageInputRef.current?.click()}
-              className="p-1.5 text-[#1a1a1a]/40 hover:text-[#e2533b] transition-colors flex items-center justify-center rounded-none cursor-pointer"
+              className="p-1.5 text-[#8d8074] hover:text-[#8f4f3b] transition-colors flex items-center justify-center rounded-full cursor-pointer"
               aria-label="Upload image"
             >
               <Image size={20} />
@@ -573,14 +573,14 @@ export default function PageInbox({
               type="text" 
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 font-sans text-xs md:text-sm text-[#1a1a1a] placeholder:text-[#1a1a1a]/45 py-1.5 font-light"
+              className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 font-sans text-xs md:text-sm text-[#2c211b] placeholder:text-[#8d8074] py-2"
               placeholder={`Message ${activeIdentity?.name || 'conversation'}...`}
             />
 
             <button 
               type="submit"
               aria-label="Send text messages"
-              className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white p-2 rounded-none flex items-center justify-center transition-all shadow active:scale-90 cursor-pointer"
+              className="bg-[#2c211b] hover:bg-[#8f4f3b] text-white p-2.5 rounded-full flex items-center justify-center transition-all shadow active:scale-90 cursor-pointer"
             >
               <Send size={14} className="fill-current" />
             </button>

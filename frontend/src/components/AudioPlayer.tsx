@@ -222,7 +222,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
   };
 
   return (
-    <div className="fixed bottom-[72px] md:bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[60] animate-in fade-in slide-in-from-bottom duration-300">
+    <div className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[70] animate-in fade-in slide-in-from-bottom duration-300">
       <style>{`
         @keyframes visualizer-bounce {
           0%, 100% {
@@ -234,30 +234,30 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
         }
       `}</style>
 
-      <div className="bg-[#fdfcf9] border-2 border-[#1a1a1a] rounded-none p-5 shadow-2xl flex flex-col gap-4">
+      <div className="bg-[#fffaf4]/94 border border-white/70 rounded-[2rem] p-5 shadow-[0_24px_70px_rgba(77,49,31,0.22)] flex flex-col gap-4 backdrop-blur-xl">
         {/* Header Title Information */}
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-none overflow-hidden shrink-0 border border-[#1a1a1a]">
-            <img src={tour.image} alt={tour.title} className="w-full h-full object-cover grayscale" />
+          <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 border border-white/70 shadow-[0_12px_30px_rgba(77,49,31,0.12)]">
+            <img src={tour.image} alt={tour.title} className="w-full h-full object-cover" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-start">
               <div>
-                <span className="font-mono text-[8px] tracking-widest text-white bg-[#e2533b] uppercase px-2 py-0.5 rounded-none font-bold select-none">
+                <span className="font-mono text-[8px] tracking-widest text-white bg-[#b76548] uppercase px-2.5 py-1 rounded-full font-bold select-none">
                   Live Audio Guide
                 </span>
-                <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] truncate mt-1">
+                <h3 className="font-serif font-bold text-base tracking-[-0.035em] text-[#2c211b] truncate mt-1">
                   {tour.title}
                 </h3>
               </div>
               <button 
                 onClick={onClose}
-                className="text-[#1a1a1a]/60 hover:text-[#e2533b] transition-colors p-1"
+                className="text-[#6f655b] hover:text-[#8f4f3b] transition-colors p-1 rounded-full"
               >
                 <X size={15} strokeWidth={3} />
               </button>
             </div>
-            <p className="font-sans text-[10px] text-[#1a1a1a]/60 truncate font-light tracking-wide">
+            <p className="font-sans text-[11px] text-[#6f655b] truncate tracking-wide">
               {tour.location} • {tour.vibe}
             </p>
           </div>
@@ -294,8 +294,8 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           })}
         </div>}
 
-        {tour.audioData && <div className="bg-white border border-[#1a1a1a]/10 p-3 max-h-24 overflow-y-auto">
-          <p className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b] font-bold mb-1">
+        {tour.audioData && <div className="bg-[#fffdf8] border border-[#4b362a]/10 p-3 max-h-24 overflow-y-auto rounded-2xl">
+          <p className="font-mono text-[9px] uppercase tracking-wider text-[#8f4f3b] font-bold mb-1">
             {isLoadingNarrative ? 'Generating audio narration...' : 'Audio narration'}
           </p>
           <p className="font-sans text-[11px] leading-relaxed text-[#1a1a1a]/75">
@@ -305,10 +305,10 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
 
         {/* Scrubbing slider & progress ticks */}
         {tour.audioData && <div className="flex flex-col gap-1">
-          <div className="relative w-full h-1.5 bg-[#1a1a1a]/15 rounded-none overflow-hidden cursor-pointer group">
+          <div className="relative w-full h-2 bg-[#4b362a]/12 rounded-full overflow-hidden cursor-pointer group">
             <div 
               style={{ width: `${progress}%` }}
-              className="absolute left-0 top-0 h-full bg-[#1a1a1a] rounded-none group-hover:bg-[#e2533b] transition-all"
+              className="absolute left-0 top-0 h-full bg-[#2c211b] rounded-full group-hover:bg-[#b76548] transition-all"
             />
             <input 
               type="range" 
@@ -339,7 +339,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
         {tour.audioData && <div className="flex items-center justify-center gap-6">
           <button 
             type="button"
-            className="text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-95 transition-transform"
+            className="text-[#6f655b] hover:text-[#8f4f3b] active:scale-95 transition-transform"
             onClick={() => handleSeek(progress - 10)}
           >
             <RotateCcw size={20} />
@@ -347,7 +347,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
 
           <button
             type="button"
-            className="w-10 h-10 bg-[#e2533b] hover:bg-[#1a1a1a] text-white rounded-none flex items-center justify-center shadow active:scale-95 transition-all cursor-pointer"
+            className="w-11 h-11 bg-[#b76548] hover:bg-[#2c211b] text-white rounded-full flex items-center justify-center shadow active:scale-95 transition-all cursor-pointer"
             onClick={togglePlay}
           >
             {isPlaying ? <Pause size={20} className="fill-current" /> : <Play size={20} className="fill-current" />}
@@ -355,7 +355,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
 
           <button 
             type="button"
-            className="text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-95 transition-transform"
+            className="text-[#6f655b] hover:text-[#8f4f3b] active:scale-95 transition-transform"
             onClick={() => handleSeek(progress + 10)}
           >
             <RotateCw size={20} />

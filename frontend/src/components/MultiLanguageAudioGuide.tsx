@@ -830,12 +830,12 @@ export default function MultiLanguageAudioGuide({
   };
 
   return (
-    <section className={`bg-white border border-[#1a1a1a]/15 p-3 flex flex-col gap-3 text-left ${className}`}>
+    <section className={`bg-[#fffdf8] border border-[#4b362a]/10 p-4 flex flex-col gap-3 text-left rounded-3xl shadow-[0_18px_46px_rgba(77,49,31,0.08)] ${className}`}>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] truncate">{title}</h3>
+          <h3 className="font-serif font-bold text-base tracking-[-0.035em] text-[#2c211b] truncate">{title}</h3>
         </div>
-        {isTranslating && <Loader2 size={16} className="animate-spin text-[#e2533b] shrink-0" />}
+        {isTranslating && <Loader2 size={16} className="animate-spin text-[#b76548] shrink-0" />}
       </div>
 
       <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
@@ -843,7 +843,7 @@ export default function MultiLanguageAudioGuide({
           <button
             type="button"
             onClick={() => setIsLanguageMenuOpen((open) => !open)}
-            className="w-full min-w-0 bg-[#fdfcf9] border-2 border-[#1a1a1a] px-2 py-2 font-mono text-[10px] uppercase tracking-wider focus:outline-none flex items-center justify-between gap-2"
+            className="w-full min-w-0 bg-[#fffaf4] border border-[#4b362a]/10 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider focus:outline-none flex items-center justify-between gap-2 rounded-full"
             aria-label="Select narration language"
             aria-expanded={isLanguageMenuOpen}
           >
@@ -852,9 +852,9 @@ export default function MultiLanguageAudioGuide({
           </button>
 
           {isLanguageMenuOpen && (
-            <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] bg-white border-2 border-[#1a1a1a] shadow-[4px_4px_0px_0px_#1a1a1a]">
-              <div className="p-2 border-b border-[#1a1a1a]/15 flex items-center gap-2">
-                <Search size={14} className="text-[#e2533b] shrink-0" />
+            <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[80] bg-[#fffaf4] border border-[#4b362a]/10 shadow-[0_18px_46px_rgba(77,49,31,0.18)] rounded-2xl overflow-hidden">
+              <div className="p-2 border-b border-[#4b362a]/10 flex items-center gap-2">
+                <Search size={14} className="text-[#b76548] shrink-0" />
                 <input
                   value={languageQuery}
                   onChange={(event) => setLanguageQuery(event.target.value)}
@@ -869,8 +869,8 @@ export default function MultiLanguageAudioGuide({
                     key={language.code}
                     type="button"
                     onClick={() => selectLanguage(language)}
-                    className={`w-full px-3 py-2 text-left font-mono text-[10px] uppercase tracking-wider hover:bg-[#f9f7f2] flex items-center justify-between ${
-                      language.code === targetLang ? 'bg-[#1a1a1a] text-white hover:bg-[#1a1a1a]' : 'text-[#1a1a1a]'
+                    className={`w-full px-3 py-2 text-left font-mono text-[10px] uppercase tracking-wider hover:bg-[#f5eadf] flex items-center justify-between ${
+                      language.code === targetLang ? 'bg-[#2c211b] text-white hover:bg-[#2c211b]' : 'text-[#2c211b]'
                     }`}
                   >
                     <span>{language.label}</span>
@@ -891,7 +891,7 @@ export default function MultiLanguageAudioGuide({
           type="button"
           onClick={stop}
           disabled={!isPlaying && !isPaused && progress === 0}
-          className="w-10 h-10 bg-white disabled:bg-[#1a1a1a]/5 text-[#1a1a1a] disabled:text-[#1a1a1a]/25 hover:text-[#e2533b] flex items-center justify-center border-2 border-[#1a1a1a] transition-colors cursor-pointer disabled:cursor-not-allowed"
+          className="w-10 h-10 bg-white disabled:bg-[#4b362a]/5 text-[#2c211b] disabled:text-[#2c211b]/25 hover:text-[#8f4f3b] flex items-center justify-center border border-[#4b362a]/10 transition-colors cursor-pointer disabled:cursor-not-allowed rounded-full"
           aria-label="Stop narration"
         >
           <Square size={14} className="fill-current" />
@@ -899,10 +899,10 @@ export default function MultiLanguageAudioGuide({
       </div>
 
       <div className="flex flex-col gap-1">
-        <div className="relative w-full h-1.5 bg-[#1a1a1a]/15 overflow-hidden cursor-pointer group">
+        <div className="relative w-full h-2 bg-[#4b362a]/12 overflow-hidden cursor-pointer group rounded-full">
           <div
             style={{ width: `${progress}%` }}
-            className="absolute left-0 top-0 h-full bg-[#1a1a1a] group-hover:bg-[#e2533b] transition-colors"
+            className="absolute left-0 top-0 h-full bg-[#2c211b] group-hover:bg-[#b76548] transition-colors rounded-full"
           />
           <input
             type="range"
@@ -936,7 +936,7 @@ export default function MultiLanguageAudioGuide({
           type="button"
           onClick={() => seekBySeconds(-10)}
           disabled={disabled || progress <= 0}
-          className="w-9 h-9 text-[#1a1a1a]/65 disabled:text-[#1a1a1a]/25 hover:text-[#e2533b] flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed"
+          className="w-9 h-9 text-[#6f655b] disabled:text-[#2c211b]/25 hover:text-[#8f4f3b] flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed"
           aria-label="Rewind narration 10 seconds"
         >
           <RotateCcw size={20} />
@@ -946,7 +946,7 @@ export default function MultiLanguageAudioGuide({
           type="button"
           onClick={speak}
           disabled={disabled}
-          className="w-10 h-10 bg-[#1a1a1a] disabled:bg-[#1a1a1a]/25 text-white hover:bg-[#e2533b] flex items-center justify-center border-2 border-[#1a1a1a] transition-colors cursor-pointer disabled:cursor-not-allowed"
+          className="w-11 h-11 bg-[#2c211b] disabled:bg-[#2c211b]/25 text-white hover:bg-[#8f4f3b] flex items-center justify-center border border-[#2c211b] transition-colors cursor-pointer disabled:cursor-not-allowed rounded-full"
           aria-label={isPlaying && !isPaused ? 'Pause narration' : 'Play narration'}
         >
           {isPlaying && !isPaused ? <Pause size={17} className="fill-current" /> : <Play size={17} className="fill-current" />}
@@ -956,15 +956,15 @@ export default function MultiLanguageAudioGuide({
           type="button"
           onClick={() => seekBySeconds(10)}
           disabled={disabled || progress >= 100}
-          className="w-9 h-9 text-[#1a1a1a]/65 disabled:text-[#1a1a1a]/25 hover:text-[#e2533b] flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed"
+          className="w-9 h-9 text-[#6f655b] disabled:text-[#2c211b]/25 hover:text-[#8f4f3b] flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed"
           aria-label="Forward narration 10 seconds"
         >
           <RotateCw size={20} />
         </button>
       </div>
 
-      <div className="bg-[#fdfcf9] border border-[#1a1a1a]/10 p-3 max-h-28 overflow-y-auto">
-        <p className="font-sans text-[11px] leading-relaxed text-[#1a1a1a]/75">
+      <div className="bg-[#f7efe4] border border-[#4b362a]/10 p-3 max-h-28 overflow-y-auto rounded-2xl">
+        <p className="font-sans text-[11px] leading-relaxed text-[#4c4038]">
           {isTranslating ? 'Translating narration...' : translatedText || cleanSourceText}
         </p>
       </div>

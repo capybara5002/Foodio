@@ -124,19 +124,19 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
   };
 
   return (
-    <div className="w-full bg-[#fdfcf9] pb-24 text-on-surface">
+    <div className="foodio-page w-full pb-32 text-on-surface">
       
       {/* Immersive Photo Hero Header Banner Section */}
       <div 
-        className="relative w-full h-[320px] bg-cover bg-center border-b border-[#1a1a1a]/10"
+        className="relative w-full h-[420px] bg-cover bg-center"
         style={{ backgroundImage: `url('${restaurant.image}')` }}
       >
         {/* Absolute Floating Controllers */}
-        <div className="absolute top-4 left-0 w-full flex justify-between items-center px-4 z-10 pt-4">
+        <div className="absolute top-5 left-0 w-full flex justify-between items-center px-4 md:px-8 z-10 pt-4">
           <button 
             type="button"
             onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center rounded-sm bg-white border border-[#1a1a1a]/25 shadow text-on-surface hover:bg-[#f9f7f2] active:scale-95 transition-transform cursor-pointer"
+            className="w-11 h-11 flex items-center justify-center rounded-full bg-[#fffaf4]/90 border border-white/60 shadow-[0_18px_46px_rgba(77,49,31,0.18)] text-on-surface hover:bg-white active:scale-95 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer backdrop-blur-xl"
           >
             <ArrowLeft size={20} />
           </button>
@@ -145,14 +145,14 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
             <button 
               type="button"
               onClick={handleShare}
-              className="w-10 h-10 flex items-center justify-center rounded-sm bg-white border border-[#1a1a1a]/25 shadow text-on-surface hover:bg-[#f9f7f2] active:scale-95 transition-transform cursor-pointer"
+                className="w-11 h-11 flex items-center justify-center rounded-full bg-[#fffaf4]/90 border border-white/60 shadow-[0_18px_46px_rgba(77,49,31,0.18)] text-on-surface hover:bg-white active:scale-95 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer backdrop-blur-xl"
             >
               <Share2 size={20} />
             </button>
             <button 
               type="button"
               onClick={() => setIsFavorite(!isFavorite)}
-              className="w-10 h-10 flex items-center justify-center rounded-sm bg-white border border-[#1a1a1a]/25 shadow hover:bg-[#f9f7f2] active:scale-95 transition-transform cursor-pointer"
+                className="w-11 h-11 flex items-center justify-center rounded-full bg-[#fffaf4]/90 border border-white/60 shadow-[0_18px_46px_rgba(77,49,31,0.18)] hover:bg-white active:scale-95 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer backdrop-blur-xl"
             >
               {isFavorite ? (
                 <Heart size={20} className="fill-[#e2533b] text-[#e2533b]" />
@@ -164,35 +164,35 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
         </div>
 
         {/* Bottom fading vignette */}
-        <div className="absolute bottom-0 w-full h-24 bg-gradient-to-t from-[#fdfcf9] to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#2c211b]/25 via-transparent to-[#f7efe4] pointer-events-none" />
       </div>
 
       {/* Main Content Layout Sheet Container - Magazine open spread aesthetic */}
-      <main className="relative -mt-10 bg-white border-t-2 border-[#1a1a1a] pt-8 px-5 md:px-8 flex flex-col gap-6 z-20 max-w-2xl mx-auto shadow-md">
+      <main className="relative -mt-24 bg-[#fffaf4]/96 border border-white/70 pt-8 px-5 md:px-8 flex flex-col gap-7 z-20 max-w-3xl mx-4 md:mx-auto shadow-[0_24px_70px_rgba(77,49,31,0.16)] rounded-[2rem] backdrop-blur-sm foodio-reveal">
         
         {/* Title and Badge specifications */}
         <section className="flex flex-col gap-2">
           <div className="flex justify-between items-start gap-4">
             <div>
-              <span className="text-[10px] tracking-[0.3em] uppercase text-[#e2533b] font-extrabold block mb-1">STREET FOOD SELECTION</span>
-              <h1 className="font-serif italic font-bold text-headline-lg-mobile md:text-headline-lg text-[#1a1a1a] leading-none">
+              <span className="foodio-eyebrow mb-3">Local favourite</span>
+              <h1 className="font-serif font-bold text-4xl md:text-6xl tracking-[-0.06em] text-[#2c211b] leading-[0.95] text-wrap-balance">
                 {restaurant.name}
                 {restaurant.isVerified && (
-                  <BadgeCheck size={18} className="ml-2 inline-block fill-[#e2533b] text-white select-none align-middle" />
+                  <BadgeCheck size={22} className="ml-2 inline-block fill-[#b76548] text-white select-none align-middle" />
                 )}
               </h1>
             </div>
             
-            <div className="flex items-center gap-1.5 bg-[#e2533b] text-white px-3 py-1.5 rounded-none shadow-sm shrink-0 select-none">
+            <div className="flex items-center gap-1.5 bg-[#2c211b] text-white px-3 py-2 rounded-full shadow-sm shrink-0 select-none">
               <Star size={15} className="fill-white text-white" />
               <span className="font-mono text-xs font-black">{restaurant.rating}</span>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60 pt-2 border-t border-[#1a1a1a]/10 mt-2">
-            <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2.5 py-1 rounded-none font-bold text-[#1a1a1a]">{restaurant.priceRange}</span>
-            <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2.5 py-1 rounded-none font-bold text-[#1a1a1a]">{restaurant.category}</span>
-            <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2.5 py-1 rounded-none font-bold text-[#1a1a1a]">Vietnamese</span>
+          <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-[#6f655b] pt-4 border-t border-[#4b362a]/10 mt-4">
+            <span className="bg-[#f5eadf] border border-[#4b362a]/10 px-3 py-1 rounded-full font-bold text-[#2c211b]">{restaurant.priceRange}</span>
+            <span className="bg-[#f5eadf] border border-[#4b362a]/10 px-3 py-1 rounded-full font-bold text-[#2c211b]">{restaurant.category}</span>
+            <span className="bg-[#f5eadf] border border-[#4b362a]/10 px-3 py-1 rounded-full font-bold text-[#2c211b]">Vietnamese</span>
             <span className="flex items-center gap-1 text-[#e2533b] font-bold ml-1">
               <MapPin size={14} className="text-[#e2533b]" />
               {restaurant.distance}
@@ -205,7 +205,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
           <button 
             type="button"
             onClick={() => setShowAudioGuide((current) => !current)}
-            className="flex-1 flex items-center justify-center gap-1.5 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3.5 px-4 rounded-none shadow-md active:scale-98 transition-all font-mono text-[10px] uppercase tracking-widest cursor-pointer"
+            className="foodio-btn foodio-btn-primary group flex-1 font-mono text-[10px] uppercase tracking-widest cursor-pointer"
           >
             <Volume2 size={14} /> {t('detail.play_audio')}
           </button>
@@ -214,7 +214,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
             type="button"
             onClick={onGoToChat}
             aria-label="Direct message with restaurant owner"
-            className="flex items-center justify-center gap-2 bg-white border border-[#1a1a1a]/25 text-on-surface hover:bg-[#f9f7f2] rounded-none shadow-sm active:scale-95 transition-transform cursor-pointer px-4 h-12 font-mono text-[10px] uppercase tracking-widest font-bold"
+            className="foodio-btn foodio-btn-secondary h-12 font-mono text-[10px] uppercase tracking-widest cursor-pointer"
           >
             <MessageSquare size={18} />
             {t('nav.contact')}
@@ -230,13 +230,13 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
         )}
 
         {restaurant.description && (
-          <section className="text-xs md:text-sm text-[#1a1a1a]/80 leading-relaxed font-sans border-l-3 border-[#e2533b] pl-3.5 italic py-1 bg-[#fdfcf9] border border-[#1a1a1a]/10 rounded-sm">
+          <section className="text-sm md:text-base text-[#4c4038] leading-relaxed font-sans border-l border-[#b76548]/40 pl-4 py-2 bg-[#fff8ef] rounded-2xl">
             {restaurant.description}
           </section>
         )}
 
         {/* Contact and address specification box */}
-        <section className="flex flex-col gap-3 p-4 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-xs text-[#1a1a1a]">
+        <section className="flex flex-col gap-3 p-4 bg-[#f5eadf] border border-[#4b362a]/10 text-sm text-[#2c211b] rounded-3xl">
           
           <div className="flex items-start gap-3">
             <Map size={18} className="text-[#e2533b] mt-0.5 select-none" />
@@ -262,7 +262,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
         {/* Menu signature dishes highlighting bento lists */}
         <section className="flex flex-col gap-3">
           <div className="flex justify-between items-baseline border-b border-[#1a1a1a]/10 pb-2 mb-2">
-            <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">{t('detail.signature_dishes')}</h2>
+            <h2 className="font-serif font-bold text-xl md:text-2xl tracking-[-0.04em] text-[#2c211b]">{t('detail.signature_dishes')}</h2>
             {restaurant.dishes.length > 2 && (
               <button 
                 onClick={() => setShowAllDishes(!showAllDishes)}
@@ -277,11 +277,11 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
             {(showAllDishes ? restaurant.dishes : restaurant.dishes.slice(0, 2)).map((dish) => (
               <div 
                 key={dish.id} 
-                className="bg-white border border-[#1a1a1a]/15 rounded-none overflow-hidden shadow-xs flex flex-col relative group hover:border-[#e2533b]/45 transition-colors"
+                className="bg-[#fffdf8] border border-[#4b362a]/10 rounded-[1.5rem] overflow-hidden shadow-[0_18px_46px_rgba(77,49,31,0.1)] flex flex-col relative group hover:border-[#b76548]/35 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
               >
                 {/* Image panel */}
                 <div 
-                  className="h-28 w-full bg-cover bg-center filter grayscale group-hover:grayscale-0 transition-all duration-300"
+                  className="h-32 w-full bg-cover bg-center group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
                   style={{ backgroundImage: `url('${dish.image}')` }}
                 />
                 
@@ -309,7 +309,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
         {/* Foodie list reviews */}
         <section className="flex flex-col gap-3 pb-12">
           <div className="border-b border-[#1a1a1a]/10 pb-2 mb-2 flex items-center justify-between gap-3">
-            <h2 className="font-serif italic font-bold text-base md:text-lg text-[#1a1a1a]">{t('detail.foodie_reviews')}</h2>
+            <h2 className="font-serif font-bold text-xl md:text-2xl tracking-[-0.04em] text-[#2c211b]">{t('detail.foodie_reviews')}</h2>
             <button
               type="button"
               onClick={() => {
@@ -317,7 +317,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                   setShowReviewForm((current) => !current);
                 });
               }}
-              className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[9px] uppercase tracking-wider px-3.5 py-1.5 shadow-xs active:scale-95 transition-all cursor-pointer font-bold shrink-0"
+              className="rounded-full bg-[#2c211b] hover:bg-[#8f4f3b] text-white font-mono text-[10px] uppercase tracking-wider px-4 py-2 shadow-xs active:scale-95 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer font-bold shrink-0"
             >
               {showReviewForm ? t('detail.close_review_form') : t('detail.write_review')}
             </button>
@@ -325,7 +325,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
 
           {/* Write Review Form */}
           {showReviewForm && (
-            <form onSubmit={handleCreateReview} className="bg-white p-5 border border-[#1a1a1a]/15 shadow-sm flex flex-col gap-4 text-left">
+            <form onSubmit={handleCreateReview} className="bg-[#fffdf8] p-5 border border-[#4b362a]/10 shadow-[0_18px_46px_rgba(77,49,31,0.1)] rounded-3xl flex flex-col gap-4 text-left">
               <div className="flex flex-col gap-1.5">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold select-none">
                   {t('review_form.question')}
@@ -478,7 +478,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
               filteredReviews.map((rev) => (
                 <div 
                   key={rev.id}
-                  className="min-w-[280px] md:min-w-[340px] bg-white p-4 rounded-none shadow-xs border border-[#1a1a1a]/15 flex flex-col gap-2 shrink-0 relative text-left"
+                  className="min-w-[280px] md:min-w-[340px] bg-[#fffdf8] p-5 rounded-[1.5rem] shadow-[0_18px_46px_rgba(77,49,31,0.1)] border border-[#4b362a]/10 flex flex-col gap-2 shrink-0 relative text-left"
                 >
                   {/* Visual quotation mark mark */}
                   <span className="absolute right-3 top-3 font-serif italic text-6xl text-[#1a1a1a]/5 select-none font-black leading-none">“</span>
@@ -528,10 +528,10 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
       </main>
 
       {/* Sticky Bottom Action Sheet Row */}
-      <div className="fixed bottom-0 left-0 w-full bg-[#fdfcf9] border-t border-[#1a1a1a]/10 px-4 py-3 shadow-lg z-40 flex justify-center pb-safe">
+      <div className="fixed bottom-0 left-0 w-full bg-[#fffaf4]/86 border-t border-white/70 px-4 py-3 shadow-[0_-18px_46px_rgba(77,49,31,0.12)] z-40 flex justify-center pb-safe backdrop-blur-xl">
         <button 
           onClick={onOpenBooking}
-          className="w-full max-w-md bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-mono text-[10px] uppercase tracking-widest py-3.5 rounded-none shadow-md active:scale-[0.98] transition-all text-center cursor-pointer"
+          className="foodio-btn foodio-btn-primary w-full max-w-md font-mono text-[10px] uppercase tracking-widest text-center cursor-pointer"
         >
           {t('detail.book_table')}
         </button>

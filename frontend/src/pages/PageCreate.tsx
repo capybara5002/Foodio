@@ -77,48 +77,48 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
   };
 
   return (
-    <div className="w-full min-h-[calc(100vh-72px)] bg-[#fdfcf9] pb-24 pt-4 text-on-surface">
+    <div className="foodio-page w-full min-h-[calc(100vh-72px)] pb-32 pt-8 text-on-surface">
       
       {/* Visual top app bar structure for sub-view layout */}
-      <div className="max-w-xl mx-auto px-4 flex justify-between items-center py-3 bg-white border border-[#1a1a1a]/15 rounded-none shadow-sm mb-6">
+      <div className="max-w-2xl mx-auto px-4 flex justify-between items-center py-3 bg-[#fffaf4]/88 border border-white/70 rounded-[1.75rem] shadow-[0_18px_46px_rgba(77,49,31,0.12)] mb-8 backdrop-blur-xl foodio-reveal">
         <button 
           onClick={onCancel}
-          className="text-[#1a1a1a]/60 hover:text-[#e2533b] transition-colors p-2 active:scale-95 duration-150 flex items-center justify-center cursor-pointer"
+          className="text-[#6f655b] hover:text-[#8f4f3b] hover:bg-[#f0e5d8] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] p-2 active:scale-95 flex items-center justify-center cursor-pointer rounded-full"
         >
           <X size={14} strokeWidth={3} className="select-none" />
         </button>
-        <span className="font-serif italic font-bold text-sm text-[#1a1a1a]">{t('create.new_post_title')}</span>
+        <span className="font-serif font-bold text-xl tracking-[-0.04em] text-[#2c211b]">{t('create.new_post_title')}</span>
         <button 
           onClick={handleSubmit}
-          className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white font-[#fdfcf9] font-mono text-[10px] uppercase tracking-widest px-5 py-2 rounded-none shadow-sm active:scale-95 transition-all cursor-pointer"
+          className="foodio-btn foodio-btn-primary py-2 px-5 font-mono text-[10px] uppercase tracking-widest cursor-pointer"
         >
           {t('create.post_button')}
         </button>
       </div>
 
-      <main className="w-full max-w-xl mx-auto px-4 flex flex-col gap-6">
+      <main className="w-full max-w-2xl mx-auto px-4 flex flex-col gap-6 foodio-reveal foodio-reveal-delay-1">
         
         {/* Image Preview and Upload */}
         <div 
           onClick={() => photoInputRef.current?.click()}
-          className="relative w-full aspect-video rounded-none overflow-hidden bg-[#f9f7f2] group cursor-pointer shadow-sm border border-[#1a1a1a]/15"
+          className="relative w-full aspect-[16/10] rounded-[2rem] overflow-hidden bg-[#f0e5d8] group cursor-pointer shadow-[0_24px_70px_rgba(77,49,31,0.15)] border border-white/70"
         >
           <img 
             src={photoBase64} 
             alt={t('create.alt_food')} 
-            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-transform duration-500" 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]" 
           />
           
           {/* Upload overlay */}
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-xs">
-            <div className="bg-white text-on-surface px-4 py-2 rounded-none flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider font-bold shadow-lg border border-[#1a1a1a]">
+          <div className="absolute inset-0 bg-[#2c211b]/45 opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] flex items-center justify-center">
+            <div className="bg-[#fffaf4] text-on-surface px-4 py-2 rounded-full flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider font-bold shadow-[0_18px_46px_rgba(77,49,31,0.18)] border border-white/70">
               <Camera size={16} />
               <span>Tải ảnh lên từ thiết bị</span>
             </div>
           </div>
  
           {/* Snail location tag badges matches image */}
-          <div className="absolute bottom-4 right-4 bg-white text-[#1a1a1a] px-3 py-1.5 rounded-none flex items-center gap-1.5 shadow border border-[#1a1a1a]/15">
+          <div className="absolute bottom-4 right-4 bg-[#fffaf4]/90 text-[#2c211b] px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-[0_12px_30px_rgba(77,49,31,0.14)] border border-white/60 backdrop-blur-xl">
             <MapPin size={16} className="text-[#e2533b]" />
             <span className="font-mono text-[9px] uppercase tracking-wider font-bold">{t('create.near_bui_vien')}</span>
           </div>
@@ -132,8 +132,8 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
         </div>
 
         {/* Rating Stars specification */}
-        <div className="bg-white rounded-none p-5 shadow-sm border border-[#1a1a1a]/15 flex flex-col items-center gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold select-none">
+        <div className="bg-[#fffaf4]/92 rounded-[2rem] p-6 shadow-[0_18px_46px_rgba(77,49,31,0.1)] border border-white/70 flex flex-col items-center gap-3">
+          <span className="foodio-eyebrow select-none">
             {t('create.rating_question')}
           </span>
           
@@ -143,7 +143,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
                 key={stars}
                 type="button"
                 onClick={() => setRating(stars)}
-                className="hover:scale-110 transition-transform cursor-pointer"
+                className="hover:scale-110 active:scale-95 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer"
               >
                 <Star 
                   size={28} 
@@ -155,22 +155,22 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
             ))}
           </div>
 
-          <span className="font-serif italic font-bold text-xs text-[#e2533b] mt-1">
+          <span className="font-serif font-bold text-base text-[#8f4f3b] mt-1">
             {getRatingLabel(rating)}
           </span>
         </div>
 
         {/* Review Input Box section */}
-        <div className="bg-white rounded-none shadow-sm border border-[#1a1a1a]/15 overflow-hidden transition-all">
+        <div className="bg-[#fffaf4]/92 rounded-[2rem] shadow-[0_18px_46px_rgba(77,49,31,0.1)] border border-white/70 overflow-hidden transition-all">
           <textarea 
             value={content}
             onChange={(e) => setContent(e.target.value.slice(0, 500))}
-            className="w-full bg-transparent border-0 p-4 font-sans text-xs text-[#1a1a1a] placeholder:text-[#1a1a1a]/40 resize-none focus:ring-0 min-h-[140px] leading-relaxed font-light" 
+            className="w-full bg-transparent border-0 p-5 font-sans text-sm text-[#2c211b] placeholder:text-[#8d8074] resize-none focus:ring-0 min-h-[160px] leading-relaxed" 
             placeholder={t('create.placeholder')}
           />
           
           {/* Metadata action tools row */}
-          <div className="bg-[#f9f7f2] px-4 py-2.5 flex items-center justify-between border-t border-[#1a1a1a]/10 select-none text-xs">
+          <div className="bg-[#f5eadf] px-4 py-3 flex items-center justify-between border-t border-[#4b362a]/10 select-none text-xs">
             <div className="flex gap-2">
               <button 
                 type="button"
@@ -178,7 +178,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
                   setToast(t('create.toast_tag_restaurant'));
                   setTimeout(() => setToast(null), 2000);
                 }}
-                className="flex items-center gap-1.5 bg-white rounded-none px-2.5 py-1 text-[#1a1a1a] border border-[#1a1a1a]/15 hover:bg-[#f9f7f2] transition-colors shadow-xs cursor-pointer text-[9px] font-mono uppercase tracking-wider font-extrabold"
+                className="flex items-center gap-1.5 bg-[#fffaf4] rounded-full px-3 py-1.5 text-[#2c211b] border border-[#4b362a]/10 hover:bg-white transition-colors shadow-xs cursor-pointer text-[9px] font-mono uppercase tracking-wider font-extrabold"
               >
                 <Utensils size={14} className="text-[#e2533b]" />
                 <span>{t('create.tag_restaurant_btn')}</span>
@@ -190,7 +190,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
                   setToast(t('create.toast_select_category'));
                   setTimeout(() => setToast(null), 2000);
                 }}
-                className="flex items-center gap-1.5 bg-white rounded-none px-2.5 py-1 text-[#1a1a1a] border border-[#1a1a1a]/15 hover:bg-[#f9f7f2] transition-colors shadow-xs cursor-pointer text-[9px] font-mono uppercase tracking-wider font-extrabold"
+                className="flex items-center gap-1.5 bg-[#fffaf4] rounded-full px-3 py-1.5 text-[#2c211b] border border-[#4b362a]/10 hover:bg-white transition-colors shadow-xs cursor-pointer text-[9px] font-mono uppercase tracking-wider font-extrabold"
               >
                 <Tag size={14} className="text-secondary" />
                 <span>{t('create.category_btn')}</span>
@@ -206,12 +206,12 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
 
         {/* Selected location context block attachment, interactive */}
         {hasLocation && (
-          <div className="bg-[#f9f7f2] rounded-none p-3.5 flex items-center justify-between border border-[#1a1a1a]/15 shadow-xs relative overflow-hidden transition-all duration-300">
+          <div className="bg-[#f5eadf] rounded-[1.5rem] p-4 flex items-center justify-between border border-[#4b362a]/10 shadow-xs relative overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]">
             {/* Left accent border */}
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#e2533b]" />
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#b76548]" />
             
             <div className="flex items-center gap-3 pl-2">
-              <div className="w-9 h-9 rounded-sm bg-[#1a1a1a] text-white flex items-center justify-center shrink-0 select-none">
+              <div className="w-10 h-10 rounded-2xl bg-[#2c211b] text-white flex items-center justify-center shrink-0 select-none">
                 <Store size={14} className="text-white" />
               </div>
               <div>
@@ -235,7 +235,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
           <button
             type="button"
             onClick={() => setHasLocation(true)}
-            className="text-[#e2533b] hover:underline font-mono text-[9px] uppercase tracking-wider font-extrabold text-left self-start text-[#e2533b]"
+            className="text-[#8f4f3b] hover:underline font-mono text-[10px] uppercase tracking-wider font-extrabold text-left self-start"
           >
             {t('create.re_tag_location')}
           </button>
@@ -245,7 +245,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
 
       {/* Floating alert toast notifications */}
       {toast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white px-5 py-2.5 rounded-none text-xs font-semibold tracking-wider uppercase border border-[#e2533b]/20 shadow-2xl z-50 animate-bounce">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-[#2c211b] text-white px-5 py-3 rounded-full text-xs font-semibold tracking-wider border border-white/10 shadow-[0_18px_46px_rgba(77,49,31,0.22)] z-50 animate-in fade-in slide-in-from-bottom-3">
           {toast}
         </div>
       )}

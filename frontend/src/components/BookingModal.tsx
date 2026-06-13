@@ -123,48 +123,48 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-[#1a1a1a]/80 backdrop-blur-xs transition-opacity"
+        className="absolute inset-0 bg-[#2c211b]/60 backdrop-blur-xl transition-opacity"
         onClick={step === 'form' ? onClose : undefined}
       />
 
       {/* Sheet Container */}
-      <div className="relative bg-[#fdfcf9] border-2 border-[#1a1a1a] rounded-none w-full max-w-lg shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-[#fffaf4] border border-white/70 rounded-[2rem] w-full max-w-lg shadow-[0_24px_70px_rgba(44,33,27,0.32)] overflow-hidden z-10 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
         
         {/* Subtle decorative accent bar */}
-        <div className="h-1.5 bg-[#e2533b]" />
+        <div className="h-1.5 bg-gradient-to-r from-[#b76548] via-[#d8a078] to-[#7d826b]" />
 
         {step === 'form' ? (
           <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
             {/* Header */}
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="font-serif italic font-bold text-lg text-[#1a1a1a]">{t('booking.title')}</h3>
-                <p className="font-sans text-[11px] text-[#1a1a1a]/60 flex items-center gap-1.5 mt-1 font-light">
-                  <BadgeCheck size={14} className="fill-[#e2533b] text-white" />
+                <h3 className="font-serif font-bold text-3xl tracking-[-0.055em] text-[#2c211b]">{t('booking.title')}</h3>
+                <p className="font-sans text-xs text-[#6f655b] flex items-center gap-1.5 mt-2">
+                  <BadgeCheck size={14} className="fill-[#b76548] text-white" />
                   {t('booking.at_restaurant', { name: restaurant.name })}
                 </p>
               </div>
               <button 
                 type="button" 
                 onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-none bg-white border border-[#1a1a1a]/15 text-[#1a1a1a] hover:text-[#e2533b] hover:bg-[#f9f7f2] active:scale-95 transition-all"
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-[#4b362a]/10 text-[#2c211b] hover:text-[#8f4f3b] hover:bg-[#f0e5d8] active:scale-95 transition-all"
               >
                 <X size={15} strokeWidth={3} />
               </button>
             </div>
 
-            <hr className="border-[#1a1a1a]/10" />
+            <hr className="border-[#4b362a]/10" />
 
             {/* Date Input */}
             <div className="flex flex-col gap-1">
               <label className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold">
                 {t('booking.select_date')}
               </label>
-              <div className="relative flex items-center bg-white border border-[#1a1a1a]/15 rounded-none px-3 py-1.5">
-                <Calendar size={16} className="text-[#e2533b] mr-2" />
+              <div className="relative flex items-center bg-white border border-[#4b362a]/10 rounded-2xl px-3 py-2">
+                <Calendar size={16} className="text-[#b76548] mr-2" />
                 <input 
                   type="date" 
                   value={date}
@@ -186,10 +186,10 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                     key={time}
                     type="button"
                     onClick={() => setSelectedTime(time)}
-                    className={`px-2.5 py-1.5 rounded-none font-mono text-[10px] uppercase tracking-wider border transition-all cursor-pointer ${
+                    className={`px-3 py-2 rounded-full font-mono text-[10px] uppercase tracking-wider border transition-all cursor-pointer ${
                       selectedTime === time
-                        ? 'bg-[#1a1a1a] text-white border-transparent shadow'
-                        : 'bg-white text-[#1a1a1a] border-[#1a1a1a]/15 hover:bg-[#f9f7f2]'
+                        ? 'bg-[#2c211b] text-white border-transparent shadow'
+                        : 'bg-white text-[#2c211b] border-[#4b362a]/10 hover:bg-[#f5eadf]'
                     }`}
                   >
                     {time}
@@ -204,7 +204,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                 Chọn bàn — Sơ đồ nhà hàng
               </label>
               
-              <div className="bg-[#f9f7f2] border border-[#1a1a1a]/15 p-4 relative">
+              <div className="bg-[#f5eadf] border border-[#4b362a]/10 p-4 relative rounded-[1.5rem]">
                 {/* Legend */}
                 <div className="flex flex-wrap gap-3 mb-4 text-[8px] font-mono uppercase tracking-wider text-[#1a1a1a]/55 font-bold">
                   <span className="flex items-center gap-1">
@@ -237,8 +237,8 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                           >
                             <div className={`relative ${getTableSize(table.capacity)} rounded-sm flex items-center justify-center transition-all duration-200 ${
                               isSelected
-                                ? 'bg-[#e2533b] border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] scale-110'
-                                : 'bg-white border-2 border-[#1a1a1a]/25 group-hover:border-[#e2533b] group-hover:shadow-md'
+                                ? 'bg-[#b76548] border border-white shadow-[0_12px_30px_rgba(77,49,31,0.18)] scale-110'
+                                : 'bg-white border border-[#4b362a]/20 group-hover:border-[#b76548]/45 group-hover:shadow-md'
                             }`}>
                               {renderChairs(table.capacity, isSelected)}
                               <span className={`font-mono text-[9px] font-black transition-colors ${isSelected ? 'text-white' : 'text-[#1a1a1a]/70'}`}>
@@ -386,10 +386,10 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
             <button 
               type="submit"
               disabled={!selectedTable}
-              className={`mt-2 w-full font-mono text-[10px] uppercase tracking-widest py-3 rounded-none shadow-md active:scale-[0.98] transition-all cursor-pointer ${
+              className={`mt-2 w-full font-mono text-[10px] uppercase tracking-widest py-3.5 rounded-full shadow-md active:scale-[0.98] transition-all cursor-pointer ${
                 selectedTable
-                  ? 'bg-[#1a1a1a] hover:bg-[#e2533b] text-white'
-                  : 'bg-[#1a1a1a]/30 text-white/60 cursor-not-allowed'
+                  ? 'bg-[#2c211b] hover:bg-[#8f4f3b] text-white'
+                  : 'bg-[#2c211b]/30 text-white/60 cursor-not-allowed'
               }`}
             >
               {selectedTable 

@@ -367,7 +367,7 @@ function AppContent() {
     : restaurants.find((r) => r.id === 'oc_oanh') || restaurants[0];
 
   return (
-    <div className="min-h-screen pb-16 md:pb-0 pt-[72px] flex flex-col font-sans text-on-surface bg-[#f8f9fa]">
+    <div className="foodio-shell min-h-screen pb-24 md:pb-0 pt-[72px] flex flex-col font-sans text-on-surface">
       <NavBar
         currentTab={currentTab}
         onChangeTab={(tab) => {
@@ -393,23 +393,21 @@ function AppContent() {
 
       <OfflineBanner />
 
-      {/* Floating QR scan notification banner */}
       {qrStatus && (
-        <div className={`fixed top-20 left-1/2 -translate-x-1/2 px-6 py-3 border-2 border-[#1a1a1a] shadow-[4px_4px_0px_0px_#1a1a1a] font-mono text-xs font-bold z-[9999] animate-in slide-in-from-top-4 ${
-          qrStatus.type === 'success' ? 'bg-[#cbf3d2] text-green-900' : 'bg-[#f8d7da] text-red-900'
+        <div className={`fixed top-24 left-1/2 z-[90] -translate-x-1/2 rounded-full border px-5 py-3 shadow-[0_18px_46px_rgba(77,49,31,0.16)] backdrop-blur-xl font-mono text-[11px] font-bold tracking-wide animate-in slide-in-from-top-4 ${
+          qrStatus.type === 'success' ? 'border-emerald-600/20 bg-emerald-50/90 text-emerald-900' : 'border-red-600/20 bg-red-50/90 text-red-900'
         }`}>
           {qrStatus.message}
         </div>
       )}
 
-      {/* Guest Mode Active indicator on bottom left */}
       {user?.role === 'Guest' && (
-        <div className="fixed bottom-20 left-4 md:bottom-6 md:left-4 z-[45] bg-[#ffe0b2] border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] px-3.5 py-1.5 font-mono text-[9px] font-bold uppercase tracking-wider text-[#e65100] flex items-center gap-1.5 select-none">
-          <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+        <div className="fixed bottom-24 left-4 z-[70] flex items-center gap-2 rounded-full border border-[#b76548]/20 bg-[#fffaf4]/88 px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider text-[#8f4f3b] shadow-[0_18px_46px_rgba(77,49,31,0.14)] backdrop-blur-xl select-none md:bottom-6">
+          <span className="w-2 h-2 rounded-full bg-[#b76548] animate-pulse" />
           <span>{t('auth.guest_mode', { table: user.tableNumber })}</span>
           <button 
             onClick={logout}
-            className="ml-2 underline text-[#1a1a1a] hover:text-[#e2533b]"
+            className="ml-1 rounded-full px-2 py-0.5 text-[#2c211b] transition-colors hover:bg-[#f0e5d8] hover:text-[#8f4f3b]"
           >
             {t('auth.login')}
           </button>

@@ -2,9 +2,11 @@ import React from 'react';
 
 export const RestaurantCard: React.FC = () => {
   return (
-    <div className="p-4 bg-white border border-[#1a1a1a]/15 shadow-sm">
-      <h3 className="font-serif italic font-bold text-base text-[#1a1a1a]">Restaurant Card</h3>
-      <p className="text-xs text-[#1a1a1a]/60 mt-1">Skeleton component for Restaurant Card.</p>
+    <div className="foodio-double-bezel">
+      <div className="foodio-core p-5">
+        <h3 className="font-serif font-bold text-xl tracking-[-0.045em] text-[#2c211b]">Restaurant Card</h3>
+        <p className="text-sm text-[#6f655b] mt-1">Skeleton component for Restaurant Card.</p>
+      </div>
     </div>
   );
 };
