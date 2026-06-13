@@ -1,75 +1,76 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, Pause, Play, RotateCcw, RotateCw, Square } from 'lucide-react';
+import { ChevronDown, Loader2, Pause, Play, RotateCcw, RotateCw, Search, Square } from 'lucide-react';
 import { translateText } from '../api/translateApi';
 
 type LanguageOption = {
   code: string;
   label: string;
+  speechLangs: string[];
 };
 
 const LANGUAGE_OPTIONS: LanguageOption[] = [
-  { code: 'en', label: 'English' },
-  { code: 'ko', label: 'Korean' },
-  { code: 'ja', label: 'Japanese' },
-  { code: 'fr', label: 'French' },
-  { code: 'zh', label: 'Chinese' },
-  { code: 'vi', label: 'Vietnamese' },
-  { code: 'es', label: 'Spanish' },
-  { code: 'de', label: 'German' },
-  { code: 'it', label: 'Italian' },
-  { code: 'pt', label: 'Portuguese' },
-  { code: 'ru', label: 'Russian' },
-  { code: 'ar', label: 'Arabic' },
-  { code: 'hi', label: 'Hindi' },
-  { code: 'bn', label: 'Bengali' },
-  { code: 'ur', label: 'Urdu' },
-  { code: 'id', label: 'Indonesian' },
-  { code: 'ms', label: 'Malay' },
-  { code: 'th', label: 'Thai' },
-  { code: 'lo', label: 'Lao' },
-  { code: 'km', label: 'Khmer' },
-  { code: 'my', label: 'Burmese' },
-  { code: 'tl', label: 'Filipino' },
-  { code: 'nl', label: 'Dutch' },
-  { code: 'sv', label: 'Swedish' },
-  { code: 'no', label: 'Norwegian' },
-  { code: 'da', label: 'Danish' },
-  { code: 'fi', label: 'Finnish' },
-  { code: 'pl', label: 'Polish' },
-  { code: 'cs', label: 'Czech' },
-  { code: 'sk', label: 'Slovak' },
-  { code: 'hu', label: 'Hungarian' },
-  { code: 'ro', label: 'Romanian' },
-  { code: 'bg', label: 'Bulgarian' },
-  { code: 'uk', label: 'Ukrainian' },
-  { code: 'tr', label: 'Turkish' },
-  { code: 'el', label: 'Greek' },
-  { code: 'he', label: 'Hebrew' },
-  { code: 'fa', label: 'Persian' },
-  { code: 'sw', label: 'Swahili' },
-  { code: 'am', label: 'Amharic' },
-  { code: 'ha', label: 'Hausa' },
-  { code: 'yo', label: 'Yoruba' },
-  { code: 'zu', label: 'Zulu' },
-  { code: 'af', label: 'Afrikaans' },
-  { code: 'ta', label: 'Tamil' },
-  { code: 'te', label: 'Telugu' },
-  { code: 'mr', label: 'Marathi' },
-  { code: 'gu', label: 'Gujarati' },
-  { code: 'pa', label: 'Punjabi' },
-  { code: 'kn', label: 'Kannada' },
-  { code: 'ml', label: 'Malayalam' },
-  { code: 'ne', label: 'Nepali' },
-  { code: 'si', label: 'Sinhala' },
-  { code: 'mn', label: 'Mongolian' },
-  { code: 'kk', label: 'Kazakh' },
-  { code: 'uz', label: 'Uzbek' },
-  { code: 'az', label: 'Azerbaijani' },
-  { code: 'ka', label: 'Georgian' },
-  { code: 'hy', label: 'Armenian' },
-  { code: 'sr', label: 'Serbian' },
-  { code: 'hr', label: 'Croatian' },
-  { code: 'sl', label: 'Slovenian' }
+  { code: 'en', label: 'English', speechLangs: ['en-US', 'en-GB', 'en'] },
+  { code: 'ko', label: 'Korean', speechLangs: ['ko-KR', 'ko'] },
+  { code: 'ja', label: 'Japanese', speechLangs: ['ja-JP', 'ja'] },
+  { code: 'fr', label: 'French', speechLangs: ['fr-FR', 'fr-CA', 'fr'] },
+  { code: 'zh', label: 'Chinese', speechLangs: ['zh-CN', 'zh-TW', 'zh-HK', 'zh'] },
+  { code: 'vi', label: 'Vietnamese', speechLangs: ['vi-VN', 'vi'] },
+  { code: 'es', label: 'Spanish', speechLangs: ['es-ES', 'es-MX', 'es-US', 'es'] },
+  { code: 'de', label: 'German', speechLangs: ['de-DE', 'de'] },
+  { code: 'it', label: 'Italian', speechLangs: ['it-IT', 'it'] },
+  { code: 'pt', label: 'Portuguese', speechLangs: ['pt-BR', 'pt-PT', 'pt'] },
+  { code: 'ru', label: 'Russian', speechLangs: ['ru-RU', 'ru'] },
+  { code: 'ar', label: 'Arabic', speechLangs: ['ar-SA', 'ar-EG', 'ar'] },
+  { code: 'hi', label: 'Hindi', speechLangs: ['hi-IN', 'hi'] },
+  { code: 'bn', label: 'Bengali', speechLangs: ['bn-BD', 'bn-IN', 'bn'] },
+  { code: 'ur', label: 'Urdu', speechLangs: ['ur-PK', 'ur-IN', 'ur'] },
+  { code: 'id', label: 'Indonesian', speechLangs: ['id-ID', 'id'] },
+  { code: 'ms', label: 'Malay', speechLangs: ['ms-MY', 'ms'] },
+  { code: 'th', label: 'Thai', speechLangs: ['th-TH', 'th'] },
+  { code: 'lo', label: 'Lao', speechLangs: ['lo-LA', 'lo'] },
+  { code: 'km', label: 'Khmer', speechLangs: ['km-KH', 'km'] },
+  { code: 'my', label: 'Burmese', speechLangs: ['my-MM', 'my'] },
+  { code: 'tl', label: 'Filipino', speechLangs: ['fil-PH', 'tl-PH', 'fil', 'tl'] },
+  { code: 'nl', label: 'Dutch', speechLangs: ['nl-NL', 'nl-BE', 'nl'] },
+  { code: 'sv', label: 'Swedish', speechLangs: ['sv-SE', 'sv'] },
+  { code: 'no', label: 'Norwegian', speechLangs: ['nb-NO', 'nn-NO', 'no'] },
+  { code: 'da', label: 'Danish', speechLangs: ['da-DK', 'da'] },
+  { code: 'fi', label: 'Finnish', speechLangs: ['fi-FI', 'fi'] },
+  { code: 'pl', label: 'Polish', speechLangs: ['pl-PL', 'pl'] },
+  { code: 'cs', label: 'Czech', speechLangs: ['cs-CZ', 'cs'] },
+  { code: 'sk', label: 'Slovak', speechLangs: ['sk-SK', 'sk'] },
+  { code: 'hu', label: 'Hungarian', speechLangs: ['hu-HU', 'hu'] },
+  { code: 'ro', label: 'Romanian', speechLangs: ['ro-RO', 'ro'] },
+  { code: 'bg', label: 'Bulgarian', speechLangs: ['bg-BG', 'bg'] },
+  { code: 'uk', label: 'Ukrainian', speechLangs: ['uk-UA', 'uk'] },
+  { code: 'tr', label: 'Turkish', speechLangs: ['tr-TR', 'tr'] },
+  { code: 'el', label: 'Greek', speechLangs: ['el-GR', 'el'] },
+  { code: 'he', label: 'Hebrew', speechLangs: ['he-IL', 'he'] },
+  { code: 'fa', label: 'Persian', speechLangs: ['fa-IR', 'fa'] },
+  { code: 'sw', label: 'Swahili', speechLangs: ['sw-KE', 'sw-TZ', 'sw'] },
+  { code: 'am', label: 'Amharic', speechLangs: ['am-ET', 'am'] },
+  { code: 'ha', label: 'Hausa', speechLangs: ['ha-NG', 'ha'] },
+  { code: 'yo', label: 'Yoruba', speechLangs: ['yo-NG', 'yo'] },
+  { code: 'zu', label: 'Zulu', speechLangs: ['zu-ZA', 'zu'] },
+  { code: 'af', label: 'Afrikaans', speechLangs: ['af-ZA', 'af'] },
+  { code: 'ta', label: 'Tamil', speechLangs: ['ta-IN', 'ta-LK', 'ta'] },
+  { code: 'te', label: 'Telugu', speechLangs: ['te-IN', 'te'] },
+  { code: 'mr', label: 'Marathi', speechLangs: ['mr-IN', 'mr'] },
+  { code: 'gu', label: 'Gujarati', speechLangs: ['gu-IN', 'gu'] },
+  { code: 'pa', label: 'Punjabi', speechLangs: ['pa-IN', 'pa'] },
+  { code: 'kn', label: 'Kannada', speechLangs: ['kn-IN', 'kn'] },
+  { code: 'ml', label: 'Malayalam', speechLangs: ['ml-IN', 'ml'] },
+  { code: 'ne', label: 'Nepali', speechLangs: ['ne-NP', 'ne'] },
+  { code: 'si', label: 'Sinhala', speechLangs: ['si-LK', 'si'] },
+  { code: 'mn', label: 'Mongolian', speechLangs: ['mn-MN', 'mn'] },
+  { code: 'kk', label: 'Kazakh', speechLangs: ['kk-KZ', 'kk'] },
+  { code: 'uz', label: 'Uzbek', speechLangs: ['uz-UZ', 'uz'] },
+  { code: 'az', label: 'Azerbaijani', speechLangs: ['az-AZ', 'az'] },
+  { code: 'ka', label: 'Georgian', speechLangs: ['ka-GE', 'ka'] },
+  { code: 'hy', label: 'Armenian', speechLangs: ['hy-AM', 'hy'] },
+  { code: 'sr', label: 'Serbian', speechLangs: ['sr-RS', 'sr'] },
+  { code: 'hr', label: 'Croatian', speechLangs: ['hr-HR', 'hr'] },
+  { code: 'sl', label: 'Slovenian', speechLangs: ['sl-SI', 'sl'] }
 ];
 
 interface MultiLanguageAudioGuideProps {
@@ -93,10 +94,28 @@ export default function MultiLanguageAudioGuide({
   const [progress, setProgress] = useState(0);
   const [durationSec, setDurationSec] = useState(30);
   const [isDragging, setIsDragging] = useState(false);
+  const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
+  const [languageQuery, setLanguageQuery] = useState('');
+  const [translationNotice, setTranslationNotice] = useState('');
+  const [voiceNotice, setVoiceNotice] = useState('');
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const progressRef = useRef(progress);
+  const languageMenuRef = useRef<HTMLDivElement | null>(null);
 
   const cleanSourceText = useMemo(() => sourceText.trim(), [sourceText]);
+  const selectedLanguage = useMemo(
+    () => LANGUAGE_OPTIONS.find((language) => language.code === targetLang) ?? LANGUAGE_OPTIONS[0],
+    [targetLang]
+  );
+  const filteredLanguages = useMemo(() => {
+    const query = languageQuery.trim().toLowerCase();
+    if (!query) return LANGUAGE_OPTIONS;
+
+    return LANGUAGE_OPTIONS.filter((language) => {
+      const haystack = `${language.label} ${language.code} ${language.speechLangs.join(' ')}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [languageQuery]);
 
   useEffect(() => {
     progressRef.current = progress;
@@ -109,14 +128,11 @@ export default function MultiLanguageAudioGuide({
     setIsPaused(false);
     setProgress(0);
     setIsTranslating(false);
+    setTranslationNotice('');
+    setVoiceNotice('');
 
     if (!cleanSourceText) {
       setTranslatedText('');
-      return;
-    }
-
-    if (targetLang === 'vi') {
-      setTranslatedText(cleanSourceText);
       return;
     }
 
@@ -125,12 +141,17 @@ export default function MultiLanguageAudioGuide({
 
     translateText(cleanSourceText, targetLang, controller.signal)
       .then((text) => {
-        setTranslatedText(text.trim() || cleanSourceText);
+        const nextText = text.trim();
+        setTranslatedText(nextText || cleanSourceText);
+        if (targetLang !== 'en' && nextText && nextText.toLowerCase() === cleanSourceText.toLowerCase()) {
+          setTranslationNotice('Translation returned the original text. Check the Gemini API key on the backend.');
+        }
       })
       .catch((error) => {
         if (error?.name !== 'CanceledError' && error?.code !== 'ERR_CANCELED') {
           console.warn('Translation failed, using source text.', error);
           setTranslatedText(cleanSourceText);
+          setTranslationNotice('Translation failed. Check the backend Gemini API key or network connection.');
         }
       })
       .finally(() => {
@@ -143,6 +164,17 @@ export default function MultiLanguageAudioGuide({
       controller.abort();
     };
   }, [cleanSourceText, targetLang]);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!languageMenuRef.current?.contains(event.target as Node)) {
+        setIsLanguageMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, []);
 
   useEffect(() => {
     setProgress(0);
@@ -175,12 +207,23 @@ export default function MultiLanguageAudioGuide({
 
   const clampProgress = (value: number) => Math.max(0, Math.min(100, value));
 
+  const findMatchingVoice = () => {
+    const voices = window.speechSynthesis.getVoices();
+    const preferredLangs = selectedLanguage.speechLangs.map((lang) => lang.toLowerCase());
+
+    return voices.find((voice) => {
+      const voiceLang = voice.lang.toLowerCase();
+      return preferredLangs.some(
+        (preferred) => voiceLang === preferred || voiceLang.startsWith(preferred) || preferred.startsWith(voiceLang)
+      );
+    });
+  };
+
   const createUtterance = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const matchingVoice = voices.find((voice) => voice.lang.toLowerCase().startsWith(targetLang.toLowerCase()));
+    const matchingVoice = findMatchingVoice();
     if (matchingVoice) utterance.voice = matchingVoice;
-    utterance.lang = matchingVoice?.lang || targetLang;
+    utterance.lang = matchingVoice?.lang || selectedLanguage.speechLangs[0] || targetLang;
     utterance.rate = 0.95;
     utterance.pitch = 1;
     utterance.onend = () => {
@@ -199,6 +242,12 @@ export default function MultiLanguageAudioGuide({
 
   const startSpeakingFrom = (nextProgress: number) => {
     if (!translatedText.trim() || !('speechSynthesis' in window) || isTranslating) return;
+    const matchingVoice = findMatchingVoice();
+    setVoiceNotice(
+      matchingVoice
+        ? ''
+        : `No ${selectedLanguage.label} voice is installed in this browser. The text is translated, but the browser may use its default voice.`
+    );
 
     const normalizedProgress = clampProgress(nextProgress >= 100 ? 0 : nextProgress);
     const startIndex = Math.floor((normalizedProgress / 100) * translatedText.length);
@@ -276,6 +325,11 @@ export default function MultiLanguageAudioGuide({
 
   const disabled = isTranslating || !translatedText.trim();
   const currentSec = Math.floor((progress * durationSec) / 100);
+  const selectLanguage = (language: LanguageOption) => {
+    setTargetLang(language.code);
+    setLanguageQuery('');
+    setIsLanguageMenuOpen(false);
+  };
 
   return (
     <section className={`bg-white border border-[#1a1a1a]/15 p-3 flex flex-col gap-3 text-left ${className}`}>
@@ -290,18 +344,53 @@ export default function MultiLanguageAudioGuide({
       </div>
 
       <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-        <select
-          value={targetLang}
-          onChange={(event) => setTargetLang(event.target.value)}
-          className="min-w-0 bg-[#fdfcf9] border-2 border-[#1a1a1a] px-2 py-2 font-mono text-[10px] uppercase tracking-wider focus:outline-none"
-          aria-label="Select narration language"
-        >
-          {LANGUAGE_OPTIONS.map((language) => (
-            <option key={language.code} value={language.code}>
-              {language.label} ({language.code})
-            </option>
-          ))}
-        </select>
+        <div className="relative min-w-0" ref={languageMenuRef}>
+          <button
+            type="button"
+            onClick={() => setIsLanguageMenuOpen((open) => !open)}
+            className="w-full min-w-0 bg-[#fdfcf9] border-2 border-[#1a1a1a] px-2 py-2 font-mono text-[10px] uppercase tracking-wider focus:outline-none flex items-center justify-between gap-2"
+            aria-label="Select narration language"
+            aria-expanded={isLanguageMenuOpen}
+          >
+            <span className="truncate">{selectedLanguage.label} ({selectedLanguage.code})</span>
+            <ChevronDown size={14} className="shrink-0" />
+          </button>
+
+          {isLanguageMenuOpen && (
+            <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] bg-white border-2 border-[#1a1a1a] shadow-[4px_4px_0px_0px_#1a1a1a]">
+              <div className="p-2 border-b border-[#1a1a1a]/15 flex items-center gap-2">
+                <Search size={14} className="text-[#e2533b] shrink-0" />
+                <input
+                  value={languageQuery}
+                  onChange={(event) => setLanguageQuery(event.target.value)}
+                  autoFocus
+                  placeholder="Search language..."
+                  className="w-full bg-transparent focus:outline-none font-mono text-[10px] uppercase tracking-wider"
+                />
+              </div>
+              <div className="max-h-56 overflow-y-auto py-1">
+                {filteredLanguages.map((language) => (
+                  <button
+                    key={language.code}
+                    type="button"
+                    onClick={() => selectLanguage(language)}
+                    className={`w-full px-3 py-2 text-left font-mono text-[10px] uppercase tracking-wider hover:bg-[#f9f7f2] flex items-center justify-between ${
+                      language.code === targetLang ? 'bg-[#1a1a1a] text-white hover:bg-[#1a1a1a]' : 'text-[#1a1a1a]'
+                    }`}
+                  >
+                    <span>{language.label}</span>
+                    <span>{language.code}</span>
+                  </button>
+                ))}
+                {filteredLanguages.length === 0 && (
+                  <div className="px-3 py-4 font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/45">
+                    No languages found
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         <button
           type="button"
@@ -384,6 +473,12 @@ export default function MultiLanguageAudioGuide({
           {isTranslating ? 'Translating narration...' : translatedText || cleanSourceText}
         </p>
       </div>
+
+      {(translationNotice || voiceNotice) && (
+        <p className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b] leading-relaxed">
+          {translationNotice || voiceNotice}
+        </p>
+      )}
     </section>
   );
 }
