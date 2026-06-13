@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useRef } from 'react';
 import { PRESET_IMAGES } from '../data';
 import { X, Camera, MapPin, Star, Utensils, Tag, Store } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -20,11 +20,20 @@ interface PageCreateProps {
 
 export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
   const { t } = useTranslation();
-  const [photoIndex, setPhotoIndex] = useState(0);
+  const [photoBase64, setPhotoBase64] = useState<string>(PRESET_IMAGES[0]);
   const [rating, setRating] = useState(4);
   const [content, setContent] = useState('');
   const [hasLocation, setHasLocation] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
   // Dynamic feedback phrase mapping
   const getRatingLabel = (stars: number) => {
@@ -38,10 +47,17 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
     }
   };
 
-  const handleCyclePhoto = () => {
-    setPhotoIndex((prev) => (prev + 1) % PRESET_IMAGES.length);
-    setToast(t('create.toast_photo_changed'));
-    setTimeout(() => setToast(null), 2000);
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await fileToBase64(file);
+      setPhotoBase64(base64);
+      setToast("Đã tải ảnh lên thành công!");
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      console.error("Failed to read image file", err);
+    }
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -54,7 +70,7 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
 
     onAddPost({
       content: content.trim(),
-      image: PRESET_IMAGES[photoIndex],
+      image: photoBase64,
       rating: rating + 0.8, // align to foodie fractional ranges, e.g. 4.8
       locationName: hasLocation ? 'Phở Quỳnh' : 'Hẻm Bùi Viện'
     });
@@ -82,22 +98,22 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
 
       <main className="w-full max-w-xl mx-auto px-4 flex flex-col gap-6">
         
-        {/* Image Preview cyclic deck */}
+        {/* Image Preview and Upload */}
         <div 
-          onClick={handleCyclePhoto}
+          onClick={() => photoInputRef.current?.click()}
           className="relative w-full aspect-video rounded-none overflow-hidden bg-[#f9f7f2] group cursor-pointer shadow-sm border border-[#1a1a1a]/15"
         >
           <img 
-            src={PRESET_IMAGES[photoIndex]} 
+            src={photoBase64} 
             alt={t('create.alt_food')} 
             className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-transform duration-500" 
           />
           
-          {/* Cycle overlay */}
+          {/* Upload overlay */}
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-xs">
             <div className="bg-white text-on-surface px-4 py-2 rounded-none flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider font-bold shadow-lg border border-[#1a1a1a]">
               <Camera size={16} />
-              {t('create.change_photo', { current: photoIndex + 1, total: PRESET_IMAGES.length })}
+              <span>Tải ảnh lên từ thiết bị</span>
             </div>
           </div>
  
@@ -106,7 +122,13 @@ export default function PageCreate({ onAddPost, onCancel }: PageCreateProps) {
             <MapPin size={16} className="text-[#e2533b]" />
             <span className="font-mono text-[9px] uppercase tracking-wider font-bold">{t('create.near_bui_vien')}</span>
           </div>
-
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoUpload}
+          />
         </div>
 
         {/* Rating Stars specification */}
