@@ -5,8 +5,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { AudioTour } from '../types';
-import { generateAudioTourNarrative } from '../api/cravemapApi';
 import { X, RotateCcw, RotateCw, Play, Pause } from 'lucide-react';
+import MultiLanguageAudioGuide from './MultiLanguageAudioGuide';
 
 interface AudioPlayerProps {
   tour: AudioTour | null;
@@ -14,7 +14,7 @@ interface AudioPlayerProps {
 }
 
 export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0); 
   const [durationSec, setDurationSec] = useState(150);
   const [narrative, setNarrative] = useState('');
@@ -89,45 +89,16 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
     return () => clearInterval(interval);
   }, [isPlaying, tour, durationSec, isDragging]);
 
-  // Load narrative when tour changes (Only for TTS)
+  // Load source narrative when tour changes. Multi-language TTS is handled by MultiLanguageAudioGuide.
   useEffect(() => {
     if (!tour) return;
-    if (tour.audioData) {
-      setIsLoadingNarrative(false);
-      return;
-    }
-
-    let cancelled = false;
-    setNarrative('');
+    setNarrative(tour.description);
     setProgress(0);
-    setIsPlaying(true);
-    setIsLoadingNarrative(true);
-
-    void generateAudioTourNarrative(tour)
-      .then((generatedNarrative) => {
-        if (cancelled) return;
-        setNarrative(generatedNarrative);
-        // Estimate duration based on text length (~14 characters per second at 0.95 rate)
-        const estimatedDuration = Math.max(10, Math.ceil(generatedNarrative.length / 14));
-        setDurationSec(estimatedDuration);
-        
-        if ('speechSynthesis' in window) {
-           window.speechSynthesis.cancel();
-           const utterance = new SpeechSynthesisUtterance(generatedNarrative);
-           utterance.rate = 0.95;
-           utterance.pitch = 1;
-           utterance.lang = 'en-US';
-           window.speechSynthesis.speak(utterance);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoadingNarrative(false);
-        }
-      });
+    setIsPlaying(false);
+    setIsLoadingNarrative(false);
+    setDurationSec(Math.max(10, Math.ceil(tour.description.length / 14)));
 
     return () => {
-      cancelled = true;
       window.speechSynthesis?.cancel();
     };
   }, [tour]);
@@ -292,8 +263,14 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           </div>
         </div>
 
-        {/* Animated Audio Soundwave Visualizer */}
-        <div className="h-8 flex items-end justify-center gap-[3px] py-1 select-none">
+        <MultiLanguageAudioGuide
+          title={tour.title}
+          sourceText={tour.description}
+          defaultLang={localStorage.getItem('app_lang')?.split('-')[0] || 'en'}
+        />
+
+        {/* Animated Audio Soundwave Visualizer for uploaded tour audio files */}
+        {tour.audioData && <div className="h-8 flex items-end justify-center gap-[3px] py-1 select-none">
           {Array.from({ length: 28 }).map((_, i) => {
             return (
               <div
@@ -315,19 +292,19 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
               />
             );
           })}
-        </div>
+        </div>}
 
-        <div className="bg-white border border-[#1a1a1a]/10 p-3 max-h-24 overflow-y-auto">
+        {tour.audioData && <div className="bg-white border border-[#1a1a1a]/10 p-3 max-h-24 overflow-y-auto">
           <p className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b] font-bold mb-1">
             {isLoadingNarrative ? 'Generating Gemini narration...' : 'Gemini narration'}
           </p>
           <p className="font-sans text-[11px] leading-relaxed text-[#1a1a1a]/75">
             {narrative || tour.description}
           </p>
-        </div>
+        </div>}
 
         {/* Scrubbing slider & progress ticks */}
-        <div className="flex flex-col gap-1">
+        {tour.audioData && <div className="flex flex-col gap-1">
           <div className="relative w-full h-1.5 bg-[#1a1a1a]/15 rounded-none overflow-hidden cursor-pointer group">
             <div 
               style={{ width: `${progress}%` }}
@@ -356,10 +333,10 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
             <span>{formatTime(currentSec)}</span>
             <span>{formatTime(durationSec)}</span>
           </div>
-        </div>
+        </div>}
 
         {/* Control row */}
-        <div className="flex items-center justify-center gap-6">
+        {tour.audioData && <div className="flex items-center justify-center gap-6">
           <button 
             type="button"
             className="text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-95 transition-transform"
@@ -383,7 +360,7 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           >
             <RotateCw size={20} />
           </button>
-        </div>
+        </div>}
       </div>
     </div>
   );

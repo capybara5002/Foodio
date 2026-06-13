@@ -59,7 +59,8 @@ public class RestaurantsController : ControllerBase
             Latitude = dto.Latitude,
             Longitude = dto.Longitude,
             IsActive = dto.IsActive,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         };
 
         _db.Restaurants.Add(restaurant);
@@ -97,6 +98,7 @@ public class RestaurantsController : ControllerBase
         restaurant.Latitude = dto.Latitude;
         restaurant.Longitude = dto.Longitude;
         restaurant.IsActive = dto.IsActive;
+        restaurant.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _db.SaveChangesAsync();
         return NoContent();
@@ -146,6 +148,21 @@ public class RestaurantsController : ControllerBase
         var allReviews = restaurant.Reviews.ToList();
         allReviews.Add(review);
         restaurant.Rating = Math.Round(allReviews.Average(r => r.Rating), 1);
+        restaurant.UpdatedAt = DateTimeOffset.UtcNow;
+
+        var owner = await _db.Users.FirstOrDefaultAsync(u => u.RestaurantId == id && u.Role == "Owner" && u.IsActive);
+        if (owner is not null)
+        {
+            _db.Notifications.Add(new Notification
+            {
+                UserId = owner.Id,
+                RestaurantId = id,
+                Type = "Review",
+                Title = "New restaurant review",
+                Body = $"{review.Author} rated your restaurant {review.Rating:F1} stars.",
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        }
 
         await _db.SaveChangesAsync();
 

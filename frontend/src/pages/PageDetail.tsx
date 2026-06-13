@@ -10,22 +10,23 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { createReview } from '../api/cravemapApi';
 import { PRESET_IMAGES } from '../data';
+import MultiLanguageAudioGuide from '../components/MultiLanguageAudioGuide';
 
 interface PageDetailProps {
   restaurant: Restaurant;
   onBack: () => void;
   onOpenBooking: () => void;
-  onStartAudio: () => void;
   onGoToChat: () => void;
   requireAuth: (message: string, action: () => void) => void;
   onRestaurantUpdated: (updated: Restaurant) => void;
 }
 
-export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartAudio, onGoToChat, requireAuth, onRestaurantUpdated }: PageDetailProps) {
+export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToChat, requireAuth, onRestaurantUpdated }: PageDetailProps) {
   const { t, i18n } = useTranslation();
   const [isFavorite, setIsFavorite] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showAllDishes, setShowAllDishes] = useState(false);
+  const [showAudioGuide, setShowAudioGuide] = useState(false);
 
   // Write Review State
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -191,7 +192,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
         <section className="flex items-center gap-3">
           <button 
             type="button"
-            onClick={onStartAudio}
+            onClick={() => setShowAudioGuide((current) => !current)}
             className="flex-1 flex items-center justify-center gap-1.5 bg-[#1a1a1a] hover:bg-[#e2533b] text-white py-3.5 px-4 rounded-none shadow-md active:scale-98 transition-all font-mono text-[10px] uppercase tracking-widest cursor-pointer"
           >
             <Volume2 size={14} /> {t('detail.play_audio')}
@@ -207,6 +208,14 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onStartA
             {t('nav.contact')}
           </button>
         </section>
+
+        {showAudioGuide && (
+          <MultiLanguageAudioGuide
+            title={`${restaurant.name} audio guide`}
+            sourceText={restaurant.description || `${restaurant.name}. ${restaurant.category} restaurant located at ${restaurant.address}, ${restaurant.area}. Recommended dishes include ${restaurant.dishes.map((dish) => dish.name).slice(0, 3).join(', ') || 'local specialties'}.`}
+            defaultLang={i18n.language?.split('-')[0] || 'en'}
+          />
+        )}
 
         {restaurant.description && (
           <section className="text-xs md:text-sm text-[#1a1a1a]/80 leading-relaxed font-sans border-l-3 border-[#e2533b] pl-3.5 italic py-1 bg-[#fdfcf9] border border-[#1a1a1a]/10 rounded-sm">
