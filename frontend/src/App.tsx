@@ -213,14 +213,18 @@ function AppContent() {
     }
   };
 
+  const openRestaurantChat = async (restaurantId: string) => {
+    const thread = await ensureChatThread(restaurantId, activeChatUserId);
+    upsertThread(thread);
+    setActiveThreadId(thread.id);
+    setSelectedRestaurantId(null);
+    setCurrentTab('inbox');
+  };
+
   const handleContactRestaurant = async (restaurantId: string) => {
     requireAuth(t('auth.require_login_chat'), async () => {
       try {
-        const thread = await ensureChatThread(restaurantId, activeChatUserId);
-        upsertThread(thread);
-        setActiveThreadId(thread.id);
-        setSelectedRestaurantId(null);
-        setCurrentTab('inbox');
+        await openRestaurantChat(restaurantId);
       } catch (error) {
         console.error('Failed to open restaurant chat:', error);
       }
@@ -323,11 +327,13 @@ function AppContent() {
             activeThreadId={activeThreadId}
             userId={activeChatUserId}
             restaurantId={activeChatRestaurantId}
-            currentUserRole={user?.role ?? 'User'}
+            restaurants={restaurants}
+            currentUserRole={user?.role ?? 'Guest'}
             onSelectThread={(tid) => {
               setActiveThreadId(tid);
               setChatThreads((prev) => sortThreads(prev.map((t) => (t.id === tid ? { ...t, unreadCount: 0 } : t))));
             }}
+            onStartThread={user && user.role !== 'Guest' ? openRestaurantChat : undefined}
             onThreadUpdated={upsertThread}
           />
         );

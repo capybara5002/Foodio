@@ -5,17 +5,19 @@
 
 import { useState, useRef, useEffect, FormEvent, ChangeEvent } from 'react';
 import * as signalR from '@microsoft/signalr';
-import { ChatThread, ChatMessage } from '../types';
+import { ChatThread, ChatMessage, Restaurant } from '../types';
 import { ensureChatThread } from '../api/cravemapApi';
-import { ArrowLeft, BadgeCheck, Phone, MoreVertical, CheckCheck, Image, Send, PhoneOff } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, Phone, MoreVertical, CheckCheck, Image, Send, PhoneOff, MessageSquare } from 'lucide-react';
 
 interface PageInboxProps {
   threads: ChatThread[];
   activeThreadId: string;
   userId: string;
   restaurantId?: string;
+  restaurants?: Restaurant[];
   currentUserRole: 'Admin' | 'Owner' | 'User' | 'Guest';
   onSelectThread: (threadId: string) => void;
+  onStartThread?: (restaurantId: string) => void | Promise<void>;
   onThreadUpdated: (thread: ChatThread) => void;
 }
 
@@ -24,13 +26,16 @@ export default function PageInbox({
   activeThreadId,
   userId,
   restaurantId,
+  restaurants = [],
   currentUserRole,
   onSelectThread,
+  onStartThread,
   onThreadUpdated
 }: PageInboxProps) {
   const [inputText, setInputText] = useState('');
   const [mobileView, setMobileView] = useState<'threads' | 'chat'>('threads');
   const [mockCallState, setMockCallState] = useState<'idle' | 'calling'>('idle');
+  const [startingRestaurantId, setStartingRestaurantId] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -43,6 +48,7 @@ export default function PageInbox({
   const activeThread = threads.find((t) => t.id === activeThreadId) || threads[0];
   const effectiveThreadId = activeThread?.id ?? '';
   const isOwnerView = currentUserRole === 'Owner';
+  const canStartRestaurantThread = !isOwnerView && currentUserRole !== 'Guest';
   const getThreadIdentity = (thread: ChatThread) => ({
     name: isOwnerView ? thread.customerName || thread.userId || 'Customer' : thread.name,
     avatar: isOwnerView ? thread.customerAvatar || thread.avatar : thread.avatar,
@@ -61,6 +67,9 @@ export default function PageInbox({
   const sortedThreads = [...threads].sort(
     (a, b) => getThreadSortTime(b.lastMessageTime) - getThreadSortTime(a.lastMessageTime)
   );
+  const threadRestaurantIds = new Set(threads.map((thread) => thread.restaurantId));
+  const contactableRestaurants = restaurants.filter((restaurant) => !threadRestaurantIds.has(restaurant.id));
+  const visibleRestaurants = contactableRestaurants.slice(0, 12);
 
   const fetchMessages = async (threadId: string) => {
     if (!threadId) {
@@ -73,7 +82,7 @@ export default function PageInbox({
     try {
       const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const response = await fetch(`${baseUrl}/api/chatthreads/${threadId}/messages`);
-      if (response.status === 404 && !isOwnerView && activeThread?.restaurantId) {
+      if (response.status === 404 && canStartRestaurantThread && activeThread?.restaurantId) {
         const ensuredThread = await ensureChatThread(activeThread.restaurantId, userId);
         onThreadUpdated(ensuredThread);
         onSelectThread(ensuredThread.id);
@@ -156,6 +165,22 @@ export default function PageInbox({
     }
   }, [threads, restaurantId]);
 
+  const handleStartThread = async (targetRestaurantId: string) => {
+    if (!onStartThread || startingRestaurantId) return;
+
+    setStartingRestaurantId(targetRestaurantId);
+    setErrorMessages(null);
+    try {
+      await onStartThread(targetRestaurantId);
+      setMobileView('chat');
+    } catch (error) {
+      console.error('Failed to start inbox thread:', error);
+      setErrorMessages('Failed to open this restaurant conversation.');
+    } finally {
+      setStartingRestaurantId(null);
+    }
+  };
+
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
@@ -229,53 +254,96 @@ export default function PageInbox({
         </div>
 
         {/* Channels scroll container */}
-        <div className="flex-1 overflow-y-auto divide-y divide-outline-variant/15">
-          {sortedThreads.map((thread) => {
-            const isSelected = thread.id === effectiveThreadId;
-            const identity = getThreadIdentity(thread);
-            return (
-              <div
-                key={thread.id}
-                onClick={() => {
-                  onSelectThread(thread.id);
-                  setMobileView('chat');
-                }}
-                className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-[#f9f7f2] transition-colors select-none ${
-                  isSelected ? 'bg-[#f9f7f2] border-l-4 border-[#e2533b]' : 'border-l-4 border-transparent'
-                }`}
-              >
-                {/* Channel Avatar badge */}
-                <div className="relative w-11 h-11 rounded-none overflow-hidden shrink-0 border border-[#1a1a1a]/15 bg-white">
-                  <img src={identity.avatar} alt={identity.name} className="w-full h-full object-cover grayscale" />
-                  {thread.id === 'oc_oanh_thread' && (
-                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#e2533b] rounded-full border border-white" />
+        <div className="flex-1 overflow-y-auto">
+          <div className="divide-y divide-outline-variant/15">
+            {sortedThreads.map((thread) => {
+              const isSelected = thread.id === effectiveThreadId;
+              const identity = getThreadIdentity(thread);
+              return (
+                <div
+                  key={thread.id}
+                  onClick={() => {
+                    onSelectThread(thread.id);
+                    setMobileView('chat');
+                  }}
+                  className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-[#f9f7f2] transition-colors select-none ${
+                    isSelected ? 'bg-[#f9f7f2] border-l-4 border-[#e2533b]' : 'border-l-4 border-transparent'
+                  }`}
+                >
+                  {/* Channel Avatar badge */}
+                  <div className="relative w-11 h-11 rounded-none overflow-hidden shrink-0 border border-[#1a1a1a]/15 bg-white">
+                    <img src={identity.avatar} alt={identity.name} className="w-full h-full object-cover grayscale" />
+                    {thread.id === 'oc_oanh_thread' && (
+                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#e2533b] rounded-full border border-white" />
+                    )}
+                  </div>
+
+                  {/* Info Text snippet previews */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline mb-0.5">
+                      <h3 className="font-serif italic font-bold text-xs text-[#1a1a1a] truncate">
+                        {identity.name}
+                      </h3>
+                      <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 shrink-0">
+                        {formatThreadTime(thread.lastMessageTime)}
+                      </span>
+                    </div>
+                    <p className={`font-sans text-[11px] truncate font-light ${
+                      thread.unreadCount > 0 ? 'text-[#1a1a1a] font-black' : 'text-[#1a1a1a]/60'
+                    }`}>
+                      {thread.lastMessageText}
+                    </p>
+                  </div>
+
+                  {/* Unread circle bubble */}
+                  {thread.unreadCount > 0 && (
+                    <div className="w-2 h-2 bg-[#e2533b] rounded-none shrink-0" />
                   )}
                 </div>
+              );
+            })}
+          </div>
 
-                {/* Info Text snippet previews */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline mb-0.5">
-                    <h3 className="font-serif italic font-bold text-xs text-[#1a1a1a] truncate">
-                      {identity.name}
-                    </h3>
-                    <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 shrink-0">
-                      {formatThreadTime(thread.lastMessageTime)}
-                    </span>
-                  </div>
-                  <p className={`font-sans text-[11px] truncate font-light ${
-                    thread.unreadCount > 0 ? 'text-[#1a1a1a] font-black' : 'text-[#1a1a1a]/60'
-                  }`}>
-                    {thread.lastMessageText}
-                  </p>
-                </div>
-
-                {/* Unread circle bubble */}
-                {thread.unreadCount > 0 && (
-                  <div className="w-2 h-2 bg-[#e2533b] rounded-none shrink-0" />
-                )}
+          {canStartRestaurantThread && visibleRestaurants.length > 0 && (
+            <div className="border-t border-[#1a1a1a]/15 p-4">
+              <p className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/45 mb-3">
+                Contact another restaurant
+              </p>
+              <div className="space-y-2">
+                {visibleRestaurants.map((restaurant) => (
+                  <button
+                    key={restaurant.id}
+                    type="button"
+                    onClick={() => void handleStartThread(restaurant.id)}
+                    disabled={startingRestaurantId !== null}
+                    className="w-full bg-white border border-[#1a1a1a]/15 hover:border-[#e2533b] disabled:opacity-60 text-left p-2.5 flex items-center gap-2.5 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <img
+                      src={restaurant.image}
+                      alt={restaurant.name}
+                      className="w-10 h-10 object-cover grayscale border border-[#1a1a1a]/15 shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-serif italic font-bold text-xs text-[#1a1a1a] truncate">{restaurant.name}</h3>
+                      <p className="font-mono text-[8px] uppercase tracking-wider text-[#1a1a1a]/50 truncate">
+                        {restaurant.area || restaurant.category}
+                      </p>
+                    </div>
+                    <MessageSquare size={14} className="text-[#e2533b] shrink-0" />
+                  </button>
+                ))}
               </div>
-            );
-          })}
+            </div>
+          )}
+
+          {sortedThreads.length === 0 && visibleRestaurants.length === 0 && (
+            <div className="p-4 py-10 text-center text-[#1a1a1a]/40">
+              <MessageSquare size={28} className="mx-auto mb-3" />
+              <p className="font-mono text-[9px] uppercase tracking-widest">
+                {canStartRestaurantThread ? 'No restaurants available.' : 'Inbox is empty.'}
+              </p>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -283,6 +351,55 @@ export default function PageInbox({
       <section className={`flex-1 flex flex-col h-full bg-surface relative ${
         mobileView === 'threads' ? 'hidden md:flex' : 'flex'
       }`}>
+        {!activeThread ? (
+          <div className="flex-1 flex flex-col bg-[#fcfbfa]">
+            <div className="h-[72px] px-5 border-b border-[#1a1a1a]/15 bg-white flex items-center justify-between shrink-0">
+              <div>
+                <h2 className="font-serif italic font-bold text-sm text-[#1a1a1a]">Start a conversation</h2>
+                <p className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b]">
+                  {canStartRestaurantThread ? 'Choose a restaurant to inbox' : 'No customer conversations yet'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5">
+              {canStartRestaurantThread && visibleRestaurants.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {visibleRestaurants.map((restaurant) => (
+                    <button
+                      key={restaurant.id}
+                      type="button"
+                      onClick={() => void handleStartThread(restaurant.id)}
+                      disabled={startingRestaurantId !== null}
+                      className="bg-white border border-[#1a1a1a]/15 hover:border-[#e2533b] disabled:opacity-60 text-left p-3 flex items-center gap-3 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      <img
+                        src={restaurant.image}
+                        alt={restaurant.name}
+                        className="w-12 h-12 object-cover grayscale border border-[#1a1a1a]/15 shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] truncate">{restaurant.name}</h3>
+                        <p className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/50 truncate">
+                          {restaurant.area || restaurant.category}
+                        </p>
+                      </div>
+                      <MessageSquare size={16} className="text-[#e2533b] shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center text-[#1a1a1a]/50">
+                  <MessageSquare size={32} className="mb-3" />
+                  <p className="font-mono text-[10px] uppercase tracking-widest">
+                    {canStartRestaurantThread ? 'No restaurants available to contact.' : 'No inbox messages yet.'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
         
         {/* Chat Header panel, matches layout specs */}
         <div className="h-[72px] px-5 border-b border-[#1a1a1a]/15 bg-white flex items-center justify-between shrink-0 z-10 shadow-xs">
@@ -470,6 +587,8 @@ export default function PageInbox({
 
           </form>
         </div>
+          </>
+        )}
 
       </section>
 
