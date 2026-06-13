@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Restaurant } from '../types';
 import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { createReview } from '../api/cravemapApi';
-import { PRESET_IMAGES } from '../data';
 import MultiLanguageAudioGuide from '../components/MultiLanguageAudioGuide';
 
 interface PageDetailProps {
@@ -32,14 +31,26 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [newRating, setNewRating] = useState(5);
-  const [newPhotoIndex, setNewPhotoIndex] = useState<number | null>(null);
+  const [newPhotoBase64, setNewPhotoBase64] = useState<string | null>(null);
   const { user } = useAuth();
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCyclePhoto = () => {
-    if (newPhotoIndex === null) {
-      setNewPhotoIndex(0);
-    } else {
-      setNewPhotoIndex((prev) => (prev! + 1) % PRESET_IMAGES.length);
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await fileToBase64(file);
+      setNewPhotoBase64(base64);
+    } catch (err) {
+      console.error("Failed to read image file", err);
     }
   };
 
@@ -58,7 +69,7 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
         rating: newRating,
         comment: newComment.trim(),
         avatar: (user?.username || 'AN').slice(0, 2).toUpperCase(),
-        imageUrl: newPhotoIndex !== null ? PRESET_IMAGES[newPhotoIndex] : undefined,
+        imageUrl: newPhotoBase64 || undefined,
       };
 
       const addedReview = await createReview(restaurant.id, reviewPayload);
@@ -80,7 +91,8 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
       // Reset form
       setNewComment('');
       setNewRating(5);
-      setNewPhotoIndex(null);
+      setNewPhotoBase64(null);
+      if (photoInputRef.current) photoInputRef.current.value = '';
       setShowReviewForm(false);
       setToastMessage(t('review_form.success_toast'));
       setTimeout(() => setToastMessage(null), 2500);
@@ -359,10 +371,13 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                   <span className="font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/60 font-extrabold select-none">
                     {t('review_form.photo_attachment')}
                   </span>
-                  {newPhotoIndex !== null && (
+                  {newPhotoBase64 !== null && (
                     <button 
                       type="button" 
-                      onClick={() => setNewPhotoIndex(null)}
+                      onClick={() => {
+                        setNewPhotoBase64(null);
+                        if (photoInputRef.current) photoInputRef.current.value = '';
+                      }}
                       className="text-red-500 font-mono text-[9px] uppercase font-bold tracking-wider hover:underline"
                     >
                       {t('review_form.photo_delete')}
@@ -370,11 +385,11 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                   )}
                 </div>
                 
-                {newPhotoIndex !== null ? (
-                  <div className="relative aspect-video w-full max-w-[200px] border border-[#1a1a1a]/15 overflow-hidden group cursor-pointer" onClick={handleCyclePhoto}>
+                {newPhotoBase64 !== null ? (
+                  <div className="relative aspect-video w-full max-w-[200px] border border-[#1a1a1a]/15 overflow-hidden group cursor-pointer" onClick={() => photoInputRef.current?.click()}>
                     <img 
-                      src={PRESET_IMAGES[newPhotoIndex]} 
-                      alt="Preset Food" 
+                      src={newPhotoBase64} 
+                      alt="Uploaded Food" 
                       className="w-full h-full object-cover" 
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -384,13 +399,20 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                 ) : (
                   <button
                     type="button"
-                    onClick={handleCyclePhoto}
+                    onClick={() => photoInputRef.current?.click()}
                     className="flex items-center justify-center gap-1.5 border border-dashed border-[#1a1a1a]/25 py-3 text-[#1a1a1a]/60 hover:text-[#e2533b] hover:border-[#e2533b] transition-all cursor-pointer font-mono text-[10px] uppercase tracking-wider font-bold max-w-[200px] self-start"
                   >
                     <Camera size={14} />
-                    <span>{t('review_form.photo_preset')}</span>
+                    <span>Tải ảnh từ thiết bị</span>
                   </button>
                 )}
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                />
               </div>
 
               {/* Form Actions */}

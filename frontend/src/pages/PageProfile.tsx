@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/Admin/AdminDashboard';
 import OwnerDashboard from '../components/Owner/OwnerDashboard';
@@ -36,6 +36,26 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
   const [isEditingAvatar, setIsEditingAvatar] = useState(false);
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState('');
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleAvatarFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await fileToBase64(file);
+      setSelectedAvatarUrl(base64);
+    } catch (err) {
+      console.error("Failed to read avatar file", err);
+    }
+  };
 
   // Password update states
   const [isEditingPassword, setIsEditingPassword] = useState(false);
@@ -267,18 +287,28 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
                     </div>
                   </div>
 
-                  {/* Custom URL Input */}
+                   {/* Custom File Upload Input */}
                   <div className="flex flex-col gap-1.5">
                     <label className="font-mono text-[9px] text-[#1a1a1a]/60 uppercase tracking-wider font-extrabold">
-                      {t('profile.custom_avatar_url')}
+                      Ảnh đại diện từ thiết bị
                     </label>
+                    <button
+                      type="button"
+                      onClick={() => avatarFileRef.current?.click()}
+                      className="w-full py-2 bg-white text-[#1a1a1a] hover:bg-[#f9f7f2] border-2 border-dashed border-[#1a1a1a]/40 hover:border-[#e2533b] hover:text-[#e2533b] font-mono text-xs font-bold uppercase transition-all cursor-pointer text-center"
+                    >
+                      Chọn file ảnh từ thiết bị
+                    </button>
                     <input
-                      type="text"
-                      value={selectedAvatarUrl}
-                      onChange={(e) => setSelectedAvatarUrl(e.target.value)}
-                      placeholder="https://example.com/avatar.png"
-                      className="w-full px-3 py-2 border-2 border-[#1a1a1a] font-mono text-xs focus:outline-none focus:border-[#e2533b] bg-white rounded-none"
+                      ref={avatarFileRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarFileUpload}
                     />
+                    {selectedAvatarUrl && selectedAvatarUrl.startsWith('data:') && (
+                      <span className="text-[10px] text-green-600 font-mono font-bold mt-1 text-center">✓ Đã chọn ảnh từ máy</span>
+                    )}
                   </div>
 
                   {/* Actions */}
