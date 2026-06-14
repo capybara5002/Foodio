@@ -65,6 +65,29 @@ function AppContent() {
   const sortThreads = (items: ChatThread[]) =>
     [...items].sort((a, b) => getThreadSortTime(b.lastMessageTime) - getThreadSortTime(a.lastMessageTime));
 
+  const mergeThreads = (...groups: ChatThread[][]) => {
+    const merged = new Map<string, ChatThread>();
+    groups.flat().forEach((thread) => {
+      merged.set(thread.id, thread);
+    });
+    return [...merged.values()];
+  };
+
+  const getRelevantChatThreads = async () => {
+    if (!activeChatRestaurantId) {
+      return getChatThreads({ userId: activeChatUserId });
+    }
+
+    const [ownerThreads, customerThreads] = await Promise.all([
+      getChatThreads({ restaurantId: activeChatRestaurantId }),
+      getChatThreads({ userId: activeChatUserId })
+    ]);
+
+    return mergeThreads(ownerThreads, customerThreads).filter(
+      (thread) => !(thread.restaurantId === activeChatRestaurantId && thread.userId === activeChatUserId)
+    );
+  };
+
   const replaceChatThreads = (items: ChatThread[]) => {
     const sorted = sortThreads(items);
     setChatThreads(sorted);
@@ -108,11 +131,7 @@ function AppContent() {
       try {
         const [remoteRestaurants, remoteThreads, remoteTours] = await Promise.all([
           getRestaurants(),
-          getChatThreads(
-            activeChatRestaurantId
-              ? { restaurantId: activeChatRestaurantId }
-              : { userId: activeChatUserId }
-          ),
+          getRelevantChatThreads(),
           getAudioTours()
         ]);
 
@@ -210,11 +229,7 @@ function AppContent() {
 
   const handleRefreshThreads = async () => {
     try {
-      const remoteThreads = await getChatThreads(
-        activeChatRestaurantId
-          ? { restaurantId: activeChatRestaurantId }
-          : { userId: activeChatUserId }
-      );
+      const remoteThreads = await getRelevantChatThreads();
       replaceChatThreads(remoteThreads);
     } catch (error) {
       console.warn('Failed to refresh chat threads:', error);
@@ -230,6 +245,12 @@ function AppContent() {
   };
 
   const handleContactRestaurant = async (restaurantId: string) => {
+    if (user?.role === 'Owner' && user.restaurantId === restaurantId) {
+      setSelectedRestaurantId(null);
+      setCurrentTab('inbox');
+      return;
+    }
+
     requireAuth(t('auth.require_login_chat'), async () => {
       try {
         await openRestaurantChat(restaurantId);

@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import * as signalR from '@microsoft/signalr';
 import { ChatThread, ChatMessage, Restaurant } from '../types';
 import { ensureChatThread } from '../api/cravemapApi';
+import { apiBase } from '../api/apiConfig';
 import { ArrowLeft, BadgeCheck, Phone, MoreVertical, CheckCheck, Image, Send, PhoneOff, MessageSquare } from 'lucide-react';
 
 interface PageInboxProps {
@@ -63,13 +64,25 @@ export default function PageInbox({
   }, [effectiveThreadId, threads, restaurantId]);
 
   const canStartRestaurantThread = !isOwnerView && currentUserRole !== 'Guest';
+  const isOwnedRestaurantThread = (thread?: ChatThread | null) =>
+    Boolean(isOwnerView && restaurantId && thread?.restaurantId === restaurantId);
+  const getThreadIdentity = (thread: ChatThread) => {
+    if (isOwnedRestaurantThread(thread)) {
+      return {
+        name: thread.customerName || thread.userId || 'Customer',
+        avatar: thread.customerAvatar || thread.avatar,
+        statusText: 'Customer conversation'
+      };
+    }
 
-  const getThreadIdentity = (thread: ChatThread) => ({
-    name: isOwnerView ? thread.customerName || thread.userId || 'Customer' : thread.name,
-    avatar: isOwnerView ? thread.customerAvatar || thread.avatar : thread.avatar,
-    statusText: isOwnerView ? 'Customer conversation' : thread.statusText
-  });
+    return {
+      name: thread.name,
+      avatar: thread.avatar,
+      statusText: thread.statusText
+    };
+  };
   const activeIdentity = activeThread ? getThreadIdentity(activeThread) : null;
+  const activeThreadIsOwnerConsole = isOwnedRestaurantThread(activeThread);
   const getThreadSortTime = (value: string) => {
     const time = new Date(value).getTime();
     return Number.isNaN(time) ? 0 : time;
@@ -95,8 +108,7 @@ export default function PageInbox({
     setLoadingMessages(true);
     setErrorMessages(null);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${baseUrl}/api/chatthreads/${threadId}/messages`);
+      const response = await fetch(`${apiBase}/api/chatthreads/${threadId}/messages`);
       if (response.status === 404 && canStartRestaurantThread && activeThread?.restaurantId) {
         const ensuredThread = await ensureChatThread(activeThread.restaurantId, userId);
         onThreadUpdated(ensuredThread);
@@ -127,9 +139,8 @@ export default function PageInbox({
   }, [messages]);
 
   useEffect(() => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     const connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${baseUrl}/hubs/chat`)
+      .withUrl(`${apiBase}/hubs/chat`)
       .withAutomaticReconnect()
       .build();
 
@@ -261,9 +272,8 @@ export default function PageInbox({
   return (
     <div className="w-full h-[calc(100vh-72px)] flex bg-[#f7efe4] overflow-hidden text-[#2c211b]">
       {/* Left Column Sidebar: Conversations List (Hidden on mobile if actively chatting) */}
-      <aside className={`w-full md:w-[320px] lg:w-[390px] bg-[#fffaf4]/86 border-r border-[#4b362a]/10 flex-col shrink-0 h-full shadow-[18px_0_46px_rgba(77,49,31,0.08)] ${
-        mobileView === 'chat' ? 'hidden md:flex' : 'flex'
-      }`}>
+      <aside className={`w-full md:w-[320px] lg:w-[390px] bg-[#fffaf4]/86 border-r border-[#4b362a]/10 flex-col shrink-0 h-full shadow-[18px_0_46px_rgba(77,49,31,0.08)] ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'
+        }`}>
         {/* Sidebar Header */}
         <div className="px-5 py-3 bg-[#fffaf4]/94 border-b border-[#4b362a]/10 flex justify-between items-center h-[72px]">
           <h1 className="font-serif font-bold text-2xl tracking-[-0.05em] text-[#2c211b]">Inbox</h1>
@@ -285,15 +295,14 @@ export default function PageInbox({
                     onSelectThread(thread.id);
                     setMobileView('chat');
                   }}
-                  className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-white/70 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] select-none ${
-                    isSelected ? 'bg-white/82 border-l-4 border-[#b76548]' : 'border-l-4 border-transparent'
-                  }`}
+                  className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-white/70 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] select-none ${isSelected ? 'bg-white/82 border-l-4 border-[#b76548]' : 'border-l-4 border-transparent'
+                    }`}
                 >
                   {/* Channel Avatar badge */}
                   <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-white/70 bg-white shadow-[0_12px_30px_rgba(77,49,31,0.1)]">
                     <img src={identity.avatar} alt={identity.name} className="w-full h-full object-cover" />
                     {thread.id === 'oc_oanh_thread' && (
-                    <div className="absolute bottom-1 right-1 w-2.5 h-2.5 bg-[#b76548] rounded-full border border-white" />
+                      <div className="absolute bottom-1 right-1 w-2.5 h-2.5 bg-[#b76548] rounded-full border border-white" />
                     )}
                   </div>
 
@@ -307,9 +316,8 @@ export default function PageInbox({
                         {formatThreadTime(thread.lastMessageTime)}
                       </span>
                     </div>
-                    <p className={`font-sans text-[11px] truncate font-light ${
-                      thread.unreadCount > 0 ? 'text-[#2c211b] font-black' : 'text-[#6f655b]'
-                    }`}>
+                    <p className={`font-sans text-[11px] truncate font-light ${thread.unreadCount > 0 ? 'text-[#2c211b] font-black' : 'text-[#6f655b]'
+                      }`}>
                       {thread.lastMessageText}
                     </p>
                   </div>
@@ -367,9 +375,8 @@ export default function PageInbox({
       </aside>
 
       {/* Main Column Chat Window Frame */}
-      <section className={`flex-1 flex flex-col h-full bg-[#f7efe4] relative ${
-        mobileView === 'threads' ? 'hidden md:flex' : 'flex'
-      }`}>
+      <section className={`flex-1 flex flex-col h-full bg-[#f7efe4] relative ${mobileView === 'threads' ? 'hidden md:flex' : 'flex'
+        }`}>
         {!activeThread ? (
           <div className="flex-1 flex flex-col bg-[#f7efe4]">
             <div className="h-[72px] px-5 border-b border-[#4b362a]/10 bg-[#fffaf4]/88 flex items-center justify-between shrink-0">
@@ -421,10 +428,10 @@ export default function PageInbox({
           <>
             {/* Chat Header panel, matches layout specs */}
             <div className="h-[72px] px-5 border-b border-[#4b362a]/10 bg-[#fffaf4]/90 flex items-center justify-between shrink-0 z-10 shadow-xs">
-              
+
               <div className="flex items-center gap-3 min-w-0">
                 {/* Mobile Back button */}
-                <button 
+                <button
                   onClick={() => setMobileView('threads')}
                   className="md:hidden p-1.5 -ml-1 text-[#6f655b] hover:bg-[#f0e5d8] rounded-full transition-colors flex items-center justify-center cursor-pointer"
                 >
@@ -439,7 +446,7 @@ export default function PageInbox({
                 <div className="min-w-0">
                   <h2 className="font-serif font-bold text-base tracking-[-0.035em] text-[#2c211b] flex items-center gap-1.5">
                     {activeIdentity?.name}
-                    {!isOwnerView && activeThread.restaurantId === 'oc_oanh' && (
+                    {!activeThreadIsOwnerConsole && activeThread.restaurantId === 'oc_oanh' && (
                       <BadgeCheck size={15} className="fill-[#b76548] text-white inline-block select-none" />
                     )}
                   </h2>
@@ -452,7 +459,7 @@ export default function PageInbox({
 
               {/* Call & detail dropdown options */}
               <div className="flex gap-1.5">
-                <button 
+                <button
                   onClick={startMockCall}
                   className="p-2 text-[#2c211b] hover:text-[#8f4f3b] hover:bg-[#f0e5d8] rounded-full transition-all flex items-center justify-center cursor-pointer"
                 >
@@ -467,7 +474,7 @@ export default function PageInbox({
 
             {/* Messages Stream viewport area */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 flex flex-col bg-[radial-gradient(circle_at_12%_0%,rgba(183,101,72,0.08),transparent_28rem),#f7efe4]">
-              
+
               {/* Calendar separator */}
               <div className="flex justify-center my-1 select-none">
                 <span className="bg-[#fffaf4]/88 text-[#6f655b] font-mono text-[9px] uppercase tracking-wider px-4 py-1.5 rounded-full shadow-xs border border-white/70">
@@ -497,11 +504,11 @@ export default function PageInbox({
               {/* Actual streams rendering */}
               {!loadingMessages && !errorMessages && messages.map((msg) => {
                 const isSystem = msg.isSystemNotification || msg.messageType === 'Booking';
-                const isOwnMessage = msg.senderId === userId || (!msg.senderId && msg.sender === 'user' && !isOwnerView);
+                const isOwnMessage = msg.senderId === userId || (!msg.senderId && msg.sender === (activeThreadIsOwnerConsole ? 'restaurant' : 'user'));
                 const isBooking = msg.messageType === 'Booking' && msg.booking;
                 const isImage = msg.messageType === 'Image' && msg.imageData;
                 return (
-                  <div 
+                  <div
                     key={msg.id}
                     className={`flex flex-col group ${isSystem ? 'items-center' : isOwnMessage ? 'items-end' : 'items-start'}`}
                   >
@@ -525,11 +532,10 @@ export default function PageInbox({
                         </p>
                       </div>
                     ) : isImage ? (
-                      <div className={`max-w-[85%] md:max-w-[70%] p-2 shadow-[0_18px_46px_rgba(77,49,31,0.1)] rounded-3xl border ${
-                        isOwnMessage
-                          ? 'bg-[#2c211b] text-white border-[#2c211b]'
-                          : 'bg-[#fffaf4] text-[#2c211b] border-white/70'
-                      }`}>
+                      <div className={`max-w-[85%] md:max-w-[70%] p-2 shadow-[0_18px_46px_rgba(77,49,31,0.1)] rounded-3xl border ${isOwnMessage
+                        ? 'bg-[#2c211b] text-white border-[#2c211b]'
+                        : 'bg-[#fffaf4] text-[#2c211b] border-white/70'
+                        }`}>
                         <img
                           src={msg.imageData!}
                           alt={msg.imageFileName || 'Chat attachment'}
@@ -542,18 +548,16 @@ export default function PageInbox({
                         )}
                       </div>
                     ) : (
-                      <div className={`max-w-[85%] md:max-w-[70%] text-xs md:text-sm px-4 py-3 shadow-[0_18px_46px_rgba(77,49,31,0.1)] transition-transform transform origin-bottom rounded-3xl border ${
-                        isOwnMessage 
-                          ? 'bg-[#2c211b] text-white border-[#2c211b]' 
-                          : 'bg-[#fffaf4] text-[#2c211b] border-white/70'
-                      }`}>
+                      <div className={`max-w-[85%] md:max-w-[70%] text-xs md:text-sm px-4 py-3 shadow-[0_18px_46px_rgba(77,49,31,0.1)] transition-transform transform origin-bottom rounded-3xl border ${isOwnMessage
+                        ? 'bg-[#2c211b] text-white border-[#2c211b]'
+                        : 'bg-[#fffaf4] text-[#2c211b] border-white/70'
+                        }`}>
                         <p className="font-sans leading-relaxed font-light">{msg.text}</p>
                       </div>
                     )}
-                    
-                    <span className={`font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 mt-1 flex items-center gap-1 ${
-                      isSystem ? '' : isOwnMessage ? 'mr-1' : 'ml-1'
-                    }`}>
+
+                    <span className={`font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 mt-1 flex items-center gap-1 ${isSystem ? '' : isOwnMessage ? 'mr-1' : 'ml-1'
+                      }`}>
                       {msg.timestamp}
                       {isOwnMessage && !isSystem && (
                         <CheckCheck size={12} className="text-[#e2533b] font-bold" />
@@ -563,74 +567,76 @@ export default function PageInbox({
                 );
               })}
 
-              {/* Auto Scroll block */}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input layout frame text-input box, matches screenshot fully */}
-            <div className="p-3 md:p-4 bg-[#fffaf4]/88 border-t border-white/70 shrink-0 backdrop-blur-xl">
-              <form onSubmit={handleSend} className="flex items-center gap-2 bg-white/88 rounded-full border border-[#4b362a]/10 pr-2 pl-3 py-1.5 shadow-[0_12px_30px_rgba(77,49,31,0.1)] transition-all">
-                <button 
-                  type="button"
-                  onClick={() => imageInputRef.current?.click()}
-                  className="p-1.5 text-[#8d8074] hover:text-[#8f4f3b] transition-colors flex items-center justify-center rounded-full cursor-pointer"
-                  aria-label="Upload image"
-                >
-                  <Image size={20} />
-                </button>
-
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageSelected}
-                />
-
-                <input 
-                  type="text" 
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 font-sans text-xs md:text-sm text-[#2c211b] placeholder:text-[#8d8074] py-2"
-                  placeholder={`Message ${activeIdentity?.name || 'conversation'}...`}
-                />
-
-                <button 
-                  type="submit"
-                  aria-label="Send text messages"
-                  className="bg-[#2c211b] hover:bg-[#8f4f3b] text-white p-2.5 rounded-full flex items-center justify-center transition-all shadow active:scale-90 cursor-pointer"
-                >
-                  <Send size={14} className="fill-current" />
-                </button>
-
-              </form>
-            </div>
-          </>
-        )}
-      </section>
-
-      {/* Mock Dialing calling modal overlays */}
-      {mockCallState === 'calling' && (
-        <div className="fixed inset-0 bg-[#1a1a1a] z-[99] flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
-          <div className="w-24 h-24 rounded-none overflow-hidden border-2 border-[#e2533b] shadow-2xl relative select-none">
-            <img src={activeIdentity?.avatar} alt="Calling recipient" className="w-full h-full object-cover grayscale" />
-            <div className="absolute inset-0 bg-[#e2533b]/25 animate-ping" />
-          </div>
-
-          <h3 className="font-serif italic font-bold text-lg mt-6">{activeIdentity?.name}</h3>
-          <p className="font-mono text-[9px] uppercase tracking-widest text-[#e2533b] mt-2 animate-pulse font-bold">
-            Calling via CraveMap Voice...
-          </p>
-
-          <button
-            onClick={() => setMockCallState('idle')}
-            className="mt-16 w-12 h-12 bg-[#e2533b] hover:bg-red-800 rounded-none flex items-center justify-center active:scale-90 cursor-pointer text-white"
-          >
-            <PhoneOff size={20} />
-          </button>
+          {/* Auto Scroll block */}
+          <div ref={messagesEndRef} />
         </div>
-      )}
 
-    </div>
+        {/* Input layout frame text-input box, matches screenshot fully */}
+        <div className="p-3 md:p-4 bg-[#fffaf4]/88 border-t border-white/70 shrink-0 backdrop-blur-xl">
+          <form onSubmit={handleSend} className="flex items-center gap-2 bg-white/88 rounded-full border border-[#4b362a]/10 pr-2 pl-3 py-1.5 shadow-[0_12px_30px_rgba(77,49,31,0.1)] transition-all">
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              className="p-1.5 text-[#8d8074] hover:text-[#8f4f3b] transition-colors flex items-center justify-center rounded-full cursor-pointer"
+              aria-label="Upload image"
+            >
+              <Image size={20} />
+            </button>
+
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageSelected}
+            />
+
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 font-sans text-xs md:text-sm text-[#2c211b] placeholder:text-[#8d8074] py-2"
+              placeholder={`Message ${activeIdentity?.name || 'conversation'}...`}
+            />
+
+            <button
+              type="submit"
+              aria-label="Send text messages"
+              className="bg-[#2c211b] hover:bg-[#8f4f3b] text-white p-2.5 rounded-full flex items-center justify-center transition-all shadow active:scale-90 cursor-pointer"
+            >
+              <Send size={14} className="fill-current" />
+            </button>
+
+          </form>
+        </div>
+      </>
+        )}
+    </section>
+
+      {/* Mock Dialing calling modal overlays */ }
+  {
+    mockCallState === 'calling' && (
+      <div className="fixed inset-0 bg-[#1a1a1a] z-[99] flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
+        <div className="w-24 h-24 rounded-none overflow-hidden border-2 border-[#e2533b] shadow-2xl relative select-none">
+          <img src={activeIdentity?.avatar} alt="Calling recipient" className="w-full h-full object-cover grayscale" />
+          <div className="absolute inset-0 bg-[#e2533b]/25 animate-ping" />
+        </div>
+
+        <h3 className="font-serif italic font-bold text-lg mt-6">{activeIdentity?.name}</h3>
+        <p className="font-mono text-[9px] uppercase tracking-widest text-[#e2533b] mt-2 animate-pulse font-bold">
+          Calling via CraveMap Voice...
+        </p>
+
+        <button
+          onClick={() => setMockCallState('idle')}
+          className="mt-16 w-12 h-12 bg-[#e2533b] hover:bg-red-800 rounded-none flex items-center justify-center active:scale-90 cursor-pointer text-white"
+        >
+          <PhoneOff size={20} />
+        </button>
+      </div>
+    )
+  }
+
+    </div >
   );
 }

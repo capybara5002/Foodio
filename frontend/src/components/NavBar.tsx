@@ -23,7 +23,7 @@ const normalizeString = (str: string) =>
   str
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[đĐ]/g, 'd')
+    .replace(/[\u0111\u0110]/g, 'd')
     .toLowerCase();
 
 const navItems = [
@@ -59,6 +59,11 @@ export default function NavBar({
     : [];
 
   const showSearchSuggestions = currentTab === 'map' && isSearchFocused && normalizedSearchQuery.length > 0;
+  const selectSearchSuggestion = (restaurant: Restaurant) => {
+    onSearchQueryChange(restaurant.name);
+    onSearchRestaurantSelect(restaurant.id);
+    setIsSearchFocused(false);
+  };
 
   return (
     <>
@@ -95,6 +100,12 @@ export default function NavBar({
                   }}
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => window.setTimeout(() => setIsSearchFocused(false), 180)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchSuggestions[0]) {
+                      e.preventDefault();
+                      selectSearchSuggestion(searchSuggestions[0]);
+                    }
+                  }}
                   placeholder={t('search.placeholder')}
                   className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#2c211b] outline-none placeholder:text-[#8d8074]"
                   aria-label="Search restaurants on the map"
@@ -112,25 +123,22 @@ export default function NavBar({
               </div>
 
               {showSearchSuggestions && (
-                <div className="absolute left-0 right-0 top-[calc(100%+10px)] max-h-[360px] overflow-y-auto rounded-[1.5rem] border border-[#4b362a]/10 bg-[#fffaf4] p-2 shadow-[0_24px_70px_rgba(77,49,31,0.2)] hide-scrollbar">
+                <div className="fixed left-3 right-3 top-[82px] z-[95] max-h-[min(48vh,360px)] overflow-y-auto rounded-[1.5rem] border border-[#4b362a]/10 bg-[#fffaf4] p-2 shadow-[0_24px_70px_rgba(77,49,31,0.2)] hide-scrollbar md:absolute md:left-0 md:right-0 md:top-[calc(100%+10px)] md:max-h-[360px]">
                   {searchSuggestions.length > 0 ? (
                     searchSuggestions.map((restaurant) => (
                       <button
                         key={restaurant.id}
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          onSearchRestaurantSelect(restaurant.id);
-                          setIsSearchFocused(false);
-                        }}
-                        className="group flex w-full items-start gap-3 rounded-[1.15rem] px-3 py-3 text-left transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white active:scale-[0.99]"
+                        onClick={() => selectSearchSuggestion(restaurant)}
+                        className="group flex w-full min-w-0 items-start gap-3 rounded-[1.15rem] px-3 py-3 text-left transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white active:scale-[0.99]"
                       >
                         <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f0d5c8] text-[#8f4f3b]">
                           <MapPin size={17} />
                         </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-[#2c211b]">{restaurant.name}</span>
-                          <span className="mt-0.5 block truncate text-xs text-[#6f655b]">
+                        <span className="flex min-w-0 flex-1 flex-col pr-1">
+                          <span className="block min-w-0 truncate text-sm font-semibold leading-5 text-[#2c211b]">{restaurant.name}</span>
+                          <span className="mt-0.5 block min-w-0 truncate text-xs leading-4 text-[#6f655b]">
                             {restaurant.category} · {restaurant.area}
                           </span>
                         </span>

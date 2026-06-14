@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { apiBase } from './apiConfig';
 
 export interface AudioGuideNarration {
   translatedText: string;

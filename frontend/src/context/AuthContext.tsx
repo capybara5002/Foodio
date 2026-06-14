@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
+import { apiBase } from '../api/apiConfig';
 
 interface AuthContextType {
   user: User | null;
@@ -35,8 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const response = await fetch(`${baseUrl}/api/auth/login`, {
+    const response = await fetch(`${apiBase}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -56,8 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (username: string, email: string, password: string): Promise<User> => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const response = await fetch(`${baseUrl}/api/auth/register`, {
+    const response = await fetch(`${apiBase}/api/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -77,8 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const qrLogin = async (token: string): Promise<User> => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const response = await fetch(`${baseUrl}/api/auth/qr/verify`, {
+    const response = await fetch(`${apiBase}/api/auth/qr/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -138,8 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateAvatar = async (avatarUrl: string): Promise<User> => {
     if (!user) throw new Error('Not logged in');
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const response = await fetch(`${baseUrl}/api/auth/update-avatar`, {
+    const response = await fetch(`${apiBase}/api/auth/update-avatar`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -160,8 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updatePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
     if (!user) throw new Error('Not logged in');
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const response = await fetch(`${baseUrl}/api/auth/update-password`, {
+    const response = await fetch(`${apiBase}/api/auth/update-password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
