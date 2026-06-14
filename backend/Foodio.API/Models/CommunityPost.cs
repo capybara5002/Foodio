@@ -18,7 +18,6 @@ public class CommunityPost
     public string Handle { get; set; } = string.Empty;
 
     [Required]
-    [MaxLength(1000)]
     public string Avatar { get; set; } = string.Empty;
 
     [MaxLength(40)]
@@ -28,7 +27,6 @@ public class CommunityPost
     public decimal Rating { get; set; }
 
     [Required]
-    [MaxLength(1000)]
     public string Image { get; set; } = string.Empty;
 
     [Required]

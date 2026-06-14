@@ -17,7 +17,6 @@ public class MenuItem
     public decimal Price { get; set; }
 
     [Required]
-    [MaxLength(1000)]
     public string Image { get; set; } = string.Empty;
 
     [MaxLength(600)]

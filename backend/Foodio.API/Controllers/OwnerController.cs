@@ -66,6 +66,14 @@ public class OwnerController : ControllerBase
             return NotFound("Restaurant not found.");
         }
 
+        // Check if new coordinates overlap with another restaurant
+        var isLocationDuplicate = await _db.Restaurants
+            .AnyAsync(r => r.Id != restaurantId && r.Latitude == dto.Latitude && r.Longitude == dto.Longitude);
+        if (isLocationDuplicate)
+        {
+            return BadRequest("Tọa độ này đã được sử dụng bởi một quán ăn khác. Vui lòng chọn tọa độ khác.");
+        }
+
         var audit = new AuditLog
         {
             Actor = owner.Username,
@@ -199,6 +207,16 @@ public class OwnerController : ControllerBase
             .FirstOrDefaultAsync(r => r.OwnerId == ownerId && r.Status == "Pending");
         if (existing != null)
             return BadRequest("You already have a pending request.");
+
+        // Check if coordinates overlap with an existing restaurant or another pending request
+        var isLocationDuplicate = await _db.Restaurants
+            .AnyAsync(r => r.Latitude == dto.Latitude && r.Longitude == dto.Longitude);
+        var isLocationDuplicateInRequests = await _db.RestaurantRequests
+            .AnyAsync(r => r.Status == "Pending" && r.Latitude == dto.Latitude && r.Longitude == dto.Longitude);
+        if (isLocationDuplicate || isLocationDuplicateInRequests)
+        {
+            return BadRequest("Tọa độ này đã được đăng ký hoặc đang chờ duyệt bởi một quán ăn khác. Vui lòng chọn tọa độ khác.");
+        }
 
         var request = new RestaurantRequest
         {
