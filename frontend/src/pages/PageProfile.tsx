@@ -12,6 +12,7 @@ interface PageProfileProps {
   onLoginTrigger: () => void;
   sessionCommunityPosts?: CommunityPost[];
   onRestaurantUpdated?: (updated: Restaurant) => void;
+  onRefreshRestaurants?: () => void;
 }
 
 const AVATAR_PRESETS = [
@@ -23,7 +24,7 @@ const AVATAR_PRESETS = [
   "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=150&auto=format&fit=crop&q=60"  // Seafood/Snails
 ];
 
-export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = [], onRestaurantUpdated }: PageProfileProps) {
+export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = [], onRestaurantUpdated, onRefreshRestaurants }: PageProfileProps) {
   const { user, logout, updateAvatar, updatePassword } = useAuth();
   const { t } = useTranslation();
   const { language, changeLanguage } = useLanguage();
@@ -529,7 +530,7 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
         {/* Tab 2: Admin Dashboard Console */}
         {activeConsole === 'admin' && isAdmin && (
           <div className="animate-in fade-in duration-300">
-            <AdminDashboard />
+            <AdminDashboard onRestaurantUpdated={onRestaurantUpdated} onRefreshRestaurants={onRefreshRestaurants} />
           </div>
         )}
 

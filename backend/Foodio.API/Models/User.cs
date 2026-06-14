@@ -32,7 +32,6 @@ public class User
     [MaxLength(32)]
     public string OwnerStatus { get; set; } = "None"; // "None", "Pending", "Verified", "Rejected"
 
-    [MaxLength(2000)]
     public string? Avatar { get; set; }
 
     public bool IsActive { get; set; } = true;
