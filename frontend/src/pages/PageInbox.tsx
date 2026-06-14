@@ -242,7 +242,7 @@ export default function PageInbox({
     <div className="w-full h-[calc(100vh-72px)] flex bg-[#f7efe4] overflow-hidden text-[#2c211b]">
       
       {/* Left Column Sidebar: Conversations List (Hidden on mobile if actively chatting) */}
-      <aside className={`w-[320px] lg:w-[390px] bg-[#fffaf4]/86 border-r border-[#4b362a]/10 flex-col shrink-0 h-full shadow-[18px_0_46px_rgba(77,49,31,0.08)] ${
+      <aside className={`w-full md:w-[320px] lg:w-[390px] bg-[#fffaf4]/86 border-r border-[#4b362a]/10 flex-col shrink-0 h-full shadow-[18px_0_46px_rgba(77,49,31,0.08)] ${
         mobileView === 'chat' ? 'hidden md:flex' : 'flex'
       }`}>
         {/* Sidebar Header */}
