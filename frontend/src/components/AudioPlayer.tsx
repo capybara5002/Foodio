@@ -151,6 +151,16 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
 
 
   const togglePlay = () => {
+    if (tour?.audioData) {
+      if (progress >= 100) {
+        handleSeek(0);
+        setIsPlaying(true);
+      } else {
+        setIsPlaying((current) => !current);
+      }
+      return;
+    }
+
     if (!('speechSynthesis' in window)) return;
     
     if (isPlaying) {

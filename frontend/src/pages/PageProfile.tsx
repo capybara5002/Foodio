@@ -6,6 +6,7 @@ import { CommunityPost, Restaurant } from '../types';
 import { UserCircle, BadgeCheck, FileText, Star, Globe, LogOut, User, Shield, Store, Edit2, Key, ChevronRight, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
+import { apiBase } from '../api/apiConfig';
 
 interface PageProfileProps {
   userEmail: string;
@@ -80,10 +81,9 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
     
     const fetchPostsCount = async () => {
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        let response = await fetch(`${baseUrl}/api/admin/posts`);
+        let response = await fetch(`${apiBase}/api/admin/posts`);
         if (!response.ok) {
-          response = await fetch(`${baseUrl}/api/communityposts`);
+          response = await fetch(`${apiBase}/api/communityposts`);
         }
         if (!response.ok) throw new Error("Failed to fetch posts count");
         const data = await response.json();

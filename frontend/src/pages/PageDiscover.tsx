@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { AudioTour, CommunityPost, PostComment } from '../types';
 import { getPostComments, createPostComment } from '../api/cravemapApi';
+import { apiBase } from '../api/apiConfig';
 import { initialCommunityFeed } from '../data';
 import { Flame, MapPin, Star, Heart, MessageSquare, Bookmark, Volume2, Users, Plus, Camera } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -63,8 +64,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
         setLoading(true);
         setError(null);
         try {
-          const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-          const response = await fetch(`${baseUrl}/api/communityposts`);
+          const response = await fetch(`${apiBase}/api/communityposts`);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }

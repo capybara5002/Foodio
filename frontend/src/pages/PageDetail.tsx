@@ -5,7 +5,7 @@
 
 import { useState, useRef } from 'react';
 import { Restaurant } from '../types';
-import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X } from 'lucide-react';
+import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X, CalendarCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { createReview } from '../api/cravemapApi';
@@ -216,24 +216,34 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
           </div>
         </section>
 
-        {/* Action Row CTA: Audio Guide and Chat triggers */}
-        <section className="flex items-center gap-3">
+        {/* Action Row CTA: Booking, audio guide, and chat triggers */}
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <button
+            type="button"
+            onClick={onOpenBooking}
+            className="foodio-btn foodio-btn-primary col-span-2 h-12 min-w-0 !px-4 !py-0 font-mono text-[10px] uppercase tracking-widest cursor-pointer md:col-span-1"
+          >
+            <CalendarCheck size={18} className="shrink-0" />
+            <span className="truncate">{t('detail.book_table')}</span>
+          </button>
+
           <button 
             type="button"
             onClick={() => setShowAudioGuide((current) => !current)}
-            className="foodio-btn foodio-btn-primary group flex-1 font-mono text-[10px] uppercase tracking-widest cursor-pointer"
+            className="foodio-btn foodio-btn-primary group h-12 min-w-0 !px-3 !py-0 font-mono text-[9px] uppercase tracking-wider cursor-pointer"
           >
-            <Volume2 size={14} /> {t('detail.play_audio')}
+            <Volume2 size={22} className="shrink-0" />
+            <span className="min-w-0 leading-tight text-wrap-balance">{t('detail.play_audio')}</span>
           </button>
           
           <button 
             type="button"
             onClick={onGoToChat}
             aria-label="Direct message with restaurant owner"
-            className="foodio-btn foodio-btn-secondary h-12 font-mono text-[10px] uppercase tracking-widest cursor-pointer"
+            className="foodio-btn foodio-btn-secondary h-12 min-w-0 !px-3 !py-0 font-mono text-[9px] uppercase tracking-wider cursor-pointer"
           >
-            <MessageSquare size={18} />
-            {t('nav.contact')}
+            <MessageSquare size={19} className="shrink-0" />
+            <span className="min-w-0 leading-tight text-wrap-balance">{t('nav.contact')}</span>
           </button>
         </section>
 
@@ -562,10 +572,10 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
       </main>
 
       {/* Sticky Bottom Action Sheet Row */}
-      <div className="fixed bottom-0 left-0 w-full bg-[#fffaf4]/86 border-t border-white/70 px-4 py-3 shadow-[0_-18px_46px_rgba(77,49,31,0.12)] z-40 flex justify-center pb-safe backdrop-blur-xl">
+      <div className="fixed bottom-20 left-0 w-full bg-[#fffaf4]/86 border-t border-white/70 px-4 py-3 shadow-[0_-18px_46px_rgba(77,49,31,0.12)] z-[70] flex justify-center pb-safe backdrop-blur-xl md:bottom-0">
         <button 
           onClick={onOpenBooking}
-          className="foodio-btn foodio-btn-primary w-full max-w-md font-mono text-[10px] uppercase tracking-widest text-center cursor-pointer"
+          className="foodio-btn foodio-btn-primary h-12 w-full max-w-md !py-0 font-mono text-[10px] uppercase tracking-widest text-center cursor-pointer"
         >
           {t('detail.book_table')}
         </button>

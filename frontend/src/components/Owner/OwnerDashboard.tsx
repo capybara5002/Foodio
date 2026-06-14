@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { apiBase } from '../../api/apiConfig';
 
 // Leaflet standard icon fixes
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -294,7 +295,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     setIsSpeaking(true);
   };
 
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const baseUrl = apiBase;
   const activeRestaurantId = user?.restaurantId;
   const ownerQuery = user?.id ? `ownerId=${encodeURIComponent(user.id)}` : '';
 

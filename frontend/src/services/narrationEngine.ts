@@ -1,6 +1,5 @@
 import { Restaurant } from '../types';
-
-const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { apiBase } from '../api/apiConfig';
 
 type StartCallback = (restaurant: Restaurant, text: string) => void;
 type EndCallback = () => void;

@@ -1,6 +1,5 @@
 import { AudioTour, ChatMessage, ChatThread, CommunityPost, FoodieReview, PostComment, Restaurant } from '../types';
-
-const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { apiBase } from './apiConfig';
 
 async function getJson<T>(path: string): Promise<T> {
   const response = await fetch(`${apiBase}${path}`, {

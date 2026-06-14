@@ -7,6 +7,7 @@ import { useState, useRef, useEffect, FormEvent, ChangeEvent } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { ChatThread, ChatMessage, Restaurant } from '../types';
 import { ensureChatThread } from '../api/cravemapApi';
+import { apiBase } from '../api/apiConfig';
 import { ArrowLeft, BadgeCheck, Phone, MoreVertical, CheckCheck, Image, Send, PhoneOff, MessageSquare } from 'lucide-react';
 
 interface PageInboxProps {
@@ -49,12 +50,25 @@ export default function PageInbox({
   const effectiveThreadId = activeThread?.id ?? '';
   const isOwnerView = currentUserRole === 'Owner';
   const canStartRestaurantThread = !isOwnerView && currentUserRole !== 'Guest';
-  const getThreadIdentity = (thread: ChatThread) => ({
-    name: isOwnerView ? thread.customerName || thread.userId || 'Customer' : thread.name,
-    avatar: isOwnerView ? thread.customerAvatar || thread.avatar : thread.avatar,
-    statusText: isOwnerView ? 'Customer conversation' : thread.statusText
-  });
+  const isOwnedRestaurantThread = (thread?: ChatThread | null) =>
+    Boolean(isOwnerView && restaurantId && thread?.restaurantId === restaurantId);
+  const getThreadIdentity = (thread: ChatThread) => {
+    if (isOwnedRestaurantThread(thread)) {
+      return {
+        name: thread.customerName || thread.userId || 'Customer',
+        avatar: thread.customerAvatar || thread.avatar,
+        statusText: 'Customer conversation'
+      };
+    }
+
+    return {
+      name: thread.name,
+      avatar: thread.avatar,
+      statusText: thread.statusText
+    };
+  };
   const activeIdentity = activeThread ? getThreadIdentity(activeThread) : null;
+  const activeThreadIsOwnerConsole = isOwnedRestaurantThread(activeThread);
   const getThreadSortTime = (value: string) => {
     const time = new Date(value).getTime();
     return Number.isNaN(time) ? 0 : time;
@@ -80,8 +94,7 @@ export default function PageInbox({
     setLoadingMessages(true);
     setErrorMessages(null);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${baseUrl}/api/chatthreads/${threadId}/messages`);
+      const response = await fetch(`${apiBase}/api/chatthreads/${threadId}/messages`);
       if (response.status === 404 && canStartRestaurantThread && activeThread?.restaurantId) {
         const ensuredThread = await ensureChatThread(activeThread.restaurantId, userId);
         onThreadUpdated(ensuredThread);
@@ -112,9 +125,8 @@ export default function PageInbox({
   }, [messages]);
 
   useEffect(() => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     const connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${baseUrl}/hubs/chat`)
+      .withUrl(`${apiBase}/hubs/chat`)
       .withAutomaticReconnect()
       .build();
 
@@ -421,7 +433,7 @@ export default function PageInbox({
             <div className="min-w-0">
               <h2 className="font-serif font-bold text-base tracking-[-0.035em] text-[#2c211b] flex items-center gap-1.5">
                 {activeIdentity?.name}
-                {!isOwnerView && activeThread.restaurantId === 'oc_oanh' && (
+                {!activeThreadIsOwnerConsole && activeThread.restaurantId === 'oc_oanh' && (
                   <BadgeCheck size={15} className="fill-[#b76548] text-white inline-block select-none" />
                 )}
               </h2>
@@ -479,7 +491,7 @@ export default function PageInbox({
           {/* Actual streams rendering */}
           {!loadingMessages && !errorMessages && messages.map((msg) => {
             const isSystem = msg.isSystemNotification || msg.messageType === 'Booking';
-            const isOwnMessage = msg.senderId === userId || (!msg.senderId && msg.sender === 'user' && !isOwnerView);
+            const isOwnMessage = msg.senderId === userId || (!msg.senderId && msg.sender === (activeThreadIsOwnerConsole ? 'restaurant' : 'user'));
             const isBooking = msg.messageType === 'Booking' && msg.booking;
             const isImage = msg.messageType === 'Image' && msg.imageData;
             return (
