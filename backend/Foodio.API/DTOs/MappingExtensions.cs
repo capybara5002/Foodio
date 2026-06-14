@@ -42,6 +42,7 @@ public static class MappingExtensions
             restaurant.Image,
             restaurant.IsVerified,
             restaurant.ReplySpeed,
+            restaurant.IsActive,
             restaurant.Latitude,
             restaurant.Longitude,
             restaurant.CategoryId,

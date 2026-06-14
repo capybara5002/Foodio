@@ -42,6 +42,7 @@ public record RestaurantDto(
     string Image,
     bool IsVerified,
     string ReplySpeed,
+    bool IsActive,
     decimal Latitude,
     decimal Longitude,
     int CategoryId,

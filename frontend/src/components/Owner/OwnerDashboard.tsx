@@ -989,7 +989,9 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                   <MapContainer
                     center={VINH_KHANH_CENTER}
                     zoom={16}
+                    minZoom={16}
                     maxBounds={MAX_BOUNDS}
+                    maxBoundsViscosity={1.0}
                     className="w-full h-full z-0"
                   >
                     <TileLayer

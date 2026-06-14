@@ -1,7 +1,91 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { User, Restaurant, Category, AudioTour, RestaurantRequest, CommunityPost, AuditLog } from '../../types';
-import { Plus, Pencil, Trash2, X, Shield, Store, User as UserIcon, Ban, Users, Unlock, MapPin, Calendar, MessageSquare, AlertTriangle, FileText, Check, Navigation, CheckCircle2, XCircle, UploadCloud } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Shield, Store, User as UserIcon, Ban, Users, Unlock, MapPin, Calendar, MessageSquare, AlertTriangle, FileText, Check, Navigation, CheckCircle2, XCircle, UploadCloud, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Leaflet standard icon fixes
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
+
+const VINH_KHANH_CENTER: [number, number] = [10.7580, 106.7020];
+const SW_BOUNDS: [number, number] = [10.7500, 106.6950];
+const NE_BOUNDS: [number, number] = [10.7650, 106.7150];
+const MAX_BOUNDS = L.latLngBounds(SW_BOUNDS, NE_BOUNDS);
+
+const getIconSvg = (category: string, size: number) => {
+  if (category?.toLowerCase() === 'seafood') {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-fish" style="transform: rotate(-45deg);"><path d="M2 16c.8-1 2-2.2 3.5-3 1.7.5 3.5.8 5.2.8 3.7 0 7.3-1.7 9.8-4.7L22 7l-1.9 1.2a15.7 15.7 0 0 1-9.8 3.5c-1.8 0-3.5-.3-5.2-.8-1.5-.8-2.7-2-3.5-3L2 6v10Z"/><path d="M16 8h.01"/><path d="M12 3h.01"/><path d="M22 17c-.8-1.2-2.2-2-3.5-2"/></svg>`;
+  } else {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flame" style="transform: rotate(-45deg);"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`;
+  }
+};
+
+const getRestaurantIcon = (category: string, isSelected: boolean) => {
+  const bgColor = isSelected ? '#b76548' : '#3b2a21';
+  const size = isSelected ? 42 : 34;
+  const innerSize = isSelected ? 22 : 18;
+
+  return L.divIcon({
+    className: `custom-restaurant-pin-${category}`,
+    html: `
+      <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s;">
+        <div style="display: flex; align-items: center; justify-content: center; width: ${size}px; height: ${size}px; background-color: ${bgColor}; border: 2px solid white; border-radius: 50% 50% 0 50%; transform: rotate(45deg); box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+          ${getIconSvg(category, innerSize)}
+        </div>
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size]
+  });
+};
+
+const getRequestMarkerIcon = (category: string) => {
+  const bgColor = '#e2533b';
+  const size = 42;
+  const innerSize = 22;
+
+  return L.divIcon({
+    className: `custom-request-pin-${category}`,
+    html: `
+      <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s;">
+        <div class="animate-bounce" style="display: flex; align-items: center; justify-content: center; width: ${size}px; height: ${size}px; background-color: ${bgColor}; border: 2px solid white; border-radius: 50% 50% 0 50%; transform: rotate(45deg); box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+          ${getIconSvg(category, innerSize)}
+        </div>
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size]
+  });
+};
+
+const formatEntityId = (id: string | null | undefined) => {
+  if (!id) return '';
+  if (id.length <= 15) return id;
+  if (id.startsWith('req_') && id.length > 12) {
+    return `req_${id.substring(4, 10)}...`;
+  }
+  if (id.startsWith('rev_') && id.length > 12) {
+    return `rev_${id.substring(4, 10)}...`;
+  }
+  if (id.startsWith('tour_') && id.length > 13) {
+    return `tour_${id.substring(5, 11)}...`;
+  }
+  if (id.startsWith('post_') && id.length > 13) {
+    return `post_${id.substring(5, 11)}...`;
+  }
+  return `${id.substring(0, 8)}...`;
+};
 
 interface AdminReviewDto {
   id: string;
@@ -23,7 +107,12 @@ const LOCATION_OPTIONS = [
   'Khu ẩm thực cuối đường Vĩnh Khánh',
 ];
 
-export default function AdminDashboard() {
+interface AdminDashboardProps {
+  onRestaurantUpdated?: (updated: Restaurant) => void;
+  onRefreshRestaurants?: () => void;
+}
+
+export default function AdminDashboard({ onRestaurantUpdated, onRefreshRestaurants }: AdminDashboardProps = {}) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'accounts' | 'requests' | 'categories' | 'tours' | 'moderation' | 'audit_logs'>('accounts');
   
@@ -40,10 +129,14 @@ export default function AdminDashboard() {
   // Sub Tab for Moderation
   const [modSubTab, setModSubTab] = useState<'posts' | 'reviews'>('posts');
 
+  // Sub Tab for Requests / Active Restaurants
+  const [requestSubTab, setRequestSubTab] = useState<'requests' | 'restaurants'>('requests');
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // --- Modal & Form States ---
+  const [selectedRequestForDetails, setSelectedRequestForDetails] = useState<RestaurantRequest | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userFormData, setUserFormData] = useState({
@@ -86,6 +179,39 @@ export default function AdminDashboard() {
 
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const toastTimerRef = useRef<any>(null);
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+    type?: 'danger' | 'info' | 'success';
+  } | null>(null);
+
+  const [promptModal, setPromptModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    placeholder?: string;
+    onConfirm: (value: string) => void;
+    onCancel?: () => void;
+  } | null>(null);
+
+  const [promptValue, setPromptValue] = useState('');
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToast({ message, type });
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  };
+
   const fetchTabContent = async () => {
     setIsLoading(true);
     setError(null);
@@ -93,15 +219,19 @@ export default function AdminDashboard() {
       if (activeTab === 'accounts') {
         const [usersRes, restRes] = await Promise.all([
           fetch(`${baseUrl}/api/admin/users`),
-          fetch(`${baseUrl}/api/cravemap/restaurants`)
+          fetch(`${baseUrl}/api/cravemap/restaurants?includeInactive=true`)
         ]);
         if (!usersRes.ok || !restRes.ok) throw new Error('Failed to fetch account data.');
         setUsers(await usersRes.json());
         setRestaurants(await restRes.json());
       } else if (activeTab === 'requests') {
-        const res = await fetch(`${baseUrl}/api/admin/restaurant-requests`);
-        if (!res.ok) throw new Error('Failed to fetch restaurant requests.');
-        setRequests(await res.json());
+        const [reqsRes, restsRes] = await Promise.all([
+          fetch(`${baseUrl}/api/admin/restaurant-requests`),
+          fetch(`${baseUrl}/api/cravemap/restaurants?includeInactive=true`)
+        ]);
+        if (!reqsRes.ok || !restsRes.ok) throw new Error('Failed to fetch requests or restaurants.');
+        setRequests(await reqsRes.json());
+        setRestaurants(await restsRes.json());
       } else if (activeTab === 'categories') {
         const res = await fetch(`${baseUrl}/api/categories`);
         if (!res.ok) throw new Error('Failed to fetch categories.');
@@ -170,32 +300,49 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error('Failed to toggle user status.');
       const updatedUser = await res.json();
       setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+      showToast('Đã thay đổi trạng thái tài khoản thành công!');
     } catch (err: any) {
-      alert(err.message || 'Failed to update status.');
+      showToast(err.message || 'Failed to update status.', 'error');
     }
   };
 
   const handleLockUser = async (userId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn khóa tài khoản này?')) return;
-    try {
-      const res = await fetch(`${baseUrl}/api/admin/users/${userId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to lock user.');
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, isActive: false } : u));
-    } catch (err: any) {
-      alert(err.message || 'Failed to lock user.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Khóa tài khoản',
+      message: 'Bạn có chắc chắn muốn khóa tài khoản này?',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${baseUrl}/api/admin/users/${userId}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Failed to lock user.');
+          setUsers(prev => prev.map(u => u.id === userId ? { ...u, isActive: false } : u));
+          showToast('Đã khóa tài khoản thành công!');
+        } catch (err: any) {
+          showToast(err.message || 'Failed to lock user.', 'error');
+        }
+      }
+    });
   };
 
   const handleUnlockUser = async (userId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn mở khóa tài khoản này?')) return;
-    try {
-      const res = await fetch(`${baseUrl}/api/admin/users/${userId}/toggle-status`, { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to unlock user.');
-      const updatedUser = await res.json();
-      setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
-    } catch (err: any) {
-      alert(err.message || 'Failed to unlock user.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Mở khóa tài khoản',
+      message: 'Bạn có chắc chắn muốn mở khóa tài khoản này?',
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${baseUrl}/api/admin/users/${userId}/toggle-status`, { method: 'POST' });
+          if (!res.ok) throw new Error('Failed to unlock user.');
+          const updatedUser = await res.json();
+          setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+          showToast('Đã mở khóa tài khoản thành công!');
+        } catch (err: any) {
+          showToast(err.message || 'Failed to unlock user.', 'error');
+        }
+      }
+    });
   };
 
   const handleSaveUser = async (e: React.FormEvent) => {
@@ -220,43 +367,96 @@ export default function AdminDashboard() {
       const savedUser = await res.json();
       if (editingUser) {
         setUsers(prev => prev.map(u => u.id === editingUser.id ? savedUser : u));
+        showToast('Đã cập nhật thông tin tài khoản thành công!');
       } else {
         setUsers(prev => [savedUser, ...prev]);
+        showToast('Đã thêm tài khoản mới thành công!');
       }
       setIsUserModalOpen(false);
     } catch (err: any) {
-      alert(err.message || 'Error saving user.');
+      showToast(err.message || 'Error saving user.', 'error');
     }
   };
 
   // --- Restaurant Requests Handlers ---
   const handleApproveRequest = async (id: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn duyệt yêu cầu mở quán này?')) return;
-    try {
-      const res = await fetch(`${baseUrl}/api/admin/restaurant-requests/${id}/approve`, { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to approve request.');
-      alert('Đã duyệt yêu cầu và kích hoạt quán ăn thành công!');
-      void fetchTabContent();
-    } catch (err: any) {
-      alert(err.message || 'Error approving request.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Duyệt yêu cầu mở quán',
+      message: 'Bạn có chắc chắn muốn duyệt yêu cầu mở quán này?',
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${baseUrl}/api/admin/restaurant-requests/${id}/approve`, { method: 'POST' });
+          if (!res.ok) throw new Error('Failed to approve request.');
+          showToast('Đã duyệt yêu cầu và kích hoạt quán ăn thành công!');
+          void fetchTabContent();
+          if (onRefreshRestaurants) {
+            onRefreshRestaurants();
+          }
+        } catch (err: any) {
+          showToast(err.message || 'Error approving request.', 'error');
+        }
+      }
+    });
   };
 
   const handleRejectRequest = async (id: string) => {
-    const note = window.prompt('Nhập lý do từ chối yêu cầu này:');
-    if (note === null) return;
-    try {
-      const res = await fetch(`${baseUrl}/api/admin/restaurant-requests/${id}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminNote: note })
-      });
-      if (!res.ok) throw new Error('Failed to reject request.');
-      alert('Đã từ chối yêu cầu.');
-      void fetchTabContent();
-    } catch (err: any) {
-      alert(err.message || 'Error rejecting request.');
-    }
+    setPromptModal({
+      isOpen: true,
+      title: 'Từ chối yêu cầu mở quán',
+      message: 'Vui lòng nhập lý do từ chối yêu cầu này:',
+      placeholder: 'Lý do từ chối...',
+      onConfirm: async (note) => {
+        if (!note.trim()) {
+          showToast('Vui lòng nhập lý do từ chối!', 'error');
+          return;
+        }
+        try {
+          const res = await fetch(`${baseUrl}/api/admin/restaurant-requests/${id}/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ adminNote: note })
+          });
+          if (!res.ok) throw new Error('Failed to reject request.');
+          showToast('Đã từ chối yêu cầu.');
+          void fetchTabContent();
+        } catch (err: any) {
+          showToast(err.message || 'Error rejecting request.', 'error');
+        }
+      }
+    });
+  };
+
+  const handleToggleRestaurantActive = async (id: string) => {
+    const r = restaurants.find(x => x.id === id);
+    if (!r) return;
+    const msg = r.isActive 
+      ? `Bạn có chắc chắn muốn VÔ HIỆU HÓA quán ăn "${r.name}"?\nQuán sẽ bị ẩn khỏi bản đồ và toàn bộ ứng dụng.`
+      : `Bạn có chắc chắn muốn KÍCH HOẠT lại quán ăn "${r.name}"?`;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: r.isActive ? 'Vô hiệu hóa quán ăn' : 'Kích hoạt quán ăn',
+      message: msg,
+      type: r.isActive ? 'danger' : 'info',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${baseUrl}/api/admin/restaurants/${id}/toggle-active`, { method: 'POST' });
+          if (!res.ok) throw new Error('Failed to toggle restaurant active status.');
+          
+          const updatedRest = await res.json();
+          setRestaurants(prev => prev.map(x => x.id === id ? updatedRest : x));
+          if (onRestaurantUpdated) {
+            onRestaurantUpdated(updatedRest);
+          }
+          showToast(`Đã ${updatedRest.isActive ? 'kích hoạt' : 'vô hiệu hóa'} quán ăn thành công!`);
+          void fetchTabContent();
+        } catch (err: any) {
+          showToast(err.message || 'Error toggling restaurant active status.', 'error');
+        }
+      }
+    });
   };
 
   // --- Categories CRUD ---
@@ -291,21 +491,30 @@ export default function AdminDashboard() {
       });
       if (!res.ok) throw new Error('Failed to save category.');
       setShowCategoryModal(false);
+      showToast('Đã lưu danh mục thành công!');
       void fetchTabContent();
     } catch (err: any) {
-      alert(err.message || 'Error saving category.');
+      showToast(err.message || 'Error saving category.', 'error');
     }
   };
 
   const handleDeleteCategory = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa danh mục này?')) return;
-    try {
-      const res = await fetch(`${baseUrl}/api/categories/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete category.');
-      void fetchTabContent();
-    } catch (err: any) {
-      alert(err.message || 'Error deleting category.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa danh mục',
+      message: 'Bạn có chắc chắn muốn xóa danh mục này?',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${baseUrl}/api/categories/${id}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Failed to delete category.');
+          showToast('Đã xóa danh mục thành công!');
+          void fetchTabContent();
+        } catch (err: any) {
+          showToast(err.message || 'Error deleting category.', 'error');
+        }
+      }
+    });
   };
 
   // --- Audio Tours CRUD ---
@@ -399,21 +608,30 @@ export default function AdminDashboard() {
       });
       if (!res.ok) throw new Error('Failed to save audio tour.');
       setShowTourModal(false);
+      showToast('Đã lưu audio tour thành công!');
       void fetchTabContent();
     } catch (err: any) {
-      alert(err.message || 'Error saving audio tour.');
+      showToast(err.message || 'Error saving audio tour.', 'error');
     }
   };
 
   const handleDeleteTour = async (id: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa tour này?')) return;
-    try {
-      const res = await fetch(`${baseUrl}/api/admin/audio-tours/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete audio tour.');
-      void fetchTabContent();
-    } catch (err: any) {
-      alert(err.message || 'Error deleting audio tour.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa Audio Tour',
+      message: 'Bạn có chắc chắn muốn xóa tour này?',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${baseUrl}/api/admin/audio-tours/${id}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Failed to delete audio tour.');
+          showToast('Đã xóa audio tour thành công!');
+          void fetchTabContent();
+        } catch (err: any) {
+          showToast(err.message || 'Error deleting audio tour.', 'error');
+        }
+      }
+    });
   };
 
   // --- Moderation System ---
@@ -422,31 +640,48 @@ export default function AdminDashboard() {
       const res = await fetch(`${baseUrl}/api/admin/posts/${id}/approve`, { method: 'POST' });
       if (!res.ok) throw new Error('Failed to approve post.');
       setPosts(prev => prev.map(p => p.id === id ? { ...p, isApproved: true } : p));
+      showToast('Đã duyệt bài đăng lên Feed thành công!');
     } catch (err: any) {
-      alert(err.message || 'Error approving post.');
+      showToast(err.message || 'Error approving post.', 'error');
     }
   };
 
   const handleDeletePost = async (id: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết cộng đồng này?')) return;
-    try {
-      const res = await fetch(`${baseUrl}/api/admin/posts/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete post.');
-      setPosts(prev => prev.filter(p => p.id !== id));
-    } catch (err: any) {
-      alert(err.message || 'Error deleting post.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa bài viết cộng đồng',
+      message: 'Bạn có chắc chắn muốn xóa bài viết cộng đồng này?',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${baseUrl}/api/admin/posts/${id}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Failed to delete post.');
+          setPosts(prev => prev.filter(p => p.id !== id));
+          showToast('Đã xóa bài viết cộng đồng thành công!');
+        } catch (err: any) {
+          showToast(err.message || 'Error deleting post.', 'error');
+        }
+      }
+    });
   };
 
   const handleDeleteReview = async (id: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa đánh giá này?')) return;
-    try {
-      const res = await fetch(`${baseUrl}/api/admin/reviews/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete review.');
-      setReviews(prev => prev.filter(r => r.id !== id));
-    } catch (err: any) {
-      alert(err.message || 'Error deleting review.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa đánh giá',
+      message: 'Bạn có chắc chắn muốn xóa đánh giá này?',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${baseUrl}/api/admin/reviews/${id}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Failed to delete review.');
+          setReviews(prev => prev.filter(r => r.id !== id));
+          showToast('Đã xóa đánh giá thành công!');
+        } catch (err: any) {
+          showToast(err.message || 'Error deleting review.', 'error');
+        }
+      }
+    });
   };
 
   // Stats Counters
@@ -641,91 +876,190 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* TAB 2: RESTAURANT REQUESTS */}
+          {/* TAB 2: RESTAURANT REQUESTS & MANAGEMENT */}
           {activeTab === 'requests' && (
             <div className="bg-white border-2 border-[#1a1a1a] shadow-[5px_5px_0px_0px_#1a1a1a] p-5">
-              <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4">
-                <h3 className="font-serif italic font-bold text-lg">{t('admin.requests.title')}</h3>
-                <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">RESTAURANT APPROVAL PIPELINE</p>
+              <div className="border-b border-[#1a1a1a]/15 pb-3 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                  <h3 className="font-serif italic font-bold text-lg">Quản lý quán ăn & Yêu cầu đăng ký</h3>
+                  <p className="font-mono text-[9px] text-[#1a1a1a]/55 uppercase tracking-wider mt-0.5">RESTAURANT MANAGEMENT PIPELINE</p>
+                </div>
+
+                {/* Requests sub tabs */}
+                <div className="flex border border-[#1a1a1a]">
+                  <button
+                    onClick={() => setRequestSubTab('requests')}
+                    className={`px-3 py-1.5 font-mono text-[9px] uppercase tracking-wider font-extrabold cursor-pointer transition-colors ${
+                      requestSubTab === 'requests' ? 'bg-[#1a1a1a] text-white' : 'bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    Yêu cầu mở quán ({requests.length})
+                  </button>
+                  <button
+                    onClick={() => setRequestSubTab('restaurants')}
+                    className={`px-3 py-1.5 font-mono text-[9px] uppercase tracking-wider font-extrabold cursor-pointer transition-colors ${
+                      requestSubTab === 'restaurants' ? 'bg-[#1a1a1a] text-white' : 'bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    Quán ăn hoạt động ({restaurants.length})
+                  </button>
+                </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left font-sans text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b-2 border-[#1a1a1a] bg-[#f9f7f2] font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60">
-                      <th className="py-2.5 px-3">{t('admin.requests.restaurant')}</th>
-                      <th className="py-2.5 px-3">{t('admin.requests.owner')}</th>
-                      <th className="py-2.5 px-3">{t('admin.requests.area')}</th>
-                      <th className="py-2.5 px-3">{t('admin.requests.price')}</th>
-                      <th className="py-2.5 px-3">{t('admin.requests.street')}</th>
-                      <th className="py-2.5 px-3">{t('admin.requests.status')}</th>
-                      <th className="py-2.5 px-3 text-right">{t('admin.requests.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#1a1a1a]/10">
-                    {requests.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-8 text-center font-mono text-xs text-[#1a1a1a]/40 uppercase">
-                          {t('admin.requests.no_requests')}
-                        </td>
+              {requestSubTab === 'requests' ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left font-sans text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b-2 border-[#1a1a1a] bg-[#f9f7f2] font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60">
+                        <th className="py-2.5 px-3">{t('admin.requests.restaurant')}</th>
+                        <th className="py-2.5 px-3">{t('admin.requests.owner')}</th>
+                        <th className="py-2.5 px-3">{t('admin.requests.area')}</th>
+                        <th className="py-2.5 px-3">{t('admin.requests.price')}</th>
+                        <th className="py-2.5 px-3">{t('admin.requests.street')}</th>
+                        <th className="py-2.5 px-3">{t('admin.requests.status')}</th>
+                        <th className="py-2.5 px-3 text-right">{t('admin.requests.actions')}</th>
                       </tr>
-                    ) : (
-                      requests.map(r => (
-                        <tr key={r.id} className="hover:bg-[#fcfbfa]/50 transition-colors">
-                          <td className="py-3 px-3 font-semibold">
-                            <div className="flex items-center gap-2">
-                              {r.image && (
-                                <img src={r.image} alt={r.name} className="w-8 h-8 object-cover border border-[#1a1a1a]/20" />
-                              )}
-                              <div>
-                                <p className="font-bold">{r.name}</p>
-                                <p className="text-[10px] text-slate-500 font-mono">{r.address}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-3">
-                            <p className="font-semibold">{r.ownerName}</p>
-                            <p className="text-[10px] text-slate-400 font-mono">{r.ownerEmail}</p>
-                          </td>
-                          <td className="py-3 px-3">{r.area}</td>
-                          <td className="py-3 px-3 font-mono font-bold text-amber-600">{r.priceRange}</td>
-                          <td className="py-3 px-3">{r.foodStreetName}</td>
-                          <td className="py-3 px-3">
-                            <span className={`px-2 py-0.5 text-[9px] font-mono uppercase font-bold border ${
-                              r.status === 'Pending' ? 'bg-yellow-100 border-yellow-400 text-yellow-800' :
-                              r.status === 'Approved' ? 'bg-green-100 border-green-400 text-green-800' :
-                              'bg-red-100 border-red-400 text-red-800'
-                            }`}>
-                              {r.status === 'Pending' ? t('admin.requests.pending') : r.status === 'Approved' ? t('admin.requests.approved') : t('admin.requests.rejected')}
-                            </span>
-                            {r.adminNote && (
-                              <p className="text-[9px] text-red-500 italic mt-0.5">Note: {r.adminNote}</p>
-                            )}
-                          </td>
-                          <td className="py-3 px-3 text-right">
-                            {r.status === 'Pending' && (
-                              <div className="inline-flex gap-2">
-                                <button
-                                  onClick={() => handleApproveRequest(r.id)}
-                                  className="px-2 py-1 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-green-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5"
-                                >
-                                  <Check size={11} strokeWidth={3} className="text-green-600" /> {t('admin.requests.approve')}
-                                </button>
-                                <button
-                                  onClick={() => handleRejectRequest(r.id)}
-                                  className="px-2 py-1 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-red-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5 text-red-500"
-                                >
-                                  <X size={11} strokeWidth={3} className="text-red-500" /> {t('admin.requests.reject')}
-                                </button>
-                              </div>
-                            )}
+                    </thead>
+                    <tbody className="divide-y divide-[#1a1a1a]/10">
+                      {requests.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-8 text-center font-mono text-xs text-[#1a1a1a]/40 uppercase">
+                            {t('admin.requests.no_requests')}
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ) : (
+                        requests.map(r => (
+                          <tr key={r.id} className="hover:bg-[#fcfbfa]/50 transition-colors">
+                            <td className="py-3 px-3 font-semibold">
+                              <div className="flex items-center gap-2">
+                                {r.image && (
+                                  <img src={r.image} alt={r.name} className="w-8 h-8 object-cover border border-[#1a1a1a]/20" />
+                                )}
+                                <div>
+                                  <p className="font-bold">{r.name}</p>
+                                  <p className="text-[10px] text-slate-500 font-mono">{r.address}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <p className="font-semibold">{r.ownerName}</p>
+                              <p className="text-[10px] text-slate-400 font-mono">{r.ownerEmail}</p>
+                            </td>
+                            <td className="py-3 px-3">{r.area}</td>
+                            <td className="py-3 px-3 font-mono font-bold text-amber-600">{r.priceRange}</td>
+                            <td className="py-3 px-3">{r.foodStreetName}</td>
+                            <td className="py-3 px-3">
+                              <span className={`px-2 py-0.5 text-[9px] font-mono uppercase font-bold border ${
+                                r.status === 'Pending' ? 'bg-yellow-100 border-yellow-400 text-yellow-800' :
+                                r.status === 'Approved' ? 'bg-green-100 border-green-400 text-green-800' :
+                                'bg-red-100 border-red-400 text-red-800'
+                              }`}>
+                                {r.status === 'Pending' ? t('admin.requests.pending') : r.status === 'Approved' ? t('admin.requests.approved') : t('admin.requests.rejected')}
+                              </span>
+                              {r.adminNote && (
+                                <p className="text-[9px] text-red-500 italic mt-0.5">Note: {r.adminNote}</p>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <div className="inline-flex gap-2 justify-end">
+                                <button
+                                  onClick={() => setSelectedRequestForDetails(r)}
+                                  className="px-2 py-1 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5"
+                                >
+                                  <Eye size={11} strokeWidth={3} /> Chi tiết
+                                </button>
+                                {r.status === 'Pending' && (
+                                  <>
+                                    <button
+                                      onClick={() => handleApproveRequest(r.id)}
+                                      className="px-2 py-1 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-green-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5"
+                                    >
+                                      <Check size={11} strokeWidth={3} className="text-green-600" /> {t('admin.requests.approve')}
+                                    </button>
+                                    <button
+                                      onClick={() => handleRejectRequest(r.id)}
+                                      className="px-2 py-1 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-red-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5 text-red-500"
+                                    >
+                                      <X size={11} strokeWidth={3} className="text-red-500" /> {t('admin.requests.reject')}
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left font-sans text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b-2 border-[#1a1a1a] bg-[#f9f7f2] font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/60">
+                        <th className="py-2.5 px-3">Quán ăn</th>
+                        <th className="py-2.5 px-3">Khu vực / Đường</th>
+                        <th className="py-2.5 px-3">Danh mục</th>
+                        <th className="py-2.5 px-3">Giờ mở cửa</th>
+                        <th className="py-2.5 px-3">Trạng thái</th>
+                        <th className="py-2.5 px-3 text-right">Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#1a1a1a]/10">
+                      {restaurants.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center font-mono text-xs text-[#1a1a1a]/40 uppercase">
+                            Chưa có quán ăn nào được duyệt hoạt động.
+                          </td>
+                        </tr>
+                      ) : (
+                        restaurants.map(rest => (
+                          <tr key={rest.id} className="hover:bg-[#fcfbfa]/50 transition-colors">
+                            <td className="py-3 px-3 font-semibold">
+                              <div className="flex items-center gap-2">
+                                {rest.image && (
+                                  <img src={rest.image} alt={rest.name} className="w-8 h-8 object-cover border border-[#1a1a1a]/20" />
+                                )}
+                                <div>
+                                  <p className="font-bold">{rest.name}</p>
+                                  <p className="text-[10px] text-slate-500 font-mono">{rest.address}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <p className="font-semibold">{rest.area}</p>
+                              <p className="text-[10px] text-slate-400">Phố Vĩnh Khánh</p>
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="font-serif italic">{rest.category || 'Chưa phân loại'}</span>
+                            </td>
+                            <td className="py-3 px-3 font-mono">{rest.openingHours}</td>
+                            <td className="py-3 px-3">
+                              <span className={`px-2 py-0.5 text-[9px] font-mono uppercase font-bold border ${
+                                rest.isActive !== false ? 'bg-green-100 border-green-400 text-green-800' : 'bg-red-100 border-red-400 text-red-800'
+                              }`}>
+                                {rest.isActive !== false ? 'Đang hoạt động' : 'Vô hiệu hóa'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <button
+                                onClick={() => handleToggleRestaurantActive(rest.id)}
+                                className={`px-3 py-1 font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5 border-2 ${
+                                  rest.isActive !== false 
+                                    ? 'bg-white hover:bg-red-50 border-red-500 text-red-500' 
+                                    : 'bg-white hover:bg-green-50 border-green-500 text-green-600'
+                                }`}
+                              >
+                                {rest.isActive !== false ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -1013,14 +1347,13 @@ export default function AdminDashboard() {
                       <th className="py-2.5 px-3">Thời gian</th>
                       <th className="py-2.5 px-3">Tác nhân</th>
                       <th className="py-2.5 px-3">Hành động</th>
-                      <th className="py-2.5 px-3">Đối tượng</th>
                       <th className="py-2.5 px-3">Chi tiết</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#1a1a1a]/10">
                     {auditLogs.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center font-mono text-xs text-[#1a1a1a]/40 uppercase">
+                        <td colSpan={4} className="py-8 text-center font-mono text-xs text-[#1a1a1a]/40 uppercase">
                           Chưa có nhật ký hoạt động nào.
                         </td>
                       </tr>
@@ -1032,12 +1365,9 @@ export default function AdminDashboard() {
                           </td>
                           <td className="py-3 px-3 font-bold">{log.actor}</td>
                           <td className="py-3 px-3">
-                            <span className="px-2 py-0.5 text-[9px] font-mono uppercase font-bold bg-amber-50 border border-amber-300 text-amber-800">
+                            <span className="px-2 py-0.5 text-[9px] font-mono uppercase font-bold bg-amber-50 border border-amber-300 text-amber-800 whitespace-nowrap inline-block">
                               {log.action}
                             </span>
-                          </td>
-                          <td className="py-3 px-3 font-mono">
-                            {log.entityType} ({log.entityId})
                           </td>
                           <td className="py-3 px-3 italic font-sans">{log.details || '-'}</td>
                         </tr>
@@ -1286,6 +1616,283 @@ export default function AdminDashboard() {
 
               <button type="submit" className="w-full mt-2 bg-[#1a1a1a] text-white hover:bg-[#e2533b] py-2.5 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md">Lưu Audio Tour</button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Restaurant Request Details Modal */}
+      {selectedRequestForDetails && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-4xl bg-[#fdfcf9] border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setSelectedRequestForDetails(null)}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center border-2 border-[#1a1a1a] bg-white hover:bg-[#e2533b] hover:text-white transition-colors cursor-pointer z-10"
+            >
+              <X size={14} strokeWidth={3} />
+            </button>
+            
+            <div className="mb-4 pb-2 border-b border-[#1a1a1a]/10">
+              <span className="text-[9px] tracking-[0.3em] uppercase text-[#e2533b] font-mono font-bold block mb-1">
+                RESTAURANT REGISTRATION DETAIL
+              </span>
+              <h2 className="font-serif italic font-bold text-2xl uppercase">
+                {selectedRequestForDetails.name}
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left Column: Info & Details */}
+              <div className="flex flex-col gap-4">
+                {selectedRequestForDetails.image && (
+                  <div className="border-2 border-[#1a1a1a] overflow-hidden bg-white">
+                    <img
+                      src={selectedRequestForDetails.image}
+                      alt={selectedRequestForDetails.name}
+                      className="w-full h-48 object-cover"
+                    />
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-3 bg-[#fdfbf6] p-4 border-2 border-[#1a1a1a]/10">
+                  <div>
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-slate-400 block">Danh mục</span>
+                    <span className="font-serif italic text-sm font-semibold">{selectedRequestForDetails.categoryName}</span>
+                  </div>
+                  <div>
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-slate-400 block">Khu phố ẩm thực</span>
+                    <span className="text-sm font-semibold">{selectedRequestForDetails.foodStreetName}</span>
+                  </div>
+                  <div>
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-slate-400 block">Mức giá</span>
+                    <span className="font-mono text-sm font-bold text-amber-600">{selectedRequestForDetails.priceRange}</span>
+                  </div>
+                  <div>
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-slate-400 block">Giờ mở cửa</span>
+                    <span className="text-sm font-mono">{selectedRequestForDetails.openingHours}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <h4 className="font-mono text-[9px] uppercase tracking-widest font-extrabold text-[#1a1a1a]/60">Thông tin liên hệ</h4>
+                  <div className="bg-white border-2 border-[#1a1a1a]/15 p-3 font-sans text-xs flex flex-col gap-1">
+                    <p><strong>Chủ sở hữu:</strong> {selectedRequestForDetails.ownerName}</p>
+                    <p><strong>Email:</strong> <span className="font-mono text-slate-500">{selectedRequestForDetails.ownerEmail}</span></p>
+                    <p><strong>Địa chỉ quán:</strong> {selectedRequestForDetails.address}</p>
+                    <p><strong>Khu vực:</strong> {selectedRequestForDetails.area}</p>
+                    <p><strong>Toạ độ:</strong> <span className="font-mono text-slate-500">{selectedRequestForDetails.latitude}, {selectedRequestForDetails.longitude}</span></p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-slate-400 block">Trạng thái hiện tại</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2.5 py-1 text-[10px] font-mono uppercase font-bold border ${
+                      selectedRequestForDetails.status === 'Pending' ? 'bg-yellow-100 border-yellow-400 text-yellow-800' :
+                      selectedRequestForDetails.status === 'Approved' ? 'bg-green-100 border-green-400 text-green-800' :
+                      'bg-red-100 border-red-400 text-red-800'
+                    }`}>
+                      {selectedRequestForDetails.status === 'Pending' ? 'Đang chờ duyệt' : selectedRequestForDetails.status === 'Approved' ? 'Đã duyệt' : 'Đã từ chối'}
+                    </span>
+                    {selectedRequestForDetails.adminNote && (
+                      <span className="text-xs font-sans italic text-red-500">Lý do từ chối: {selectedRequestForDetails.adminNote}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Location Map */}
+              <div className="flex flex-col gap-2">
+                <span className="font-mono text-[9px] uppercase tracking-widest font-extrabold text-[#1a1a1a]/60 flex items-center gap-1">
+                  <MapPin size={12} className="text-[#e2533b]" /> Vị trí trên bản đồ Vĩnh Khánh
+                </span>
+                
+                <div className="w-full border-2 border-[#1a1a1a] z-0 relative overflow-hidden bg-[#f3efe8]" style={{ height: '360px' }}>
+                  <MapContainer
+                    center={[selectedRequestForDetails.latitude, selectedRequestForDetails.longitude]}
+                    zoom={17}
+                    minZoom={16}
+                    maxBounds={MAX_BOUNDS}
+                    maxBoundsViscosity={1.0}
+                    className="w-full h-full z-0"
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+
+                    {/* Background existing restaurants */}
+                    {restaurants
+                      .filter(r => r.latitude !== undefined && r.latitude !== null && r.longitude !== undefined && r.longitude !== null && r.isActive !== false)
+                      .map(r => {
+                        const lat = Number(r.latitude);
+                        const lng = Number(r.longitude);
+                        if (isNaN(lat) || isNaN(lng)) return null;
+                        return (
+                          <Marker
+                            key={r.id}
+                            position={[lat, lng]}
+                            icon={getRestaurantIcon(r.category || 'Seafood', false)}
+                          >
+                            <Popup>
+                              <div className="text-xs font-sans">
+                                <p className="font-bold">{r.name}</p>
+                                <p className="text-gray-500">{r.address}</p>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        );
+                      })}
+
+                    {/* The request pin itself */}
+                    <Marker
+                      position={[selectedRequestForDetails.latitude, selectedRequestForDetails.longitude]}
+                      icon={getRequestMarkerIcon(selectedRequestForDetails.categoryName || 'Seafood')}
+                    >
+                      <Popup>
+                        <div className="text-xs font-sans">
+                          <p className="font-bold text-[#e2533b]">{selectedRequestForDetails.name} (Đang duyệt)</p>
+                          <p className="text-gray-500">{selectedRequestForDetails.address}</p>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  </MapContainer>
+                </div>
+
+                <p className="text-[10px] text-slate-500 font-sans leading-normal">
+                  * Marker màu cam nhấp nháy <span className="inline-block w-2.5 h-2.5 bg-[#e2533b] rounded-full align-middle mx-0.5 animate-pulse"></span> biểu thị vị trí đăng ký của quán. Các marker màu đen biểu thị các quán đã được duyệt và hoạt động trên phố ẩm thực.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Actions Footer */}
+            {selectedRequestForDetails.status === 'Pending' && (
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[#1a1a1a]/10">
+                <button
+                  onClick={() => {
+                    const id = selectedRequestForDetails.id;
+                    setSelectedRequestForDetails(null);
+                    void handleApproveRequest(id);
+                  }}
+                  className="px-4 py-2 flex items-center gap-1.5 border-2 border-[#1a1a1a] hover:bg-green-100 bg-white font-mono text-xs uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5"
+                >
+                  <Check size={14} strokeWidth={3} className="text-green-600" /> Duyệt quán ăn
+                </button>
+                <button
+                  onClick={() => {
+                    const id = selectedRequestForDetails.id;
+                    setSelectedRequestForDetails(null);
+                    void handleRejectRequest(id);
+                  }}
+                  className="px-4 py-2 flex items-center gap-1.5 border-2 border-[#1a1a1a] hover:bg-red-100 bg-white font-mono text-xs uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5 text-red-500"
+                >
+                  <X size={14} strokeWidth={3} className="text-red-500" /> Từ chối yêu cầu
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Toast Status indicators */}
+      {toast && (
+        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-5 py-3 rounded-full text-xs font-mono tracking-wide z-[10000] border animate-in fade-in slide-in-from-bottom-3 select-none shadow-[0_18px_46px_rgba(77,49,31,0.22)] ${
+          toast.type === 'success' 
+            ? 'bg-[#2c211b] text-white border-white/10' 
+            : 'bg-red-50/90 text-red-900 border-red-600/20'
+        }`}>
+          {toast.message}
+        </div>
+      )}
+
+      {/* Custom Confirmation Modal */}
+      {confirmModal && confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-sm bg-[#fdfcf9] border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a] relative animate-in zoom-in-95 duration-200">
+            <h3 className="font-serif italic font-bold text-lg mb-2 flex items-center gap-2">
+              {confirmModal.type === 'danger' ? (
+                <AlertTriangle className="text-red-500" size={20} />
+              ) : (
+                <Shield className="text-[#e2533b]" size={20} />
+              )}
+              {confirmModal.title}
+            </h3>
+            <p className="text-xs text-slate-700 leading-relaxed font-sans mb-6">
+              {confirmModal.message}
+            </p>
+            <div className="flex gap-3 justify-end font-mono text-[10px] uppercase font-bold tracking-wider">
+              <button
+                onClick={() => {
+                  if (confirmModal.onCancel) confirmModal.onCancel();
+                  setConfirmModal(null);
+                }}
+                className="px-4 py-2 border-2 border-[#1a1a1a] hover:bg-[#f9f7f2] cursor-pointer bg-white transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  setConfirmModal(null);
+                }}
+                className={`px-4 py-2 text-white border-2 border-[#1a1a1a] cursor-pointer transition-colors ${
+                  confirmModal.type === 'danger' ? 'bg-red-500 hover:bg-red-600' : 'bg-[#1a1a1a] hover:bg-[#e2533b]'
+                }`}
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Prompt Modal */}
+      {promptModal && promptModal.isOpen && (
+        <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-sm bg-[#fdfcf9] border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a] relative animate-in zoom-in-95 duration-200">
+            <h3 className="font-serif italic font-bold text-lg mb-2 flex items-center gap-2">
+              <MessageSquare className="text-[#e2533b]" size={20} />
+              {promptModal.title}
+            </h3>
+            <p className="text-xs text-slate-700 leading-relaxed font-sans mb-3">
+              {promptModal.message}
+            </p>
+            <input
+              type="text"
+              placeholder={promptModal.placeholder || "Nhập nội dung..."}
+              value={promptValue}
+              onChange={(e) => setPromptValue(e.target.value)}
+              className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-2 text-sm focus:outline-none mb-6 font-sans"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  promptModal.onConfirm(promptValue);
+                  setPromptModal(null);
+                  setPromptValue('');
+                }
+              }}
+            />
+            <div className="flex gap-3 justify-end font-mono text-[10px] uppercase font-bold tracking-wider">
+              <button
+                onClick={() => {
+                  if (promptModal.onCancel) promptModal.onCancel();
+                  setPromptModal(null);
+                  setPromptValue('');
+                }}
+                className="px-4 py-2 border-2 border-[#1a1a1a] hover:bg-[#f9f7f2] cursor-pointer bg-white transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  promptModal.onConfirm(promptValue);
+                  setPromptModal(null);
+                  setPromptValue('');
+                }}
+                className="px-4 py-2 bg-[#1a1a1a] text-white hover:bg-[#e2533b] border-2 border-[#1a1a1a] cursor-pointer transition-colors"
+              >
+                Đồng ý
+              </button>
+            </div>
           </div>
         </div>
       )}

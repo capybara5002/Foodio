@@ -466,6 +466,30 @@ public class AdminController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("restaurants/{id}/toggle-active")]
+    public async Task<ActionResult<RestaurantDto>> ToggleRestaurantActive(string id)
+    {
+        var restaurant = await _db.Restaurants.FindAsync(id);
+        if (restaurant == null) return NotFound("Restaurant not found.");
+
+        restaurant.IsActive = !restaurant.IsActive;
+        restaurant.UpdatedAt = DateTimeOffset.UtcNow;
+
+        var audit = new AuditLog
+        {
+            Actor = "Admin",
+            Action = restaurant.IsActive ? "Kích hoạt quán ăn" : "Vô hiệu hóa quán ăn",
+            EntityType = "Restaurant",
+            EntityId = id,
+            Timestamp = DateTimeOffset.UtcNow,
+            Details = $"{(restaurant.IsActive ? "Kích hoạt" : "Vô hiệu hóa")} quán ăn '{restaurant.Name}'"
+        };
+        _db.AuditLogs.Add(audit);
+
+        await _db.SaveChangesAsync();
+        return Ok(restaurant.ToDto());
+    }
+
     [HttpGet("audit-logs")]
     public async Task<ActionResult<IReadOnlyList<AuditLogDto>>> GetAuditLogs()
     {

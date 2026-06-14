@@ -303,8 +303,24 @@ function AppContent() {
   };
 
   const handleRestaurantUpdated = (updated: Restaurant) => {
-    setRestaurants((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    setRestaurants((prev) => {
+      const next = prev.map((r) => (r.id === updated.id ? updated : r));
+      void saveRestaurants(next);
+      return next;
+    });
   };
+
+  const handleRefreshRestaurants = useCallback(async () => {
+    try {
+      const remoteRestaurants = await getRestaurants();
+      if (remoteRestaurants.length > 0) {
+        setRestaurants(remoteRestaurants);
+        void saveRestaurants(remoteRestaurants);
+      }
+    } catch (error) {
+      console.warn('Failed to refresh restaurants:', error);
+    }
+  }, []);
 
   const unreadInboxCount = chatThreads.reduce((total, t) => total + t.unreadCount, 0);
 
@@ -331,7 +347,7 @@ function AppContent() {
       case 'map':
         return (
           <PageMap
-            restaurants={restaurants}
+            restaurants={restaurants.filter(r => r.isActive !== false)}
             onSelectRestaurant={handleSelectRestaurant}
             onSelectTour={handleSelectTour}
             onContactRestaurant={handleContactRestaurant}
@@ -349,7 +365,7 @@ function AppContent() {
           />
         );
       case 'create':
-        return <PageCreate restaurants={restaurants} onAddPost={handleAddPost} onCancel={() => setCurrentTab('discover')} />;
+        return <PageCreate restaurants={restaurants.filter(r => r.isActive !== false)} onAddPost={handleAddPost} onCancel={() => setCurrentTab('discover')} />;
       case 'inbox':
         return (
           <PageInbox
@@ -378,12 +394,13 @@ function AppContent() {
             }} 
             sessionCommunityPosts={sessionCommunityPosts}
             onRestaurantUpdated={handleRestaurantUpdated}
+            onRefreshRestaurants={handleRefreshRestaurants}
           />
         );
       default:
         return (
           <PageMap
-            restaurants={restaurants}
+            restaurants={restaurants.filter(r => r.isActive !== false)}
             onSelectRestaurant={handleSelectRestaurant}
             onSelectTour={handleSelectTour}
             onContactRestaurant={handleContactRestaurant}
@@ -413,7 +430,7 @@ function AppContent() {
           }
         }}
         unreadInboxCount={unreadInboxCount}
-        restaurants={restaurants}
+        restaurants={restaurants.filter(r => r.isActive !== false)}
         searchQuery={mapSearchQuery}
         onSearchQueryChange={setMapSearchQuery}
         onSearchRestaurantSelect={handleMapSearchSelect}
