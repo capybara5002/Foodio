@@ -311,11 +311,10 @@ function AppContent() {
       : restaurants.find((r) => r.id === 'oc_oanh') || restaurants[0];
 
     if (!bookingRestaurant) {
-      console.error('No restaurant available for booking.');
-      return;
+      return Promise.reject(new Error(t('booking.no_restaurant', 'No restaurant available for booking.')));
     }
 
-    void createBooking({
+    return createBooking({
       restaurantId: bookingRestaurant.id,
       date: bookingDetails.date,
       time: bookingDetails.time,
@@ -324,8 +323,7 @@ function AppContent() {
       userId: activeChatUserId,
       tableNumber: bookingDetails.tableNumber
     })
-      .then(() => handleRefreshThreads())
-      .catch(() => undefined);
+      .then(() => handleRefreshThreads());
   };
 
   const handleRestaurantUpdated = (updated: Restaurant) => {

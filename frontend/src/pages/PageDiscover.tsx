@@ -37,7 +37,7 @@ const getPostImages = (post: CommunityPost) =>
 export default function PageDiscover({ tours, onPlayTour, searchText, sessionCommunityPosts = emptySessionPosts, onCreatePost }: PageDiscoverProps) {
   const { t } = useTranslation();
   const [subTab, setSubTab] = useState<'tours' | 'feed'>('tours');
-  const [feedFilter, setFeedFilter] = useState<'forYou' | 'saved'>('forYou');
+  const [feedFilter, setFeedFilter] = useState<'forYou' | 'following'>('forYou');
   const [tourFilter, setTourFilter] = useState('All');
 
   const [posts, setPosts] = useState<CommunityPost[]>(() =>

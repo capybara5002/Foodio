@@ -18,7 +18,7 @@ interface BookingModalProps {
     guests: number;
     seating: string;
     tableNumber?: string;
-  }) => void;
+  }) => Promise<void> | void;
 }
 
 // Fixed 12-table layout
@@ -39,10 +39,18 @@ const FIXED_TABLES = [
 
 export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }: BookingModalProps) {
   const { t } = useTranslation();
-  const [date, setDate] = useState('2026-05-27');
+  const [date, setDate] = useState(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   const [selectedTime, setSelectedTime] = useState('7:00 PM');
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [step, setStep] = useState<'form' | 'success'>('form');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (!isOpen || !restaurant) return null;
 
@@ -50,22 +58,31 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
 
   const selectedTable = FIXED_TABLES.find(t => t.id === selectedTableId);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedTable) return;
-    setStep('success');
-    onConfirm({
-      date,
-      time: selectedTime,
-      guests: selectedTable.capacity,
-      seating: selectedTable.name,
-      tableNumber: selectedTable.name,
-    });
+    setErrorMessage(null);
+    setIsSubmitting(true);
+    try {
+      await onConfirm({
+        date,
+        time: selectedTime,
+        guests: selectedTable.capacity,
+        seating: selectedTable.name,
+        tableNumber: selectedTable.name,
+      });
+      setStep('success');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Đã xảy ra lỗi khi đặt bàn.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDone = () => {
     setStep('form');
     setSelectedTableId(null);
+    setErrorMessage(null);
     onClose();
   };
 
@@ -168,7 +185,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                 <input 
                   type="date" 
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(e) => { setDate(e.target.value); setErrorMessage(null); }}
                   className="bg-transparent border-none p-0 font-mono text-[11px] text-[#1a1a1a] focus:outline-none focus:ring-0 w-full"
                   required
                 />
@@ -185,7 +202,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                   <button
                     key={time}
                     type="button"
-                    onClick={() => setSelectedTime(time)}
+                    onClick={() => { setSelectedTime(time); setErrorMessage(null); }}
                     className={`px-3 py-2 rounded-full font-mono text-[10px] uppercase tracking-wider border transition-all cursor-pointer ${
                       selectedTime === time
                         ? 'bg-[#2c211b] text-white border-transparent shadow'
@@ -232,7 +249,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                           <button
                             key={table.id}
                             type="button"
-                            onClick={() => setSelectedTableId(table.id)}
+                            onClick={() => { setSelectedTableId(table.id); setErrorMessage(null); }}
                             className="flex flex-col items-center gap-2 group cursor-pointer"
                           >
                             <div className={`relative ${getTableSize(table.capacity)} rounded-sm flex items-center justify-center transition-all duration-200 ${
@@ -268,7 +285,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                           <button
                             key={table.id}
                             type="button"
-                            onClick={() => setSelectedTableId(table.id)}
+                            onClick={() => { setSelectedTableId(table.id); setErrorMessage(null); }}
                             className="flex flex-col items-center gap-2 group cursor-pointer"
                           >
                             <div className={`relative ${getTableSize(table.capacity)} rounded-sm flex items-center justify-center transition-all duration-200 ${
@@ -304,7 +321,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                           <button
                             key={table.id}
                             type="button"
-                            onClick={() => setSelectedTableId(table.id)}
+                            onClick={() => { setSelectedTableId(table.id); setErrorMessage(null); }}
                             className="flex flex-col items-center gap-2 group cursor-pointer"
                           >
                             <div className={`relative ${getTableSize(table.capacity)} rounded-sm flex items-center justify-center transition-all duration-200 ${
@@ -340,7 +357,7 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
                           <button
                             key={table.id}
                             type="button"
-                            onClick={() => setSelectedTableId(table.id)}
+                            onClick={() => { setSelectedTableId(table.id); setErrorMessage(null); }}
                             className="flex flex-col items-center gap-2 group cursor-pointer"
                           >
                             <div className={`relative ${getTableSize(table.capacity)} rounded-sm flex items-center justify-center transition-all duration-200 ${
@@ -382,19 +399,25 @@ export default function BookingModal({ restaurant, isOpen, onClose, onConfirm }:
               </div>
             </div>
 
+            {errorMessage && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-700 text-xs rounded-xl p-3 font-bold font-sans tracking-wide text-center">
+                ⚠️ {errorMessage}
+              </div>
+            )}
+
             {/* Submit Button */}
             <button 
               type="submit"
-              disabled={!selectedTable}
+              disabled={!selectedTable || isSubmitting}
               className={`mt-2 w-full font-mono text-[10px] uppercase tracking-widest py-3.5 rounded-full shadow-md active:scale-[0.98] transition-all cursor-pointer ${
-                selectedTable
+                selectedTable && !isSubmitting
                   ? 'bg-[#2c211b] hover:bg-[#8f4f3b] text-white'
                   : 'bg-[#2c211b]/30 text-white/60 cursor-not-allowed'
               }`}
             >
-              {selectedTable 
+              {isSubmitting ? 'Đang xử lý...' : (selectedTable 
                 ? `${t('booking.confirm_button')} — ${selectedTable.name} (${selectedTable.capacity} khách)`
-                : 'Vui lòng chọn bàn trước'}
+                : 'Vui lòng chọn bàn trước')}
             </button>
           </form>
         ) : (
