@@ -115,6 +115,9 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   const [showNotifications, setShowNotifications] = useState(false);
   const [existingRestaurants, setExistingRestaurants] = useState<Restaurant[]>([]);
   const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
+  const [open247, setOpen247] = useState(false);
+  const [openingTime, setOpeningTime] = useState('16:00');
+  const [closingTime, setClosingTime] = useState('23:00');
 
   // Edit Restaurant Form state
   const [restForm, setRestForm] = useState({
@@ -423,6 +426,14 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     void fetchRestaurant();
   }, [activeRestaurantId, user]);
 
+  useEffect(() => {
+    if (open247) {
+      setCreateForm(prev => ({ ...prev, openingHours: 'Open 24/7' }));
+    } else {
+      setCreateForm(prev => ({ ...prev, openingHours: `${openingTime} - ${closingTime}` }));
+    }
+  }, [open247, openingTime, closingTime]);
+
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -439,16 +450,8 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       return;
     }
 
-    const openingHoursStr = createForm.openingHours.trim().toLowerCase();
-    const isAlwaysOpen = openingHoursStr.includes("24/7") || openingHoursStr.includes("24/24") || openingHoursStr.includes("24h");
-    const hasTimeFormat = /\d+/.test(openingHoursStr) && (openingHoursStr.includes("-") || openingHoursStr.includes("to") || openingHoursStr.includes("đến") || openingHoursStr.includes("h"));
-
-    if (!openingHoursStr) {
+    if (!createForm.openingHours.trim()) {
       setError("Giờ mở cửa không được để trống.");
-      return;
-    }
-    if (!isAlwaysOpen && !hasTimeFormat) {
-      setError("Giờ mở cửa không hợp lệ. Vui lòng nhập đúng định dạng (Ví dụ: 16:00 - 23:00 hoặc Open 24/7).");
       return;
     }
 
@@ -888,16 +891,50 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                 <p className="text-[10px] text-gray-500 italic mt-0.5">Lưu ý: Quán phải nằm trên phố ẩm thực Vĩnh Khánh.</p>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Giờ mở cửa</label>
-                <input
-                  type="text"
-                  value={createForm.openingHours}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, openingHours: e.target.value }))}
-                  placeholder="Ví dụ: 16:00 - 23:00"
-                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
-                  required
-                />
+              <div className="flex flex-col gap-2 border-2 border-dashed border-[#1a1a1a]/20 p-3 bg-slate-50/50">
+                <div className="flex items-center justify-between">
+                  <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Thời gian hoạt động</label>
+                  <label className="flex items-center gap-1.5 font-mono text-[9px] uppercase font-bold tracking-wider cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={open247}
+                      onChange={(e) => setOpen247(e.target.checked)}
+                      className="accent-[#e2533b]"
+                    />
+                    Mở cửa 24/7
+                  </label>
+                </div>
+
+                {!open247 ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 flex flex-col gap-1">
+                      <span className="text-[8px] font-mono uppercase text-[#1a1a1a]/50">Giờ mở cửa</span>
+                      <input
+                        type="time"
+                        value={openingTime}
+                        onChange={(e) => setOpeningTime(e.target.value)}
+                        className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono"
+                        required
+                      />
+                    </div>
+                    <span className="font-bold text-xs mt-4">đến</span>
+                    <div className="flex-1 flex flex-col gap-1">
+                      <span className="text-[8px] font-mono uppercase text-[#1a1a1a]/50">Giờ đóng cửa</span>
+                      <input
+                        type="time"
+                        value={closingTime}
+                        onChange={(e) => setClosingTime(e.target.value)}
+                        className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono"
+                        required
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-green-50 border border-green-200 text-green-800 text-xs font-mono py-2 px-3 text-center">
+                    📢 Quán sẽ được cấu hình mở cửa liên tục 24/7
+                  </div>
+                )}
+                <input type="hidden" value={createForm.openingHours} required />
               </div>
 
               <div className="flex flex-col gap-1">
