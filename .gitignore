@@ -77,3 +77,6 @@ backend/Foodio.API/appsettings.Development.json
 
 # Local documentation / planning notes
 Docs/
+
+.agent/
+skills-lock.json

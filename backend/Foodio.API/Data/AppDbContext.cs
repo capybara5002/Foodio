@@ -267,7 +267,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<User>().HasData(
             new User { Id = "usr_1", Username = "admin", Email = "admin@foodio.com", PasswordHash = "123456", Role = "Admin", IsActive = true, CreatedAt = createdAt },
-            new User { Id = "usr_2", Username = "owner_ocdao", Email = "owner@foodio.com", PasswordHash = "123456", Role = "Owner", RestaurantId = "oc_dao", IsActive = true, CreatedAt = createdAt },
+            new User { Id = "usr_2", Username = "owner_ocdao", Email = "owner@foodio.com", PasswordHash = "123456", Role = "Owner", RestaurantId = "oc_dao", OwnerStatus = "Verified", IsActive = true, CreatedAt = createdAt },
             new User { Id = "usr_3", Username = "customer", Email = "customer@foodio.com", PasswordHash = "123456", Role = "User", IsActive = true, CreatedAt = createdAt }
         );
     }

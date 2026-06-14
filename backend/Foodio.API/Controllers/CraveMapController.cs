@@ -330,7 +330,7 @@ public class CraveMapController : ControllerBase
             Time = time,
             Guests = dto.Guests,
             Seating = dto.Seating,
-            Status = "Confirmed",
+            Status = "Pending",
             UserId = dto.UserId ?? "usr_3",
             TableNumber = dto.TableNumber,
             CreatedAt = DateTimeOffset.UtcNow

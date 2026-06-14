@@ -1,46 +1,128 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500..800,35,1&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Playfair Display", Georgia, Cambria, serif;
-  --font-headline: "Playfair Display", serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", Georgia, Cambria, serif;
+  --font-headline: "Fraunces", Georgia, Cambria, serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --color-primary: #e2533b;
-  --color-primary-container: #1a1a1a;
-  --color-on-primary: #ffffff;
-  --color-on-primary-container: #fdfcf9;
-  --color-inverse-primary: #ffaba0;
+  --color-primary: #b76548;
+  --color-primary-container: #f0d5c8;
+  --color-on-primary: #fffaf4;
+  --color-on-primary-container: #3b241b;
+  --color-inverse-primary: #f0b69e;
 
-  --color-secondary: #1a1a1a;
-  --color-secondary-container: #f9f7f2;
-  --color-on-secondary: #ffffff;
-  --color-on-secondary-container: #1a1a1a;
+  --color-secondary: #34251d;
+  --color-secondary-container: #f5eadf;
+  --color-on-secondary: #fffaf4;
+  --color-on-secondary-container: #2c211b;
 
-  --color-tertiary: #586062;
-  --color-tertiary-container: #e3dfd6;
-  --color-on-tertiary-container: #1a1a1a;
+  --color-tertiary: #6f655b;
+  --color-tertiary-container: #ede0d3;
+  --color-on-tertiary-container: #2c211b;
 
-  --color-background: #fdfcf9;
-  --color-on-background: #1a1a1a;
+  --color-background: #f7efe4;
+  --color-on-background: #2c211b;
 
-  --color-surface: #fdfcf9;
-  --color-surface-dim: #edeae2;
-  --color-surface-bright: #fdfcf9;
-  --color-on-surface: #1a1a1a;
-  --color-surface-variant: #edeae2;
-  --color-on-surface-variant: #1a1a1a;
-  --color-inverse-surface: #1a1a1a;
-  --color-inverse-on-surface: #fdfcf9;
+  --color-surface: #fffaf4;
+  --color-surface-dim: #eadfd2;
+  --color-surface-bright: #fffdf8;
+  --color-on-surface: #2c211b;
+  --color-surface-variant: #f0e5d8;
+  --color-on-surface-variant: #6f655b;
+  --color-inverse-surface: #2c211b;
+  --color-inverse-on-surface: #fffaf4;
 
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f9f7f2;
-  --color-surface-container: #f5f2eb;
-  --color-surface-container-high: #edeae2;
-  --color-surface-container-highest: #e3dfd6;
+  --color-surface-container-lowest: #fffdf8;
+  --color-surface-container-low: #fff8ef;
+  --color-surface-container: #f7efe4;
+  --color-surface-container-high: #efe3d5;
+  --color-surface-container-highest: #e5d5c5;
 
-  --color-outline: #1a1a1a;
-  --color-outline-variant: #e3dfd6;
+  --color-outline: #d8c4b2;
+  --color-outline-variant: #eadacc;
+}
+
+:root {
+  color-scheme: light;
+  --foodio-ink: #2c211b;
+  --foodio-ink-soft: #6f655b;
+  --foodio-paper: #f7efe4;
+  --foodio-paper-strong: #fffaf4;
+  --foodio-paper-muted: #f0e5d8;
+  --foodio-accent: #b76548;
+  --foodio-accent-dark: #8f4f3b;
+  --foodio-sage: #7d826b;
+  --foodio-line: rgba(75, 54, 42, 0.14);
+  --foodio-line-strong: rgba(75, 54, 42, 0.24);
+  --foodio-shadow: 0 24px 70px rgba(77, 49, 31, 0.14);
+  --foodio-shadow-soft: 0 18px 46px rgba(77, 49, 31, 0.1);
+  --foodio-ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--foodio-paper);
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  background:
+    radial-gradient(circle at 8% 4%, rgba(183, 101, 72, 0.18), transparent 30rem),
+    radial-gradient(circle at 88% 2%, rgba(125, 130, 107, 0.16), transparent 28rem),
+    linear-gradient(180deg, #fffaf4 0%, #f7efe4 38%, #efe1d2 100%);
+  color: var(--foodio-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01" 1, "cv01" 1;
+  text-rendering: geometricPrecision;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483640;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(44, 33, 27, 0.55) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(44, 33, 27, 0.35) 0 1px, transparent 1px 4px);
+  mix-blend-mode: multiply;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(183, 101, 72, 0.32);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: rgba(183, 101, 72, 0.22);
+  color: var(--foodio-ink);
+}
+
+.lucide {
+  stroke-width: 1.75;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
@@ -52,11 +134,180 @@
   scrollbar-width: none;
 }
 
+.foodio-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(183, 101, 72, 0.12), transparent 28rem),
+    radial-gradient(circle at 88% 12%, rgba(125, 130, 107, 0.12), transparent 24rem),
+    linear-gradient(180deg, rgba(255, 250, 244, 0.92), rgba(247, 239, 228, 0.96));
+}
+
+.foodio-page {
+  min-height: calc(100dvh - 72px);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(183, 101, 72, 0.13), transparent 24rem),
+    linear-gradient(180deg, rgba(255, 250, 244, 0.76), rgba(247, 239, 228, 0.96));
+}
+
+.foodio-card,
+.foodio-panel,
+.foodio-double-bezel {
+  border: 1px solid rgba(75, 54, 42, 0.12);
+  background: rgba(255, 250, 244, 0.9);
+  box-shadow: var(--foodio-shadow-soft);
+}
+
+.foodio-double-bezel {
+  border-radius: 2rem;
+  padding: 0.375rem;
+}
+
+.foodio-double-bezel > .foodio-core {
+  border-radius: calc(2rem - 0.375rem);
+  background: rgba(255, 253, 248, 0.92);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.72);
+}
+
+.foodio-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(183, 101, 72, 0.2);
+  background: rgba(183, 101, 72, 0.09);
+  color: var(--foodio-accent-dark);
+  padding: 0.375rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.foodio-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0.875rem 1.25rem;
+  font-weight: 700;
+  transition:
+    transform 520ms var(--foodio-ease),
+    background-color 520ms var(--foodio-ease),
+    color 520ms var(--foodio-ease),
+    border-color 520ms var(--foodio-ease),
+    box-shadow 520ms var(--foodio-ease);
+}
+
+.foodio-btn:hover {
+  transform: translateY(-1px);
+}
+
+.foodio-btn:active {
+  transform: scale(0.98);
+}
+
+.foodio-btn-primary {
+  background: var(--foodio-ink);
+  color: #fffaf4;
+  box-shadow: 0 16px 30px rgba(44, 33, 27, 0.18);
+}
+
+.foodio-btn-primary:hover {
+  background: var(--foodio-accent-dark);
+}
+
+.foodio-btn-secondary {
+  border-color: rgba(75, 54, 42, 0.16);
+  background: rgba(255, 250, 244, 0.88);
+  color: var(--foodio-ink);
+}
+
+.foodio-btn-secondary:hover {
+  border-color: rgba(183, 101, 72, 0.34);
+  background: #fffdf8;
+  color: var(--foodio-accent-dark);
+}
+
+.foodio-icon-island {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: transform 520ms var(--foodio-ease), background-color 520ms var(--foodio-ease);
+}
+
+.group:hover .foodio-icon-island {
+  transform: translate(3px, -1px) scale(1.04);
+}
+
+.foodio-input,
+.foodio-select,
+.foodio-textarea {
+  border: 1px solid rgba(75, 54, 42, 0.14);
+  border-radius: 1rem;
+  background: rgba(255, 253, 248, 0.86);
+  color: var(--foodio-ink);
+  transition: border-color 420ms var(--foodio-ease), box-shadow 420ms var(--foodio-ease), background-color 420ms var(--foodio-ease);
+}
+
+.foodio-input:focus,
+.foodio-select:focus,
+.foodio-textarea:focus {
+  border-color: rgba(183, 101, 72, 0.56);
+  background: #fffdf8;
+  box-shadow: 0 0 0 4px rgba(183, 101, 72, 0.12);
+}
+
+.foodio-reveal {
+  animation: foodioFadeUp 780ms var(--foodio-ease) both;
+}
+
+.foodio-reveal-delay-1 {
+  animation-delay: 90ms;
+}
+
+.foodio-reveal-delay-2 {
+  animation-delay: 170ms;
+}
+
+.foodio-reveal-delay-3 {
+  animation-delay: 250ms;
+}
+
+.text-wrap-balance {
+  text-wrap: balance;
+}
+
+.text-wrap-pretty {
+  text-wrap: pretty;
+}
+
+@keyframes foodioFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
 @keyframes pulse-ring {
   0% {
     transform: scale(0.8);
     opacity: 0.5;
   }
+
   100% {
     transform: scale(2.2);
     opacity: 0;
@@ -70,8 +321,181 @@
   top: -50%;
   width: 200%;
   height: 200%;
-  background-color: #ff5c00;
+  background-color: var(--foodio-accent);
   border-radius: 50%;
   z-index: -1;
   animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.foodio-logo-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.foodio-logo-box {
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.125rem;
+  background: linear-gradient(145deg, #3b2a21, #1f1713);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.16), 0 16px 32px rgba(44, 33, 27, 0.18);
+  transition: transform 520ms var(--foodio-ease);
+}
+
+.foodio-logo-container:hover .foodio-logo-box {
+  transform: rotate(-4deg) translateY(-1px);
+}
+
+.foodio-svg-icon {
+  width: 1.8rem;
+  height: 1.8rem;
+}
+
+.foodio-text-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.foodio-main-brand {
+  color: var(--foodio-ink);
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+.foodio-speaker-badge {
+  display: flex;
+  width: 1rem;
+  height: 1rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--foodio-accent);
+  color: white;
+}
+
+@media (max-width: 640px) {
+  .foodio-logo-box {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 0.9rem;
+  }
+
+  .foodio-main-brand {
+    display: none;
+  }
+}
+
+[class~="bg-[#fdfcf9]"] {
+  background-color: var(--foodio-paper) !important;
+}
+
+[class~="bg-[#f9f7f2]"] {
+  background-color: var(--foodio-paper-muted) !important;
+}
+
+[class~="bg-[#1a1a1a]"] {
+  background-color: var(--foodio-ink) !important;
+}
+
+[class~="bg-[#e2533b]"] {
+  background-color: var(--foodio-accent) !important;
+}
+
+[class~="hover:bg-[#e2533b]"]:hover {
+  background-color: var(--foodio-accent-dark) !important;
+}
+
+[class~="hover:bg-[#f9f7f2]"]:hover {
+  background-color: #fff8ef !important;
+}
+
+[class~="text-[#1a1a1a]"] {
+  color: var(--foodio-ink) !important;
+}
+
+[class~="text-[#e2533b]"] {
+  color: var(--foodio-accent) !important;
+}
+
+[class~="hover:text-[#e2533b]"]:hover {
+  color: var(--foodio-accent-dark) !important;
+}
+
+[class~="border-2"],
+[class~="border-3"] {
+  border-width: 1px !important;
+}
+
+[class~="border-[#1a1a1a]"],
+[class~="border-[#1a1a1a]/10"],
+[class~="border-[#1a1a1a]/15"],
+[class~="border-[#1a1a1a]/20"],
+[class~="border-[#1a1a1a]/25"],
+[class~="border-[#1a1a1a]/30"],
+[class~="border-[#1a1a1a]/40"] {
+  border-color: var(--foodio-line) !important;
+}
+
+[class~="border-[#e2533b]"],
+[class~="border-[#e2533b]/20"],
+[class~="border-[#e2533b]/25"],
+[class~="border-[#e2533b]/30"],
+[class~="border-[#e2533b]/45"] {
+  border-color: rgba(183, 101, 72, 0.34) !important;
+}
+
+[class~="rounded-none"] {
+  border-radius: 1rem !important;
+}
+
+[class~="rounded-sm"],
+[class~="rounded"] {
+  border-radius: 0.8rem !important;
+}
+
+[class~="shadow-[3px_3px_0px_0px_#1a1a1a]"],
+[class~="shadow-[4px_4px_0px_0px_#1a1a1a]"],
+[class~="shadow-[5px_5px_0px_0px_#1a1a1a]"],
+[class~="shadow-[6px_6px_0px_0px_#1a1a1a]"],
+[class~="shadow-[8px_8px_0px_0px_#1a1a1a]"],
+[class~="shadow-[3px_3px_0px_0px_#e2533b]"],
+[class~="shadow-[4px_4px_0px_0px_rgba(226,83,59,0.15)]"],
+[class~="shadow-md"],
+[class~="shadow-lg"],
+[class~="shadow-xl"],
+[class~="shadow-2xl"] {
+  box-shadow: var(--foodio-shadow-soft) !important;
+}
+
+[class~="uppercase"] {
+  letter-spacing: 0.12em;
+}
+
+input,
+textarea,
+select {
+  caret-color: var(--foodio-accent);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea,
+select {
+  border-radius: 1rem !important;
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+img {
+  color: transparent;
 }

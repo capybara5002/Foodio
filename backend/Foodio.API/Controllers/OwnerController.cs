@@ -25,8 +25,13 @@ public class OwnerController : ControllerBase
     }
 
     [HttpGet("restaurant/{restaurantId}")]
-    public async Task<ActionResult<RestaurantDto>> GetRestaurantDetails(string restaurantId)
+    public async Task<ActionResult<RestaurantDto>> GetRestaurantDetails(string restaurantId, [FromQuery] string ownerId)
     {
+        if (!await IsOwnerOfRestaurantAsync(ownerId, restaurantId))
+        {
+            return OwnerForbidden();
+        }
+
         var restaurant = await _db.Restaurants
             .Include(r => r.Category)
             .Include(r => r.Dishes)
@@ -42,15 +47,12 @@ public class OwnerController : ControllerBase
     }
 
     [HttpPut("restaurant/{restaurantId}")]
-    public async Task<ActionResult<RestaurantDto>> UpdateRestaurant(string restaurantId, [FromBody] RestaurantUpsertDto dto, [FromQuery] string? ownerId = null)
+    public async Task<ActionResult<RestaurantDto>> UpdateRestaurant(string restaurantId, [FromBody] RestaurantUpsertDto dto, [FromQuery] string ownerId)
     {
-        if (!string.IsNullOrEmpty(ownerId))
+        var owner = await GetOwnerForRestaurantAsync(ownerId, restaurantId);
+        if (owner is null)
         {
-            var user = await _db.Users.FindAsync(ownerId);
-            if (user == null || user.RestaurantId != restaurantId)
-            {
-                return BadRequest("You do not have permission to update this restaurant.");
-            }
+            return OwnerForbidden();
         }
 
         var restaurant = await _db.Restaurants
@@ -64,16 +66,9 @@ public class OwnerController : ControllerBase
             return NotFound("Restaurant not found.");
         }
 
-        var actorName = "Owner";
-        if (!string.IsNullOrEmpty(ownerId))
-        {
-            var user = await _db.Users.FindAsync(ownerId);
-            if (user != null) actorName = user.Username;
-        }
-
         var audit = new AuditLog
         {
-            Actor = actorName,
+            Actor = owner.Username,
             Action = "Cập nhật thông tin quán ăn",
             EntityType = "Restaurant",
             EntityId = restaurantId,
@@ -99,6 +94,7 @@ public class OwnerController : ControllerBase
         restaurant.Latitude = dto.Latitude;
         restaurant.Longitude = dto.Longitude;
         restaurant.IsActive = dto.IsActive;
+        restaurant.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _db.SaveChangesAsync();
 
@@ -106,8 +102,23 @@ public class OwnerController : ControllerBase
     }
 
     [HttpPost("restaurant/{restaurantId}/dishes")]
-    public async Task<ActionResult<RestaurantDto>> AddDish(string restaurantId, DishDto dto)
+    public async Task<ActionResult<RestaurantDto>> AddDish(string restaurantId, DishDto dto, [FromQuery] string ownerId)
     {
+        if (!await IsOwnerOfRestaurantAsync(ownerId, restaurantId))
+        {
+            return OwnerForbidden();
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Name))
+        {
+            return BadRequest("Dish name is required.");
+        }
+
+        if (dto.Price < 0)
+        {
+            return BadRequest("Dish price must be greater than or equal to zero.");
+        }
+
         var restaurant = await _db.Restaurants
             .Include(r => r.Dishes)
             .FirstOrDefaultAsync(r => r.Id == restaurantId);
@@ -129,6 +140,7 @@ public class OwnerController : ControllerBase
         };
 
         _db.MenuItems.Add(dish);
+        restaurant.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync();
 
         var updated = await _db.Restaurants
@@ -141,8 +153,13 @@ public class OwnerController : ControllerBase
     }
 
     [HttpDelete("restaurant/{restaurantId}/dishes/{dishId}")]
-    public async Task<ActionResult<RestaurantDto>> DeleteDish(string restaurantId, string dishId)
+    public async Task<ActionResult<RestaurantDto>> DeleteDish(string restaurantId, string dishId, [FromQuery] string ownerId)
     {
+        if (!await IsOwnerOfRestaurantAsync(ownerId, restaurantId))
+        {
+            return OwnerForbidden();
+        }
+
         var dish = await _db.MenuItems.FirstOrDefaultAsync(m => m.RestaurantId == restaurantId && m.Id == dishId);
         if (dish == null)
         {
@@ -150,6 +167,11 @@ public class OwnerController : ControllerBase
         }
 
         _db.MenuItems.Remove(dish);
+        var restaurant = await _db.Restaurants.FindAsync(restaurantId);
+        if (restaurant is not null)
+        {
+            restaurant.UpdatedAt = DateTimeOffset.UtcNow;
+        }
         await _db.SaveChangesAsync();
 
         var updated = await _db.Restaurants
@@ -230,8 +252,13 @@ public class OwnerController : ControllerBase
     }
 
     [HttpGet("restaurant/{restaurantId}/bookings")]
-    public async Task<ActionResult<IReadOnlyList<BookingDto>>> GetBookings(string restaurantId)
+    public async Task<ActionResult<IReadOnlyList<BookingDto>>> GetBookings(string restaurantId, [FromQuery] string ownerId)
     {
+        if (!await IsOwnerOfRestaurantAsync(ownerId, restaurantId))
+        {
+            return OwnerForbidden();
+        }
+
         var bookings = await _db.Bookings
             .Where(b => b.RestaurantId == restaurantId)
             .OrderByDescending(b => b.Date)
@@ -242,7 +269,7 @@ public class OwnerController : ControllerBase
     }
 
     [HttpPost("bookings/{bookingId}/status")]
-    public async Task<IActionResult> UpdateBookingStatus(int bookingId, [FromBody] BookingStatusUpdateDto dto, [FromQuery] string? ownerId = null)
+    public async Task<IActionResult> UpdateBookingStatus(int bookingId, [FromBody] BookingStatusUpdateDto dto, [FromQuery] string ownerId)
     {
         var booking = await _db.Bookings.FindAsync(bookingId);
         if (booking == null)
@@ -250,19 +277,18 @@ public class OwnerController : ControllerBase
             return NotFound("Booking not found.");
         }
 
+        var owner = await GetOwnerForRestaurantAsync(ownerId, booking.RestaurantId);
+        if (owner is null)
+        {
+            return OwnerForbidden();
+        }
+
         var oldStatus = booking.Status;
         booking.Status = dto.Status;
 
-        var actorName = "Owner";
-        if (!string.IsNullOrEmpty(ownerId))
-        {
-            var user = await _db.Users.FindAsync(ownerId);
-            if (user != null) actorName = user.Username;
-        }
-
         var audit = new AuditLog
         {
-            Actor = actorName,
+            Actor = owner.Username,
             Action = "Cập nhật trạng thái đặt bàn",
             EntityType = "Booking",
             EntityId = bookingId.ToString(),
@@ -324,6 +350,11 @@ public class OwnerController : ControllerBase
     [HttpGet("notifications")]
     public async Task<ActionResult<IReadOnlyList<NotificationDto>>> GetNotifications([FromQuery] string ownerId)
     {
+        if (!await IsActiveOwnerAsync(ownerId))
+        {
+            return OwnerForbidden();
+        }
+
         var notifications = await _db.Notifications
             .Where(n => n.UserId == ownerId)
             .OrderByDescending(n => n.CreatedAt)
@@ -333,10 +364,14 @@ public class OwnerController : ControllerBase
     }
 
     [HttpPost("notifications/{id}/read")]
-    public async Task<IActionResult> MarkAsRead(int id)
+    public async Task<IActionResult> MarkAsRead(int id, [FromQuery] string ownerId)
     {
         var notification = await _db.Notifications.FindAsync(id);
         if (notification == null) return NotFound("Notification not found.");
+        if (!string.Equals(notification.UserId, ownerId, StringComparison.Ordinal) || !await IsActiveOwnerAsync(ownerId))
+        {
+            return OwnerForbidden();
+        }
 
         notification.IsRead = true;
         await _db.SaveChangesAsync();
@@ -385,8 +420,13 @@ public class OwnerController : ControllerBase
     }
 
     [HttpGet("restaurant/{restaurantId}/analytics")]
-    public async Task<ActionResult<RestaurantAnalyticsDto>> GetAnalytics(string restaurantId)
+    public async Task<ActionResult<RestaurantAnalyticsDto>> GetAnalytics(string restaurantId, [FromQuery] string ownerId)
     {
+        if (!await IsOwnerOfRestaurantAsync(ownerId, restaurantId))
+        {
+            return OwnerForbidden();
+        }
+
         var restaurant = await _db.Restaurants
             .Include(r => r.Reviews)
             .FirstOrDefaultAsync(r => r.Id == restaurantId);
@@ -451,4 +491,41 @@ public class OwnerController : ControllerBase
         r.AdminNote,
         r.CreatedAt,
         r.ReviewedAt);
+
+    private async Task<User?> GetOwnerForRestaurantAsync(string? ownerId, string restaurantId)
+    {
+        if (string.IsNullOrWhiteSpace(ownerId))
+        {
+            return null;
+        }
+
+        var owner = await _db.Users.FindAsync(ownerId);
+        if (owner is null ||
+            owner.Role != "Owner" ||
+            !owner.IsActive ||
+            owner.RestaurantId != restaurantId ||
+            !string.Equals(owner.OwnerStatus, "Verified", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return owner;
+    }
+
+    private async Task<bool> IsOwnerOfRestaurantAsync(string? ownerId, string restaurantId) =>
+        await GetOwnerForRestaurantAsync(ownerId, restaurantId) is not null;
+
+    private async Task<bool> IsActiveOwnerAsync(string? ownerId)
+    {
+        if (string.IsNullOrWhiteSpace(ownerId))
+        {
+            return false;
+        }
+
+        var owner = await _db.Users.FindAsync(ownerId);
+        return owner is not null && owner.Role == "Owner" && owner.IsActive;
+    }
+
+    private ObjectResult OwnerForbidden() =>
+        StatusCode(StatusCodes.Status403Forbidden, new { message = "Owner does not have permission for this resource." });
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { initialRestaurants, initialChatThreads, initialAudioTours } from './data';
-import { Restaurant, ChatThread, AudioTour } from './types';
+import { Restaurant, ChatThread, AudioTour, CommunityPost } from './types';
 import {
   createBooking,
   createCommunityPost,
@@ -41,6 +41,7 @@ function AppContent() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>(initialRestaurants);
   const [chatThreads, setChatThreads] = useState<ChatThread[]>(initialChatThreads);
   const [audioTours, setAudioTours] = useState<AudioTour[]>(initialAudioTours);
+  const [sessionCommunityPosts, setSessionCommunityPosts] = useState<CommunityPost[]>([]);
 
   const [activeThreadId, setActiveThreadId] = useState<string>('oc_oanh_thread');
 
@@ -194,6 +195,13 @@ function AppContent() {
     }
   };
 
+  const handleOpenCreatePost = () => {
+    requireAuth(t('auth.require_login_post'), () => {
+      setSelectedRestaurantId(null);
+      setCurrentTab('create');
+    });
+  };
+
   const handleMapSearchSelect = (restaurantId: string) => {
     setSelectedRestaurantId(null);
     setCurrentTab('map');
@@ -213,37 +221,61 @@ function AppContent() {
     }
   };
 
+  const openRestaurantChat = async (restaurantId: string) => {
+    const thread = await ensureChatThread(restaurantId, activeChatUserId);
+    upsertThread(thread);
+    setActiveThreadId(thread.id);
+    setSelectedRestaurantId(null);
+    setCurrentTab('inbox');
+  };
+
   const handleContactRestaurant = async (restaurantId: string) => {
     requireAuth(t('auth.require_login_chat'), async () => {
       try {
-        const thread = await ensureChatThread(restaurantId, activeChatUserId);
-        upsertThread(thread);
-        setActiveThreadId(thread.id);
-        setSelectedRestaurantId(null);
-        setCurrentTab('inbox');
+        await openRestaurantChat(restaurantId);
       } catch (error) {
         console.error('Failed to open restaurant chat:', error);
       }
     });
   };
 
-  const handleAddPost = async (newPost: { content: string; image: string; rating: number; locationName: string }) => {
-    const freshPost = {
+  const handleAddPost = async (newPost: {
+    content: string;
+    image: string;
+    images: string[];
+    locationName: string;
+    restaurantId?: string;
+    postType: 'story' | 'promotion';
+  }) => {
+    const taggedRestaurant = restaurants.find((restaurant) => restaurant.id === newPost.restaurantId);
+    const isRestaurantPost = user?.role === 'Owner';
+    const postImages = newPost.images.length > 0 ? newPost.images : [newPost.image];
+
+    const freshPost: CommunityPost = {
       id: `post_user_${Date.now()}`,
-      author: user?.username || 'user_anonymous',
-      handle: `@${user?.username || 'user_anonymous'}`,
-      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBRKz2YnyvZVLIBglb9f9NCrquX4dKnpC6f_I1bacYnGKPkCdd4BK4ec4NSU3T0QDdjyD09txLee_GTY0faM2F7c2iZtVrQ5AWBSRzGLIRZO8qylHZIKMAGiBCW0yPydeRXezrelYofwryiKBLEy4t0THRWH9807xh6L2T4xl221ZBFmgNwcC8Xqx34_V1ZveUHvBcv4cs9R-oNv4eYz9I-wfJoaK1POgGMvhhjPVERdEp3OZI9gxH39c_gaG667-MpaMfEpaiArA',
+      author: isRestaurantPost && taggedRestaurant ? taggedRestaurant.name : user?.username || 'user_anonymous',
+      handle: isRestaurantPost && taggedRestaurant ? `@${taggedRestaurant.id}` : `@${user?.username || 'user_anonymous'}`,
+      avatar: user?.avatar || taggedRestaurant?.image || 'https://lh3.googleusercontent.com/aida-public/AB6AXuBRKz2YnyvZVLIBglb9f9NCrquX4dKnpC6f_I1bacYnGKPkCdd4BK4ec4NSU3T0QDdjyD09txLee_GTY0faM2F7c2iZtVrQ5AWBSRzGLIRZO8qylHZIKMAGiBCW0yPydeRXezrelYofwryiKBLEy4t0THRWH9807xh6L2T4xl221ZBFmgNwcC8Xqx34_V1ZveUHvBcv4cs9R-oNv4eYz9I-wfJoaK1POgGMvhhjPVERdEp3OZI9gxH39c_gaG667-MpaMfEpaiArA',
       timeAgo: 'Vừa xong',
-      rating: Number(newPost.rating.toFixed(1)),
-      image: newPost.image,
+      rating: 0,
+      image: postImages[0],
+      images: postImages,
       content: newPost.content,
-      locationName: newPost.locationName,
+      locationName: taggedRestaurant?.name || newPost.locationName,
+      restaurantId: taggedRestaurant?.id,
       likesCount: 0,
       commentsCount: 0,
       isLiked: false,
-      isSaved: false
+      isSaved: false,
+      isRestaurantPost,
+      isApproved: isRestaurantPost,
+      postType: newPost.postType
     };
 
+    setSessionCommunityPosts((prevPosts) => [
+      freshPost,
+      ...prevPosts.filter((post) => post.id !== freshPost.id)
+    ]);
     setCurrentTab('discover');
     try {
       await createCommunityPost(freshPost);
@@ -288,10 +320,6 @@ function AppContent() {
               setIsBookingOpen(true);
             });
           }}
-          onStartAudio={() => {
-            const relevantTour = audioTours.find((t) => t.title.toLowerCase().includes('seafood')) || audioTours[0];
-            setActiveAudioTour(relevantTour);
-          }}
           onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
           requireAuth={requireAuth}
           onRestaurantUpdated={handleRestaurantUpdated}
@@ -316,10 +344,12 @@ function AppContent() {
             tours={audioTours}
             onPlayTour={(tour) => setActiveAudioTour(tour)}
             searchText=""
+            sessionCommunityPosts={sessionCommunityPosts}
+            onCreatePost={handleOpenCreatePost}
           />
         );
       case 'create':
-        return <PageCreate onAddPost={handleAddPost} onCancel={() => setCurrentTab('discover')} />;
+        return <PageCreate restaurants={restaurants} onAddPost={handleAddPost} onCancel={() => setCurrentTab('discover')} />;
       case 'inbox':
         return (
           <PageInbox
@@ -327,11 +357,13 @@ function AppContent() {
             activeThreadId={activeThreadId}
             userId={activeChatUserId}
             restaurantId={activeChatRestaurantId}
-            currentUserRole={user?.role ?? 'User'}
+            restaurants={restaurants}
+            currentUserRole={user?.role ?? 'Guest'}
             onSelectThread={(tid) => {
               setActiveThreadId(tid);
               setChatThreads((prev) => sortThreads(prev.map((t) => (t.id === tid ? { ...t, unreadCount: 0 } : t))));
             }}
+            onStartThread={user && user.role !== 'Guest' ? openRestaurantChat : undefined}
             onThreadUpdated={upsertThread}
           />
         );
@@ -344,6 +376,7 @@ function AppContent() {
               setPendingAction(null);
               setIsLoginOpen(true);
             }} 
+            sessionCommunityPosts={sessionCommunityPosts}
             onRestaurantUpdated={handleRestaurantUpdated}
           />
         );
@@ -365,7 +398,7 @@ function AppContent() {
     : restaurants.find((r) => r.id === 'oc_oanh') || restaurants[0];
 
   return (
-    <div className="min-h-screen pb-16 md:pb-0 pt-[72px] flex flex-col font-sans text-on-surface bg-[#f8f9fa]">
+    <div className="foodio-shell min-h-screen pb-24 md:pb-0 pt-[72px] flex flex-col font-sans text-on-surface">
       <NavBar
         currentTab={currentTab}
         onChangeTab={(tab) => {
@@ -373,10 +406,7 @@ function AppContent() {
             stopNarration();
           } catch (e) {}
           if (tab === 'create') {
-            requireAuth(t('auth.require_login_post'), () => {
-              setSelectedRestaurantId(null);
-              setCurrentTab('create');
-            });
+            handleOpenCreatePost();
           } else {
             setSelectedRestaurantId(null);
             setCurrentTab(tab);
@@ -391,23 +421,21 @@ function AppContent() {
 
       <OfflineBanner />
 
-      {/* Floating QR scan notification banner */}
       {qrStatus && (
-        <div className={`fixed top-20 left-1/2 -translate-x-1/2 px-6 py-3 border-2 border-[#1a1a1a] shadow-[4px_4px_0px_0px_#1a1a1a] font-mono text-xs font-bold z-[9999] animate-in slide-in-from-top-4 ${
-          qrStatus.type === 'success' ? 'bg-[#cbf3d2] text-green-900' : 'bg-[#f8d7da] text-red-900'
+        <div className={`fixed top-24 left-1/2 z-[90] -translate-x-1/2 rounded-full border px-5 py-3 shadow-[0_18px_46px_rgba(77,49,31,0.16)] backdrop-blur-xl font-mono text-[11px] font-bold tracking-wide animate-in slide-in-from-top-4 ${
+          qrStatus.type === 'success' ? 'border-emerald-600/20 bg-emerald-50/90 text-emerald-900' : 'border-red-600/20 bg-red-50/90 text-red-900'
         }`}>
           {qrStatus.message}
         </div>
       )}
 
-      {/* Guest Mode Active indicator on bottom left */}
       {user?.role === 'Guest' && (
-        <div className="fixed bottom-20 left-4 md:bottom-6 md:left-4 z-[45] bg-[#ffe0b2] border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] px-3.5 py-1.5 font-mono text-[9px] font-bold uppercase tracking-wider text-[#e65100] flex items-center gap-1.5 select-none">
-          <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+        <div className="fixed bottom-24 left-4 z-[70] flex items-center gap-2 rounded-full border border-[#b76548]/20 bg-[#fffaf4]/88 px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider text-[#8f4f3b] shadow-[0_18px_46px_rgba(77,49,31,0.14)] backdrop-blur-xl select-none md:bottom-6">
+          <span className="w-2 h-2 rounded-full bg-[#b76548] animate-pulse" />
           <span>{t('auth.guest_mode', { table: user.tableNumber })}</span>
           <button 
             onClick={logout}
-            className="ml-2 underline text-[#1a1a1a] hover:text-[#e2533b]"
+            className="ml-1 rounded-full px-2 py-0.5 text-[#2c211b] transition-colors hover:bg-[#f0e5d8] hover:text-[#8f4f3b]"
           >
             {t('auth.login')}
           </button>
@@ -437,15 +465,6 @@ function AppContent() {
         }}
       />
 
-      {currentTab !== 'map' && (
-        <footer className="hidden md:flex bg-surface-container-high text-on-surface-variant font-label-sm text-[11px] py-4 border-t border-outline-variant/20 items-center justify-center gap-2 select-none z-40 relative">
-          <span>{t('footer.copyright')}</span>
-          <span className="w-1.5 h-1.5 bg-primary rounded-full" />
-          <span>
-            {t('auth.active_user')}: <strong className="font-bold">{userEmail}</strong>
-          </span>
-        </footer>
-      )}
     </div>
   );
 }
