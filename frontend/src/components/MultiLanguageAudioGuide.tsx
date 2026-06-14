@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Loader2, Pause, Play, RotateCcw, RotateCw, Search, Square } from 'lucide-react';
-import { createAudioGuideNarration } from '../api/audioGuideApi';
+import { createAudioGuideNarration, type AudioGuideNarration } from '../api/audioGuideApi';
 
 type LanguageOption = {
   code: string;
@@ -74,13 +74,7 @@ const LANGUAGE_OPTIONS: LanguageOption[] = [
   { code: 'sl', label: 'Slovenian', speechLangs: ['sl-SI', 'sl'] }
 ];
 
-const narrationCache = new Map<string, {
-  translatedText: string;
-  audioSegments: string[];
-  audioMimeType: string;
-  provider: string;
-  locale: string;
-}>();
+const narrationCache = new Map<string, AudioGuideNarration>();
 
 const FALLBACK_LANGUAGE_FAMILIES: Record<string, string[]> = {
   ms: ['id', 'fil', 'tl', 'en'],
@@ -106,6 +100,8 @@ interface MultiLanguageAudioGuideProps {
   className?: string;
 }
 
+type PlaybackMode = 'idle' | 'cloud' | 'speech';
+
 export default function MultiLanguageAudioGuide({
   sourceText,
   title,
@@ -122,15 +118,21 @@ export default function MultiLanguageAudioGuide({
   const [isDragging, setIsDragging] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
   const [languageQuery, setLanguageQuery] = useState('');
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('idle');
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const progressRef = useRef(progress);
+  const draggingRef = useRef(isDragging);
   const languageMenuRef = useRef<HTMLDivElement | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
   const spokenTextRef = useRef('');
   const spokenLangRef = useRef(defaultLang);
   const playbackRunRef = useRef(0);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const playbackModeRef = useRef<PlaybackMode>('idle');
+  const cloudSegmentsRef = useRef<string[]>([]);
+  const cloudMimeTypeRef = useRef('audio/mpeg');
+  const cloudDurationsRef = useRef<number[]>([]);
+  const cloudTotalDurationRef = useRef(0);
 
   const cleanSourceText = useMemo(() => sourceText.trim(), [sourceText]);
   const selectedLanguage = useMemo(
@@ -151,10 +153,26 @@ export default function MultiLanguageAudioGuide({
     progressRef.current = progress;
   }, [progress]);
 
+  useEffect(() => {
+    draggingRef.current = isDragging;
+  }, [isDragging]);
+
   const getLanguageOption = (languageCode: string) =>
     LANGUAGE_OPTIONS.find((language) => language.code === languageCode) ?? LANGUAGE_OPTIONS[0];
 
   const getNarrationCacheKey = (languageCode: string, text: string) => `${languageCode}:${text}`;
+
+  const updatePlaybackMode = (mode: PlaybackMode) => {
+    playbackModeRef.current = mode;
+    setPlaybackMode(mode);
+  };
+
+  const clearCloudPlaybackMetadata = () => {
+    cloudSegmentsRef.current = [];
+    cloudMimeTypeRef.current = 'audio/mpeg';
+    cloudDurationsRef.current = [];
+    cloudTotalDurationRef.current = 0;
+  };
 
   useEffect(() => {
     playbackRunRef.current += 1;
@@ -162,6 +180,10 @@ export default function MultiLanguageAudioGuide({
     audioElementRef.current = null;
     window.speechSynthesis?.cancel();
     utteranceRef.current = null;
+    updatePlaybackMode('idle');
+    clearCloudPlaybackMetadata();
+    spokenTextRef.current = '';
+    spokenLangRef.current = targetLang;
     setIsPlaying(false);
     setIsPaused(false);
     setProgress(0);
@@ -216,8 +238,9 @@ export default function MultiLanguageAudioGuide({
   }, []);
 
   useEffect(() => {
-    setProgress(0);
-    setDurationSec(Math.max(10, Math.ceil((translatedText || cleanSourceText).length / 14)));
+    if (playbackModeRef.current !== 'cloud') {
+      setDurationSec(Math.max(10, Math.ceil((translatedText || cleanSourceText).length / 14)));
+    }
   }, [cleanSourceText, translatedText]);
 
   useEffect(() => {
@@ -227,7 +250,6 @@ export default function MultiLanguageAudioGuide({
     const captureVoices = (voices: SpeechSynthesisVoice[]) => {
       if (voices.length === 0) return;
       voicesRef.current = voices;
-      setAvailableVoices(voices);
     };
 
     const forceLoadChromeVoices = () => {
@@ -259,7 +281,7 @@ export default function MultiLanguageAudioGuide({
   }, []);
 
   useEffect(() => {
-    if (!isPlaying || isPaused || isDragging || durationSec <= 0) return;
+    if (playbackMode !== 'speech' || !isPlaying || isPaused || isDragging || durationSec <= 0) return;
 
     const intervalMs = 250;
     const interval = window.setInterval(() => {
@@ -267,9 +289,82 @@ export default function MultiLanguageAudioGuide({
     }, intervalMs);
 
     return () => window.clearInterval(interval);
-  }, [durationSec, isDragging, isPaused, isPlaying]);
+  }, [durationSec, isDragging, isPaused, isPlaying, playbackMode]);
 
   const clampProgress = (value: number) => Math.max(0, Math.min(100, value));
+
+  const loadCloudSegmentDuration = (segment: string, mimeType: string) =>
+    new Promise<number>((resolve) => {
+      const audio = new Audio();
+      let settled = false;
+      const timeoutId = window.setTimeout(() => finish(0), 2500);
+
+      function finish(duration: number) {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeoutId);
+        audio.onloadedmetadata = null;
+        audio.onerror = null;
+        resolve(Number.isFinite(duration) && duration > 0 ? duration : 0);
+      }
+
+      audio.preload = 'metadata';
+      audio.onloadedmetadata = () => finish(audio.duration);
+      audio.onerror = () => finish(0);
+      audio.src = `data:${mimeType};base64,${segment}`;
+      audio.load();
+    });
+
+  const prepareCloudPlaybackMetadata = async (
+    audioSegments: string[],
+    mimeType: string,
+    narrationText: string
+  ) => {
+    if (
+      cloudSegmentsRef.current === audioSegments &&
+      cloudMimeTypeRef.current === mimeType &&
+      cloudTotalDurationRef.current > 0
+    ) {
+      return;
+    }
+
+    const measuredDurations = await Promise.all(
+      audioSegments.map((segment) => loadCloudSegmentDuration(segment, mimeType))
+    );
+    const fallbackTotal = Math.max(10, Math.ceil((narrationText || cleanSourceText).length / 14));
+    const fallbackSegmentDuration = fallbackTotal / Math.max(audioSegments.length, 1);
+    const normalizedDurations = measuredDurations.map((duration) =>
+      duration > 0 ? duration : fallbackSegmentDuration
+    );
+    const totalDuration = normalizedDurations.reduce((sum, duration) => sum + duration, 0);
+
+    cloudSegmentsRef.current = audioSegments;
+    cloudMimeTypeRef.current = mimeType;
+    cloudDurationsRef.current = normalizedDurations;
+    cloudTotalDurationRef.current = totalDuration;
+    setDurationSec(Math.max(1, Math.ceil(totalDuration)));
+  };
+
+  const getCloudSeekPosition = (normalizedProgress: number) => {
+    const durations = cloudDurationsRef.current;
+    const totalDuration = cloudTotalDurationRef.current;
+    const targetSecond = (clampProgress(normalizedProgress) / 100) * totalDuration;
+    let elapsedBeforeSegment = 0;
+
+    for (let index = 0; index < durations.length; index += 1) {
+      const segmentDuration = durations[index];
+      if (targetSecond <= elapsedBeforeSegment + segmentDuration || index === durations.length - 1) {
+        return {
+          index,
+          offset: Math.max(0, Math.min(segmentDuration - 0.05, targetSecond - elapsedBeforeSegment)),
+          elapsedBeforeSegment
+        };
+      }
+      elapsedBeforeSegment += segmentDuration;
+    }
+
+    return { index: 0, offset: 0, elapsedBeforeSegment: 0 };
+  };
 
   const waitForVoices = () =>
     new Promise<SpeechSynthesisVoice[]>((resolve) => {
@@ -282,7 +377,6 @@ export default function MultiLanguageAudioGuide({
       const existingVoices = voicesRef.current.length > 0 ? voicesRef.current : synth.getVoices();
       if (existingVoices.length > 0) {
         voicesRef.current = existingVoices;
-        setAvailableVoices(existingVoices);
         resolve(existingVoices);
         return;
       }
@@ -293,7 +387,6 @@ export default function MultiLanguageAudioGuide({
         if (voices.length > 0 || Date.now() - startedAt >= 2000) {
           window.clearInterval(interval);
           voicesRef.current = voices;
-          setAvailableVoices(voices);
           resolve(voices);
         }
       }, 100);
@@ -401,6 +494,7 @@ export default function MultiLanguageAudioGuide({
     const selectedVoice = matchingVoice ?? fallbackVoice;
     const runId = playbackRunRef.current + 1;
     playbackRunRef.current = runId;
+    updatePlaybackMode('speech');
 
     window.speechSynthesis.cancel();
 
@@ -431,6 +525,7 @@ export default function MultiLanguageAudioGuide({
         setIsPlaying(false);
         setIsPaused(false);
         utteranceRef.current = null;
+        updatePlaybackMode('idle');
       }
     }
   };
@@ -438,43 +533,121 @@ export default function MultiLanguageAudioGuide({
   const executeCloudAudioEngine = async (
     audioSegments: string[],
     mimeType: string,
-    normalizedProgress: number
+    normalizedProgress: number,
+    narrationText: string
   ) => {
     if (audioSegments.length === 0) return;
+
+    if (normalizedProgress >= 100) {
+      setProgress(100);
+      setIsPlaying(false);
+      setIsPaused(false);
+      updatePlaybackMode('idle');
+      return;
+    }
+
+    await prepareCloudPlaybackMetadata(audioSegments, mimeType, narrationText);
 
     const runId = playbackRunRef.current + 1;
     playbackRunRef.current = runId;
     window.speechSynthesis?.cancel();
+    audioElementRef.current?.pause();
+    audioElementRef.current = null;
+    updatePlaybackMode('cloud');
+    setIsPlaying(true);
+    setIsPaused(false);
+    setProgress(clampProgress(normalizedProgress));
+
+    const startPosition = getCloudSeekPosition(normalizedProgress);
+    const durations = cloudDurationsRef.current;
+    const totalDuration = cloudTotalDurationRef.current;
 
     try {
-      for (let index = 0; index < audioSegments.length; index += 1) {
+      for (let index = startPosition.index; index < audioSegments.length; index += 1) {
         if (playbackRunRef.current !== runId) break;
 
+        const elapsedBeforeSegment = durations
+          .slice(0, index)
+          .reduce((sum, duration) => sum + duration, 0);
+        const initialOffset = index === startPosition.index ? startPosition.offset : 0;
         const audio = new Audio(`data:${mimeType};base64,${audioSegments[index]}`);
+        audio.preload = 'auto';
         audioElementRef.current = audio;
-        setIsPlaying(true);
-        setIsPaused(false);
 
         await new Promise<void>((resolve) => {
+          let started = false;
+          let resolved = false;
+          let cancelWatcher = 0;
+          let fallbackStartTimer = 0;
+
+          const resolveOnce = () => {
+            if (resolved) return;
+            resolved = true;
+            window.clearInterval(cancelWatcher);
+            window.clearTimeout(fallbackStartTimer);
+            audio.onloadedmetadata = null;
+            audio.ontimeupdate = null;
+            audio.onended = null;
+            audio.onerror = null;
+            resolve();
+          };
+
+          cancelWatcher = window.setInterval(() => {
+            if (playbackRunRef.current !== runId) {
+              resolveOnce();
+            }
+          }, 100);
+
+          const updateProgressFromAudio = () => {
+            if (playbackRunRef.current !== runId || draggingRef.current) return;
+            const elapsedSeconds = elapsedBeforeSegment + audio.currentTime;
+            const activeTotalDuration = cloudTotalDurationRef.current || totalDuration;
+            const nextProgress = activeTotalDuration > 0 ? (elapsedSeconds / activeTotalDuration) * 100 : normalizedProgress;
+            setProgress(clampProgress(nextProgress));
+          };
+
+          const beginPlayback = () => {
+            if (started || resolved || playbackRunRef.current !== runId) return;
+            started = true;
+
+            if (initialOffset > 0 && Number.isFinite(audio.duration) && audio.duration > 0) {
+              try {
+                audio.currentTime = Math.min(initialOffset, Math.max(0, audio.duration - 0.05));
+              } catch (error) {
+                console.warn('[Audio Guide] Failed to apply cloud seek offset, continuing playback:', error);
+              }
+            }
+
+            void audio.play().catch((error) => {
+              console.warn('[Audio Guide] Browser blocked cloud audio segment playback:', error);
+              resolveOnce();
+            });
+          };
+
           audio.onloadedmetadata = () => {
             if (Number.isFinite(audio.duration) && audio.duration > 0) {
-              setDurationSec((current) => Math.max(current, Math.ceil(audio.duration * audioSegments.length)));
+              cloudDurationsRef.current[index] = audio.duration;
+              const refreshedTotal = cloudDurationsRef.current.reduce((sum, duration) => sum + duration, 0);
+              cloudTotalDurationRef.current = refreshedTotal;
+              setDurationSec(Math.max(1, Math.ceil(refreshedTotal)));
             }
+            beginPlayback();
           };
-          audio.ontimeupdate = () => {
-            const segmentBase = index / audioSegments.length;
-            const segmentProgress = audio.duration > 0 ? audio.currentTime / audio.duration / audioSegments.length : 0;
-            setProgress(Math.min(100, normalizedProgress + (100 - normalizedProgress) * (segmentBase + segmentProgress)));
+          audio.ontimeupdate = updateProgressFromAudio;
+          audio.onended = () => {
+            if (playbackRunRef.current === runId) {
+              const completedSeconds = elapsedBeforeSegment + (durations[index] || audio.duration || 0);
+              const activeTotalDuration = cloudTotalDurationRef.current || totalDuration;
+              setProgress(clampProgress((completedSeconds / Math.max(activeTotalDuration, 1)) * 100));
+            }
+            resolveOnce();
           };
-          audio.onended = () => resolve();
           audio.onerror = () => {
             console.warn('[Audio Guide] Cloud audio segment failed, proceeding to next segment.');
-            resolve();
+            resolveOnce();
           };
-          audio.play().catch((error) => {
-            console.warn('[Audio Guide] Browser blocked cloud audio segment playback:', error);
-            resolve();
-          });
+          audio.load();
+          fallbackStartTimer = window.setTimeout(beginPlayback, 1500);
         });
       }
     } finally {
@@ -483,6 +656,7 @@ export default function MultiLanguageAudioGuide({
         setIsPlaying(false);
         setIsPaused(false);
         audioElementRef.current = null;
+        updatePlaybackMode('idle');
       }
     }
   };
@@ -510,7 +684,8 @@ export default function MultiLanguageAudioGuide({
           await executeCloudAudioEngine(
             cloudNarration.audioSegments,
             cloudNarration.audioMimeType || 'audio/mpeg',
-            clampProgress(nextProgress >= 100 ? 0 : nextProgress)
+            clampProgress(nextProgress >= 100 ? 0 : nextProgress),
+            cloudNarration.translatedText || cleanSourceText
           );
           return;
         }
@@ -547,7 +722,7 @@ export default function MultiLanguageAudioGuide({
   };
 
   const speak = () => {
-    if (!cleanSourceText || !('speechSynthesis' in window) || isTranslating) return;
+    if (!cleanSourceText || isTranslating) return;
 
     if (isPlaying && !isPaused) {
       if (audioElementRef.current) {
@@ -580,6 +755,7 @@ export default function MultiLanguageAudioGuide({
     audioElementRef.current = null;
     window.speechSynthesis?.cancel();
     utteranceRef.current = null;
+    updatePlaybackMode('idle');
     setIsPlaying(false);
     setIsPaused(false);
     setProgress(0);
@@ -588,18 +764,34 @@ export default function MultiLanguageAudioGuide({
   const seekTo = (nextProgress: number) => {
     const clampedProgress = clampProgress(nextProgress);
     const shouldKeepPlaying = isPlaying && !isPaused;
+    const activePlaybackMode = playbackModeRef.current;
+    const activeCloudSegments = cloudSegmentsRef.current;
+    const activeCloudMimeType = cloudMimeTypeRef.current;
+    const activeCloudText = spokenTextRef.current || translatedText || cleanSourceText;
 
     playbackRunRef.current += 1;
     audioElementRef.current?.pause();
     audioElementRef.current = null;
     window.speechSynthesis?.cancel();
     utteranceRef.current = null;
+    updatePlaybackMode('idle');
     setIsPlaying(false);
     setIsPaused(false);
     setProgress(clampedProgress);
 
     if (shouldKeepPlaying) {
-      window.setTimeout(() => void startSpeakingFrom(clampedProgress), 0);
+      if (activePlaybackMode === 'cloud' && activeCloudSegments.length > 0) {
+        window.setTimeout(() => {
+          void executeCloudAudioEngine(
+            activeCloudSegments,
+            activeCloudMimeType,
+            clampedProgress,
+            activeCloudText
+          );
+        }, 0);
+      } else {
+        window.setTimeout(() => void startSpeakingFrom(clampedProgress), 0);
+      }
     }
   };
 
@@ -623,6 +815,10 @@ export default function MultiLanguageAudioGuide({
     audioElementRef.current = null;
     window.speechSynthesis?.cancel();
     utteranceRef.current = null;
+    updatePlaybackMode('idle');
+    clearCloudPlaybackMetadata();
+    spokenTextRef.current = '';
+    spokenLangRef.current = language.code;
     setIsPlaying(false);
     setIsPaused(false);
     setProgress(0);
@@ -634,12 +830,12 @@ export default function MultiLanguageAudioGuide({
   };
 
   return (
-    <section className={`bg-white border border-[#1a1a1a]/15 p-3 flex flex-col gap-3 text-left ${className}`}>
+    <section className={`bg-[#fffdf8] border border-[#4b362a]/10 p-4 flex flex-col gap-3 text-left rounded-3xl shadow-[0_18px_46px_rgba(77,49,31,0.08)] ${className}`}>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] truncate">{title}</h3>
+          <h3 className="font-serif font-bold text-base tracking-[-0.035em] text-[#2c211b] truncate">{title}</h3>
         </div>
-        {isTranslating && <Loader2 size={16} className="animate-spin text-[#e2533b] shrink-0" />}
+        {isTranslating && <Loader2 size={16} className="animate-spin text-[#b76548] shrink-0" />}
       </div>
 
       <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
@@ -647,7 +843,7 @@ export default function MultiLanguageAudioGuide({
           <button
             type="button"
             onClick={() => setIsLanguageMenuOpen((open) => !open)}
-            className="w-full min-w-0 bg-[#fdfcf9] border-2 border-[#1a1a1a] px-2 py-2 font-mono text-[10px] uppercase tracking-wider focus:outline-none flex items-center justify-between gap-2"
+            className="w-full min-w-0 bg-[#fffaf4] border border-[#4b362a]/10 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider focus:outline-none flex items-center justify-between gap-2 rounded-full"
             aria-label="Select narration language"
             aria-expanded={isLanguageMenuOpen}
           >
@@ -656,9 +852,9 @@ export default function MultiLanguageAudioGuide({
           </button>
 
           {isLanguageMenuOpen && (
-            <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] bg-white border-2 border-[#1a1a1a] shadow-[4px_4px_0px_0px_#1a1a1a]">
-              <div className="p-2 border-b border-[#1a1a1a]/15 flex items-center gap-2">
-                <Search size={14} className="text-[#e2533b] shrink-0" />
+            <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[80] bg-[#fffaf4] border border-[#4b362a]/10 shadow-[0_18px_46px_rgba(77,49,31,0.18)] rounded-2xl overflow-hidden">
+              <div className="p-2 border-b border-[#4b362a]/10 flex items-center gap-2">
+                <Search size={14} className="text-[#b76548] shrink-0" />
                 <input
                   value={languageQuery}
                   onChange={(event) => setLanguageQuery(event.target.value)}
@@ -673,8 +869,8 @@ export default function MultiLanguageAudioGuide({
                     key={language.code}
                     type="button"
                     onClick={() => selectLanguage(language)}
-                    className={`w-full px-3 py-2 text-left font-mono text-[10px] uppercase tracking-wider hover:bg-[#f9f7f2] flex items-center justify-between ${
-                      language.code === targetLang ? 'bg-[#1a1a1a] text-white hover:bg-[#1a1a1a]' : 'text-[#1a1a1a]'
+                    className={`w-full px-3 py-2 text-left font-mono text-[10px] uppercase tracking-wider hover:bg-[#f5eadf] flex items-center justify-between ${
+                      language.code === targetLang ? 'bg-[#2c211b] text-white hover:bg-[#2c211b]' : 'text-[#2c211b]'
                     }`}
                   >
                     <span>{language.label}</span>
@@ -695,7 +891,7 @@ export default function MultiLanguageAudioGuide({
           type="button"
           onClick={stop}
           disabled={!isPlaying && !isPaused && progress === 0}
-          className="w-10 h-10 bg-white disabled:bg-[#1a1a1a]/5 text-[#1a1a1a] disabled:text-[#1a1a1a]/25 hover:text-[#e2533b] flex items-center justify-center border-2 border-[#1a1a1a] transition-colors cursor-pointer disabled:cursor-not-allowed"
+          className="w-10 h-10 bg-white disabled:bg-[#4b362a]/5 text-[#2c211b] disabled:text-[#2c211b]/25 hover:text-[#8f4f3b] flex items-center justify-center border border-[#4b362a]/10 transition-colors cursor-pointer disabled:cursor-not-allowed rounded-full"
           aria-label="Stop narration"
         >
           <Square size={14} className="fill-current" />
@@ -703,10 +899,10 @@ export default function MultiLanguageAudioGuide({
       </div>
 
       <div className="flex flex-col gap-1">
-        <div className="relative w-full h-1.5 bg-[#1a1a1a]/15 overflow-hidden cursor-pointer group">
+        <div className="relative w-full h-2 bg-[#4b362a]/12 overflow-hidden cursor-pointer group rounded-full">
           <div
             style={{ width: `${progress}%` }}
-            className="absolute left-0 top-0 h-full bg-[#1a1a1a] group-hover:bg-[#e2533b] transition-colors"
+            className="absolute left-0 top-0 h-full bg-[#2c211b] group-hover:bg-[#b76548] transition-colors rounded-full"
           />
           <input
             type="range"
@@ -740,7 +936,7 @@ export default function MultiLanguageAudioGuide({
           type="button"
           onClick={() => seekBySeconds(-10)}
           disabled={disabled || progress <= 0}
-          className="w-9 h-9 text-[#1a1a1a]/65 disabled:text-[#1a1a1a]/25 hover:text-[#e2533b] flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed"
+          className="w-9 h-9 text-[#6f655b] disabled:text-[#2c211b]/25 hover:text-[#8f4f3b] flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed"
           aria-label="Rewind narration 10 seconds"
         >
           <RotateCcw size={20} />
@@ -750,7 +946,7 @@ export default function MultiLanguageAudioGuide({
           type="button"
           onClick={speak}
           disabled={disabled}
-          className="w-10 h-10 bg-[#1a1a1a] disabled:bg-[#1a1a1a]/25 text-white hover:bg-[#e2533b] flex items-center justify-center border-2 border-[#1a1a1a] transition-colors cursor-pointer disabled:cursor-not-allowed"
+          className="w-11 h-11 bg-[#2c211b] disabled:bg-[#2c211b]/25 text-white hover:bg-[#8f4f3b] flex items-center justify-center border border-[#2c211b] transition-colors cursor-pointer disabled:cursor-not-allowed rounded-full"
           aria-label={isPlaying && !isPaused ? 'Pause narration' : 'Play narration'}
         >
           {isPlaying && !isPaused ? <Pause size={17} className="fill-current" /> : <Play size={17} className="fill-current" />}
@@ -760,15 +956,15 @@ export default function MultiLanguageAudioGuide({
           type="button"
           onClick={() => seekBySeconds(10)}
           disabled={disabled || progress >= 100}
-          className="w-9 h-9 text-[#1a1a1a]/65 disabled:text-[#1a1a1a]/25 hover:text-[#e2533b] flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed"
+          className="w-9 h-9 text-[#6f655b] disabled:text-[#2c211b]/25 hover:text-[#8f4f3b] flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed"
           aria-label="Forward narration 10 seconds"
         >
           <RotateCw size={20} />
         </button>
       </div>
 
-      <div className="bg-[#fdfcf9] border border-[#1a1a1a]/10 p-3 max-h-28 overflow-y-auto">
-        <p className="font-sans text-[11px] leading-relaxed text-[#1a1a1a]/75">
+      <div className="bg-[#f7efe4] border border-[#4b362a]/10 p-3 max-h-28 overflow-y-auto rounded-2xl">
+        <p className="font-sans text-[11px] leading-relaxed text-[#4c4038]">
           {isTranslating ? 'Translating narration...' : translatedText || cleanSourceText}
         </p>
       </div>

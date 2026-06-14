@@ -53,7 +53,7 @@ const getIconSvg = (category: string, size: number) => {
 };
 
 const getRestaurantIcon = (category: string, isSelected: boolean) => {
-  const bgColor = isSelected ? '#e2533b' : '#334155';
+  const bgColor = isSelected ? '#b76548' : '#3b2a21';
   const size = isSelected ? 42 : 34;
   const innerSize = isSelected ? 22 : 18;
 
@@ -75,9 +75,9 @@ const getRestaurantIcon = (category: string, isSelected: boolean) => {
 const userIcon = L.divIcon({
   className: 'custom-user-marker',
   html: `
-    <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;">
-      <div class="animate-ping" style="position: absolute; width: 24px; height: 24px; background-color: #3b82f6; border-radius: 50%; opacity: 0.45;"></div>
-      <div style="position: relative; width: 14px; height: 14px; background-color: #2563eb; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.35);"></div>
+      <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;">
+      <div class="animate-ping" style="position: absolute; width: 24px; height: 24px; background-color: #7d826b; border-radius: 50%; opacity: 0.38;"></div>
+      <div style="position: relative; width: 14px; height: 14px; background-color: #7d826b; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 8px 18px rgba(77,49,31,0.28);"></div>
     </div>
   `,
   iconSize: [24, 24],
@@ -122,7 +122,7 @@ function RoutingControl({ userLocation, destination }: RoutingControlProps) {
         showAlternatives: false,
         createMarker: () => null,
         lineOptions: {
-          styles: [{ color: '#e2533b', weight: 6, opacity: 0.85 }]
+          styles: [{ color: '#b76548', weight: 6, opacity: 0.85 }]
         }
       }).addTo(map);
 
@@ -353,7 +353,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
   const selectedCoords = selectedRestaurant ? getCoordinates(selectedRestaurant) : null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 top-[72px] bottom-16 md:bottom-0 flex bg-[#fdfcf9] overflow-hidden text-[#1a1a1a] z-40 transition-all duration-300">
+    <div className="foodio-map-shell fixed inset-x-0 top-[72px] bottom-0 flex bg-[#f7efe4] overflow-hidden text-[#2c211b] z-40 transition-all duration-300">
 
       {/* Live Audio Narration Guide Overlay (Glassmorphism + mini player styling) */}
       {currentNarration && (
@@ -392,7 +392,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
 
       <style>{`
         .leaflet-container {
-          background-color: #fcfbfa !important;
+          background-color: #f7efe4 !important;
           font-family: inherit;
         }
         @keyframes ping {
@@ -414,13 +414,14 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           bottom: 0;
           left: 0;
           width: 100%;
-          height: 50vh;
-          max-height: 50vh;
-          border-top: 2px solid #1a1a1a;
-          border-radius: 16px 16px 0 0;
-          box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.1), 0 -8px 10px -6px rgba(0, 0, 0, 0.1);
+          height: 58vh;
+          max-height: 620px;
+          border: 1px solid rgba(75, 54, 42, 0.12);
+          border-bottom: none;
+          border-radius: 28px 28px 0 0;
+          box-shadow: 0 -24px 70px rgba(77, 49, 31, 0.18);
           transform: translateY(100%);
-          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s ease-in-out;
+          transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.42s cubic-bezier(0.32, 0.72, 0, 1);
           z-index: 1005;
           visibility: hidden;
         }
@@ -448,10 +449,11 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
             width: 30%;
             height: 100%;
             max-height: 100%;
-            border-top: none;
-            border-right: 2px solid #1a1a1a;
-            border-radius: 0;
-            box-shadow: 10px 0 25px -5px rgba(0, 0, 0, 0.1), 8px 0 10px -6px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(75, 54, 42, 0.12);
+            border-radius: 28px;
+            margin: 16px 0 16px 16px;
+            height: calc(100% - 32px);
+            box-shadow: 0 24px 70px rgba(77, 49, 31, 0.18);
             transform: translateX(-100%);
           }
           .info-panel.open {
@@ -472,7 +474,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
       `}</style>
 
       {/* Left/Bottom Section: Google Maps-Style Responsive Details Panel */}
-      <aside className={`info-panel ${isOpen ? 'open' : 'closed'} bg-[#fdfcf9] flex flex-col`}>
+      <aside className={`info-panel ${isOpen ? 'open' : 'closed'} bg-[#fffaf4]/95 flex flex-col overflow-hidden`}>
         {/* Mobile bottom sheet drag handle */}
         <div
           onClick={() => setSelectedRestaurant(null)}
@@ -696,7 +698,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
         )}
 
         {/* Bottom Right Controls (Narration, Mode Toggle, GPS Locator) & Tour Card overlay */}
-        <div className="absolute bottom-6 left-0 w-full px-4 z-[1000] pointer-events-none flex flex-col items-end gap-3">
+        <div className="absolute bottom-24 md:bottom-6 left-0 w-full px-4 z-[1000] pointer-events-none flex flex-col items-end gap-3">
           <div className="flex flex-col gap-2.5">
             {/* Narration Mute/Unmute */}
             <button

@@ -19,6 +19,7 @@ export interface FoodieReview {
   comment: string;
   avatar: string;
   imageUrl?: string;
+  imageUrls?: string[];
 }
 
 export interface User {
@@ -89,14 +90,17 @@ export interface CommunityPost {
   timeAgo: string;
   rating: number;
   image: string;
+  images?: string[];
   content: string;
   locationName: string;
+  restaurantId?: string;
   likesCount: number;
   commentsCount: number;
   isLiked: boolean;
   isSaved: boolean;
   isRestaurantPost?: boolean;
   isApproved?: boolean;
+  postType?: 'story' | 'promotion';
 }
 
 export interface PostComment {

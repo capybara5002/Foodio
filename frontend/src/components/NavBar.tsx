@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Search, X, MapPin, Star, Map, Compass, Mail, User, Globe } from 'lucide-react';
+import { Search, X, MapPin, Star, Map as MapIcon, Compass, Mail, User, Globe, Volume2 } from 'lucide-react';
 import { Restaurant } from '../types';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
@@ -19,13 +19,19 @@ interface NavBarProps {
   onSearchRestaurantSelect: (restaurantId: string) => void;
 }
 
-// Strip Vietnamese diacritics so searches like "oc", "Óc", and "Ốc" match the same restaurants.
 const normalizeString = (str: string) =>
   str
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/đ/g, 'd');
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase();
+
+const navItems = [
+  { id: 'map' as const, icon: MapIcon, labelKey: 'nav.food_map' },
+  { id: 'discover' as const, icon: Compass, labelKey: 'nav.discover' },
+  { id: 'inbox' as const, icon: Mail, labelKey: 'nav.inbox' },
+  { id: 'profile' as const, icon: User, labelKey: 'nav.profile' }
+];
 
 export default function NavBar({
   currentTab,
@@ -43,80 +49,43 @@ export default function NavBar({
   const normalizedSearchQuery = normalizeString(searchQuery.trim());
   const searchSuggestions = normalizedSearchQuery
     ? restaurants
-        .filter((restaurant) => {
-          const searchableText = normalizeString(
-            `${restaurant.name} ${restaurant.category} ${restaurant.address} ${restaurant.area}`
-          );
-          return searchableText.includes(normalizedSearchQuery);
-        })
-        .slice(0, 8)
+      .filter((restaurant) => {
+        const searchableText = normalizeString(
+          `${restaurant.name} ${restaurant.category} ${restaurant.address} ${restaurant.area}`
+        );
+        return searchableText.includes(normalizedSearchQuery);
+      })
+      .slice(0, 8)
     : [];
 
   const showSearchSuggestions = currentTab === 'map' && isSearchFocused && normalizedSearchQuery.length > 0;
 
   return (
     <>
-      {/* Top Header App Bar */}
-      <header className="fixed top-0 left-0 w-full z-50 bg-[#fdfcf9] border-b border-[#1a1a1a]/10 flex justify-between items-center px-4 md:px-12 py-2 h-[72px]">
-        
-        {/* Left Search/Logo section */}
-        <div 
-          onClick={() => onChangeTab('map')}
-          className="flex items-center gap-3 cursor-pointer group select-none"
-        >
-          <div className="w-8 h-8 bg-[#1a1a1a] rounded-sm flex items-center justify-center text-white font-serif italic text-lg shadow-sm transition-transform group-hover:rotate-12 duration-200">
-            C
-          </div>
-          <span className="text-[10px] tracking-[0.35em] font-extrabold uppercase hidden sm:inline-block text-[#1a1a1a] font-sans">
-            CRAVEMAP // ARCHIVE
-          </span>
-          <span className="text-xs tracking-widest font-extrabold uppercase sm:hidden text-[#1a1a1a] font-sans">
-            CRAVEMAP
-          </span>
-        </div>
-
-        {/* Center navigation links for Tablet and Desktop */}
-        <div className="hidden md:flex items-center gap-8 text-[10px] tracking-[0.25em] font-extrabold uppercase select-none font-sans">
-          <button 
+      <header className="fixed inset-x-0 top-0 z-[80] h-[72px] px-3 pt-3 pointer-events-none md:px-6">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 rounded-[1.75rem] border border-white/70 bg-[#fffaf4]/84 px-2.5 shadow-[0_18px_46px_rgba(77,49,31,0.16)] backdrop-blur-2xl pointer-events-auto">
+          <button
             type="button"
             onClick={() => onChangeTab('map')}
-            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 flex items-center gap-1.5 ${currentTab === 'map' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
+            className="foodio-logo-container rounded-[1.4rem] px-1.5 py-1 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            aria-label="Open Foodio map"
           >
-            <Map size={14} className={currentTab === 'map' ? 'fill-current' : ''} /> {t('nav.food_map')}
-          </button>
-          <button 
-            type="button"
-            onClick={() => onChangeTab('discover')}
-            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 flex items-center gap-1.5 ${currentTab === 'discover' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
-          >
-            <Compass size={14} className={currentTab === 'discover' ? 'fill-current' : ''} /> {t('nav.discover')}
-          </button>
-          <button 
-            type="button"
-            onClick={() => onChangeTab('inbox')}
-            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 relative flex items-center gap-1.5 ${currentTab === 'inbox' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
-          >
-            <Mail size={14} className={currentTab === 'inbox' ? 'fill-current' : ''} /> {t('nav.inbox')}
-            {unreadInboxCount > 0 && (
-              <span className="absolute -top-2.5 -right-4 bg-[#e2533b] text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center border border-[#fdfcf9] shadow-xs">
-                {unreadInboxCount}
-              </span>
-            )}
-          </button>
-          <button 
-            type="button"
-            onClick={() => onChangeTab('profile')}
-            className={`cursor-pointer pb-1 border-b-2 transition-all duration-150 flex items-center gap-1.5 ${currentTab === 'profile' ? 'border-[#e2533b] text-[#e2533b]' : 'border-transparent text-[#1a1a1a]/60 hover:text-[#1a1a1a]'}`}
-          >
-            <User size={14} className={currentTab === 'profile' ? 'fill-current' : ''} /> {t('nav.profile')}
-          </button>
-        </div>
+            <div className="foodio-logo-box">
+              <img src="/logo.png" alt="Foodio Logo" className="foodio-svg-icon object-contain select-none rounded-md" />
+            </div>
 
-        <div className="flex items-center gap-3">
-          {currentTab === 'map' ? (
-            <div className="relative w-[40vw] max-w-[390px] min-w-[150px] z-[9999]">
-              <div className="flex items-center gap-2 bg-white border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] px-3 py-2">
-                <Search size={17} className="text-[#e2533b] shrink-0" strokeWidth={2.5} />
+            <div className="foodio-text-group">
+              <span className="foodio-main-brand">Foodio</span>
+              <span className="foodio-speaker-badge">
+                <Volume2 className="h-2.5 w-2.5 fill-current text-white" />
+              </span>
+            </div>
+          </button>
+
+          {currentTab === 'map' && (
+            <div className="relative z-[90] min-w-0 flex-1 md:max-w-[440px]">
+              <div className="flex h-11 items-center gap-3 rounded-full border border-[#4b362a]/10 bg-white/86 px-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] focus-within:border-[#b76548]/45 focus-within:bg-white focus-within:shadow-[0_12px_30px_rgba(77,49,31,0.12)]">
+                <Search size={18} className="shrink-0 text-[#6f655b]" />
                 <input
                   type="text"
                   value={searchQuery}
@@ -125,9 +94,9 @@ export default function NavBar({
                     setIsSearchFocused(true);
                   }}
                   onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                  onBlur={() => window.setTimeout(() => setIsSearchFocused(false), 180)}
                   placeholder={t('search.placeholder')}
-                  className="min-w-0 flex-1 bg-transparent outline-none font-mono text-[10px] sm:text-[11px] text-[#1a1a1a] placeholder:text-[#1a1a1a]/45"
+                  className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#2c211b] outline-none placeholder:text-[#8d8074]"
                   aria-label="Search restaurants on the map"
                 />
                 {searchQuery && (
@@ -135,15 +104,15 @@ export default function NavBar({
                     type="button"
                     onClick={() => onSearchQueryChange('')}
                     aria-label="Clear map search text"
-                    className="w-7 h-7 flex items-center justify-center text-[#1a1a1a]/60 hover:text-[#e2533b] active:scale-90 transition-all cursor-pointer"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#6f655b] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[#f0e5d8] hover:text-[#2c211b] active:scale-95"
                   >
-                    <X size={16} strokeWidth={3} />
+                    <X size={16} />
                   </button>
                 )}
               </div>
 
               {showSearchSuggestions && (
-                <div className="absolute top-[calc(100%+10px)] right-0 left-0 bg-white border-2 border-[#1a1a1a] shadow-[4px_4px_0px_0px_#1a1a1a] max-h-[320px] overflow-y-auto z-[9999] hide-scrollbar">
+                <div className="absolute left-0 right-0 top-[calc(100%+10px)] max-h-[360px] overflow-y-auto rounded-[1.5rem] border border-[#4b362a]/10 bg-[#fffaf4] p-2 shadow-[0_24px_70px_rgba(77,49,31,0.2)] hide-scrollbar">
                   {searchSuggestions.length > 0 ? (
                     searchSuggestions.map((restaurant) => (
                       <button
@@ -154,131 +123,97 @@ export default function NavBar({
                           onSearchRestaurantSelect(restaurant.id);
                           setIsSearchFocused(false);
                         }}
-                        className="w-full p-3 text-left border-b border-[#1a1a1a]/10 last:border-b-0 hover:bg-[#f9f7f2] active:bg-[#f2eee6] transition-colors cursor-pointer"
+                        className="group flex w-full items-start gap-3 rounded-[1.15rem] px-3 py-3 text-left transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white active:scale-[0.99]"
                       >
-                        <div className="flex items-start gap-2.5">
-                          <MapPin size={16} className="mt-0.5 text-[#e2533b] shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-serif italic font-bold text-sm text-[#1a1a1a] truncate">{restaurant.name}</p>
-                            <p className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 truncate">
-                              {restaurant.category} // {restaurant.area}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-0.5 bg-[#e2533b] text-white px-1.5 py-0.5 shrink-0">
-                            <Star size={9} className="fill-white text-white" />
-                            <span className="font-mono text-[9px] font-bold">{restaurant.rating}</span>
-                          </div>
-                        </div>
+                        <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f0d5c8] text-[#8f4f3b]">
+                          <MapPin size={17} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-[#2c211b]">{restaurant.name}</span>
+                          <span className="mt-0.5 block truncate text-xs text-[#6f655b]">
+                            {restaurant.category} · {restaurant.area}
+                          </span>
+                        </span>
+                        <span className="mt-1 flex shrink-0 items-center gap-1 rounded-full bg-[#f5eadf] px-2.5 py-1 text-xs font-semibold text-[#2c211b]">
+                          <Star size={12} className="fill-[#b76548] text-[#b76548]" />
+                          {restaurant.rating}
+                        </span>
                       </button>
                     ))
                   ) : (
-                    <div className="p-3 font-mono text-[10px] uppercase tracking-wider text-[#1a1a1a]/50">
-                      {t('search.no_results')}
-                    </div>
+                    <div className="px-5 py-6 text-center text-sm text-[#6f655b]">{t('search.no_results')}</div>
                   )}
                 </div>
               )}
             </div>
-          ) : null}
+          )}
 
-          {/* Toggle language button */}
+          <nav className="ml-auto hidden items-center gap-1 rounded-full bg-[#f0e5d8]/72 p-1 md:flex">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onChangeTab(item.id)}
+                  className={`relative flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] ${isActive
+                      ? 'bg-[#fffaf4] text-[#8f4f3b] shadow-[0_8px_22px_rgba(77,49,31,0.12)]'
+                      : 'text-[#6f655b] hover:bg-[#fffaf4]/74 hover:text-[#2c211b]'
+                    }`}
+                >
+                  <Icon size={17} />
+                  <span>{t(item.labelKey)}</span>
+                  {item.id === 'inbox' && unreadInboxCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#b76548] px-1 text-[10px] font-bold text-white ring-2 ring-[#fffaf4]">
+                      {unreadInboxCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
           <button
             type="button"
             onClick={() => changeLanguage(language === 'vi' ? 'en' : 'vi')}
-            className="flex items-center gap-1.5 px-3 py-2 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[2px_2px_0px_0px_#1a1a1a] font-mono text-[10px] font-bold bg-white text-[#1a1a1a] hover:bg-[#f9f7f2] transition-all cursor-pointer shrink-0"
+            className="flex h-10 shrink-0 items-center gap-2 rounded-full border border-[#4b362a]/10 bg-white/74 px-3 text-xs font-bold text-[#2c211b] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white active:scale-[0.98]"
             aria-label="Toggle language"
           >
-            <Globe size={13} className="text-[#e2533b]" />
+            <Globe size={15} className="text-[#b76548]" />
             <span>{language.toUpperCase()}</span>
           </button>
         </div>
-      </header>      {/* Bottom Layout Menu Tab Navigation (Mobile only, visible on < md breakpoint, centered on full width) */}
-      <nav className="fixed bottom-0 left-0 w-full z-50 bg-[#fdfcf9] border-t border-[#1a1a1a]/10 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex justify-around items-center h-16 md:hidden pb-safe">
-        
-        {/* Map Tab */}
-        <button 
-          onClick={() => onChangeTab('map')}
-          className={`flex flex-col items-center justify-center py-1 flex-1 relative cursor-pointer group`}
-        >
-          {currentTab === 'map' ? (
-            <div className="bg-[#e2533b] text-white rounded px-4 py-1 flex items-center justify-center shadow-md select-none">
-              <Map size={18} className="fill-current" />
-            </div>
-          ) : (
-            <div className="p-1 rounded text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5 transition-colors duration-150 select-none">
-              <Map size={18} />
-            </div>
-          )}
-          <span className={`font-label-sm text-[9px] uppercase tracking-wider mt-0.5 ${currentTab === 'map' ? 'font-black text-[#e2533b]' : 'text-[#1a1a1a]/60'}`}>
-            {t('nav.food_map')}
-          </span>
-        </button>
- 
-        {/* Discover Tab */}
-        <button 
-          onClick={() => onChangeTab('discover')}
-          className={`flex flex-col items-center justify-center py-1 flex-1 relative cursor-pointer group`}
-        >
-          {currentTab === 'discover' ? (
-            <div className="bg-[#e2533b] text-white rounded px-4 py-1 flex items-center justify-center shadow-md select-none">
-              <Compass size={18} className="fill-current" />
-            </div>
-          ) : (
-            <div className="p-1 rounded text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5 transition-colors duration-150 select-none">
-              <Compass size={18} />
-            </div>
-          )}
-          <span className={`font-label-sm text-[9px] uppercase tracking-wider mt-0.5 ${currentTab === 'discover' ? 'font-black text-[#e2533b]' : 'text-[#1a1a1a]/60'}`}>
-            {t('nav.discover')}
-          </span>
-        </button>
- 
-        {/* Inbox Tab */}
-        <button 
-          onClick={() => onChangeTab('inbox')}
-          className={`flex flex-col items-center justify-center py-1 flex-1 relative cursor-pointer group`}
-        >
-          {currentTab === 'inbox' ? (
-            <div className="bg-[#e2533b] text-white rounded px-4 py-1 flex items-center justify-center shadow-md select-none">
-              <Mail size={18} className="fill-current" />
-            </div>
-          ) : (
-            <div className="p-1 rounded text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5 transition-colors duration-150 relative select-none">
-              <Mail size={18} />
-              {unreadInboxCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-[#e2533b] rounded-full" />
-              )}
-            </div>
-          )}
-          <span className={`font-label-sm text-[9px] uppercase tracking-wider mt-0.5 ${currentTab === 'inbox' ? 'font-black text-[#e2533b]' : 'text-[#1a1a1a]/60'}`}>
-            {t('nav.inbox')}
-          </span>
-          {currentTab !== 'inbox' && unreadInboxCount > 0 && (
-            <span className="absolute top-1.5 right-6 bg-[#e2533b] text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center shadow-xs pointer-events-none">
-              {unreadInboxCount}
-            </span>
-          )}
-        </button>
- 
-        {/* Profile Tab */}
-        <button 
-          onClick={() => onChangeTab('profile')}
-          className={`flex flex-col items-center justify-center py-1 flex-1 relative cursor-pointer group`}
-        >
-          {currentTab === 'profile' ? (
-            <div className="bg-[#e2533b] text-white rounded px-4 py-1 flex items-center justify-center shadow-md select-none">
-              <User size={18} className="fill-current" />
-            </div>
-          ) : (
-            <div className="p-1 rounded text-[#1a1a1a]/60 hover:bg-[#1a1a1a]/5 transition-colors duration-150 select-none">
-              <User size={18} />
-            </div>
-          )}
-          <span className={`font-label-sm text-[9px] uppercase tracking-wider mt-0.5 ${currentTab === 'profile' ? 'font-black text-[#e2533b]' : 'text-[#1a1a1a]/60'}`}>
-            {t('nav.profile')}
-          </span>
-        </button>
- 
+      </header>
+
+      <nav className="fixed bottom-3 left-1/2 z-[80] flex h-16 w-[calc(100%-24px)] max-w-md -translate-x-1/2 items-center justify-around rounded-[1.75rem] border border-white/70 bg-[#fffaf4]/86 px-2 shadow-[0_18px_46px_rgba(77,49,31,0.18)] backdrop-blur-2xl md:hidden">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = currentTab === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onChangeTab(item.id)}
+              className="relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-95"
+            >
+              <div
+                className={`relative flex h-8 min-w-14 items-center justify-center rounded-full px-4 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${isActive ? 'bg-[#2c211b] text-[#fffaf4]' : 'text-[#6f655b] hover:bg-[#f0e5d8]'
+                  }`}
+              >
+                <Icon size={18} />
+                {item.id === 'inbox' && unreadInboxCount > 0 && (
+                  <span className="absolute right-2 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b76548] px-1 text-[9px] font-bold text-white">
+                    {unreadInboxCount}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[10px] font-bold ${isActive ? 'text-[#2c211b]' : 'text-[#6f655b]'}`}>
+                {t(item.labelKey)}
+              </span>
+            </button>
+          );
+        })}
       </nav>
     </>
   );

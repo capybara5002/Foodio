@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Restaurant, Category, BookingMessagePayload, Notification } from '../../types';
 import { Trash2, X, Plus, Store, Users, Calendar, Ban, QrCode, TrendingUp, Settings, Check, Clock, MapPin, Star, CheckCircle2, XCircle, FileText, Grid, Megaphone, Bell, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
@@ -16,6 +16,7 @@ interface BookingDto {
   guests: number;
   seating: string;
   status: string;
+  tableNumber?: string;
 }
 
 interface AnalyticsDto {
@@ -102,6 +103,92 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
 
   // TTS state for reading restaurant description
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const restRegImageRef = useRef<HTMLInputElement>(null);
+  const newsPostImageRef = useRef<HTMLInputElement>(null);
+  const restSettingsImageRef = useRef<HTMLInputElement>(null);
+  const dishImageRef = useRef<HTMLInputElement>(null);
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleRestRegImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await fileToBase64(file);
+      setCreateForm(prev => ({ ...prev, image: base64 }));
+    } catch (err) {
+      console.error("Failed to read registration image", err);
+    }
+  };
+
+  const handleNewsPostImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await fileToBase64(file);
+      setPostImage(base64);
+    } catch (err) {
+      console.error("Failed to read news post image", err);
+    }
+  };
+
+  const handleRestSettingsImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await fileToBase64(file);
+      setRestForm(prev => ({ ...prev, image: base64 }));
+    } catch (err) {
+      console.error("Failed to read restaurant setting image", err);
+    }
+  };
+
+  const handleDishImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await fileToBase64(file);
+      setDishForm(prev => ({ ...prev, image: base64 }));
+    } catch (err) {
+      console.error("Failed to read dish image", err);
+    }
+  };
+
+  const getTableActiveBooking = (t: any) => {
+    const matchingBookings = bookings.filter(b => {
+      if (!b.tableNumber) return false;
+      const bTable = String(b.tableNumber).trim().toLowerCase();
+      const tName = String(t.name || '').trim().toLowerCase();
+      const tIdStr = String(t.id).trim().toLowerCase();
+      return bTable === tName || bTable === tIdStr || bTable === tName.replace('bàn', '').trim();
+    });
+
+    return matchingBookings.find(b => {
+      const status = b.status.toLowerCase();
+      return status === 'pending' || status === 'chờ duyệt' || status === 'confirmed' || status === 'đã nhận' || status === 'đã duyệt';
+    });
+  };
+
+  const getTableStatus = (t: any) => {
+    const activeBooking = getTableActiveBooking(t);
+    if (activeBooking) {
+      const status = activeBooking.status.toLowerCase();
+      if (status === 'pending' || status === 'chờ duyệt') {
+        return 'reserved';
+      }
+      if (status === 'confirmed' || status === 'đã nhận' || status === 'đã duyệt') {
+        return 'occupied';
+      }
+    }
+    return t.status;
+  };
 
   const handleToggleTTS = () => {
     if (!('speechSynthesis' in window)) {
@@ -717,13 +804,25 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Link ảnh quán ăn</label>
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Ảnh quán ăn từ thiết bị</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => restRegImageRef.current?.click()}
+                    className="flex-1 py-2 bg-white text-[#1a1a1a] hover:bg-[#f9f7f2] border-2 border-dashed border-[#1a1a1a]/40 hover:border-[#e2533b] hover:text-[#e2533b] font-mono text-xs font-bold uppercase transition-all cursor-pointer text-center"
+                  >
+                    Chọn file ảnh quán ăn
+                  </button>
+                  {createForm.image && (
+                    <img src={createForm.image} alt="Preview" className="w-12 h-12 object-cover border border-[#1a1a1a]/20 shrink-0" />
+                  )}
+                </div>
                 <input
-                  type="text"
-                  value={createForm.image}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, image: e.target.value }))}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-xs focus:outline-none font-mono"
+                  ref={restRegImageRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleRestRegImageUpload}
                 />
               </div>
 
@@ -1112,24 +1211,29 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
           </div>
 
           {/* Table Map Statistics bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 font-mono text-[9px] uppercase tracking-wider">
-            <div className="bg-[#f9f7f2] border border-[#1a1a1a]/10 p-3 flex flex-col gap-0.5">
-              <span className="text-[#1a1a1a]/55 font-bold">Tổng số bàn</span>
-              <span className="text-xl font-bold text-[#1a1a1a]">{tablesList.length}</span>
-            </div>
-            <div className="bg-[#e8fbf0] border border-emerald-200 p-3 flex flex-col gap-0.5 text-emerald-800">
-              <span className="font-bold">{t('owner.table_vacant', 'Bàn trống')}</span>
-              <span className="text-xl font-bold">{tablesList.filter(t => t.status === 'vacant').length}</span>
-            </div>
-            <div className="bg-[#fef8e7] border border-amber-200 p-3 flex flex-col gap-0.5 text-amber-800">
-              <span className="font-bold">{t('owner.table_reserved', 'Đã đặt')}</span>
-              <span className="text-xl font-bold">{tablesList.filter(t => t.status === 'reserved').length}</span>
-            </div>
-            <div className="bg-[#fff0f0] border border-rose-200 p-3 flex flex-col gap-0.5 text-rose-850">
-              <span className="font-bold">{t('owner.table_occupied', 'Có khách')}</span>
-              <span className="text-xl font-bold">{tablesList.filter(t => t.status === 'occupied').length}</span>
-            </div>
-          </div>
+          {(() => {
+            const computedTables = tablesList.map(tbl => ({ ...tbl, status: getTableStatus(tbl) }));
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 font-mono text-[9px] uppercase tracking-wider">
+                <div className="bg-[#f9f7f2] border border-[#1a1a1a]/10 p-3 flex flex-col gap-0.5">
+                  <span className="text-[#1a1a1a]/55 font-bold">Tổng số bàn</span>
+                  <span className="text-xl font-bold text-[#1a1a1a]">{computedTables.length}</span>
+                </div>
+                <div className="bg-[#e8fbf0] border border-emerald-200 p-3 flex flex-col gap-0.5 text-emerald-800">
+                  <span className="font-bold">{t('owner.table_vacant', 'Bàn trống')}</span>
+                  <span className="text-xl font-bold">{computedTables.filter(tbl => tbl.status === 'vacant').length}</span>
+                </div>
+                <div className="bg-[#fef8e7] border border-amber-200 p-3 flex flex-col gap-0.5 text-amber-800">
+                  <span className="font-bold">{t('owner.table_reserved', 'Đã đặt')}</span>
+                  <span className="text-xl font-bold">{computedTables.filter(tbl => tbl.status === 'reserved').length}</span>
+                </div>
+                <div className="bg-[#fff0f0] border border-rose-200 p-3 flex flex-col gap-0.5 text-rose-850">
+                  <span className="font-bold">{t('owner.table_occupied', 'Có khách')}</span>
+                  <span className="text-xl font-bold">{computedTables.filter(tbl => tbl.status === 'occupied').length}</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Interactive Seating Layout Grid */}
           {tablesList.length === 0 ? (
@@ -1139,9 +1243,11 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {tablesList.map(t => {
-                const isVacant = t.status === 'vacant';
-                const isReserved = t.status === 'reserved';
-                const isOccupied = t.status === 'occupied';
+                const status = getTableStatus(t);
+                const isVacant = status === 'vacant';
+                const isReserved = status === 'reserved';
+                const isOccupied = status === 'occupied';
+                const activeBooking = getTableActiveBooking(t);
 
                 return (
                   <div
@@ -1152,6 +1258,11 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                       'bg-[#fff0f0]/65 border-rose-700/80'
                     }`}
                   >
+                    {activeBooking && (
+                      <span className="absolute -top-2.5 -right-2.5 bg-[#e2533b] text-white border border-[#1a1a1a] text-[7px] font-mono font-black px-1.5 py-0.5 shadow-md tracking-wider animate-pulse z-10" title={`Khách đặt: ${activeBooking.guests} khách`}>
+                        #BK-{activeBooking.id}
+                      </span>
+                    )}
                     {/* Header: Name and capacity */}
                     <div className="flex flex-col gap-1">
                       <div className="flex justify-between items-start">
@@ -1242,13 +1353,25 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">{t('owner.post_image', 'Link ảnh đính kèm (URL)')}</label>
+              <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Ảnh đính kèm từ thiết bị</label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => newsPostImageRef.current?.click()}
+                  className="flex-1 py-2 bg-white text-[#1a1a1a] hover:bg-[#f9f7f2] border-2 border-dashed border-[#1a1a1a]/40 hover:border-[#e2533b] hover:text-[#e2533b] font-mono text-xs font-bold uppercase transition-all cursor-pointer text-center"
+                >
+                  Chọn file ảnh đính kèm
+                </button>
+                {postImage && (
+                  <img src={postImage} alt="Preview" className="w-12 h-12 object-cover border border-[#1a1a1a]/20 shrink-0" />
+                )}
+              </div>
               <input
-                type="text"
-                value={postImage}
-                onChange={(e) => setPostImage(e.target.value)}
-                placeholder={t('owner.post_image_placeholder', 'Nhập link hình ảnh món ăn hoặc khuyến mãi (URL)...')}
-                className="bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none focus:bg-[#f9f7f2]"
+                ref={newsPostImageRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleNewsPostImageUpload}
               />
               <p className="text-[10px] text-[#1a1a1a]/40 italic font-sans mt-0.5">
                 Bỏ trống nếu muốn sử dụng ảnh đại diện mặc định của quán ăn.
@@ -1294,13 +1417,25 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Ảnh biểu diễn (URL)</label>
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Ảnh biểu diễn từ thiết bị</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => restSettingsImageRef.current?.click()}
+                    className="flex-1 py-2 bg-white text-[#1a1a1a] hover:bg-[#f9f7f2] border-2 border-dashed border-[#1a1a1a]/40 hover:border-[#e2533b] hover:text-[#e2533b] font-mono text-xs font-bold uppercase transition-all cursor-pointer text-center"
+                  >
+                    Chọn file ảnh biểu diễn
+                  </button>
+                  {restForm.image && (
+                    <img src={restForm.image} alt="Preview" className="w-12 h-12 object-cover border border-[#1a1a1a]/20 shrink-0" />
+                  )}
+                </div>
                 <input
-                  type="text"
-                  value={restForm.image}
-                  onChange={(e) => setRestForm(prev => ({ ...prev, image: e.target.value }))}
-                  className="bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
-                  required
+                  ref={restSettingsImageRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleRestSettingsImageUpload}
                 />
               </div>
             </div>
@@ -1598,13 +1733,25 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Ảnh món ăn (URL)</label>
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Ảnh món ăn từ thiết bị</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => dishImageRef.current?.click()}
+                    className="flex-1 py-2 bg-white text-[#1a1a1a] hover:bg-[#f9f7f2] border-2 border-dashed border-[#1a1a1a]/40 hover:border-[#e2533b] hover:text-[#e2533b] font-mono text-xs font-bold uppercase transition-all cursor-pointer text-center"
+                  >
+                    Chọn file ảnh món ăn
+                  </button>
+                  {dishForm.image && (
+                    <img src={dishForm.image} alt="Preview" className="w-12 h-12 object-cover border border-[#1a1a1a]/20 shrink-0" />
+                  )}
+                </div>
                 <input
-                  type="text"
-                  value={dishForm.image}
-                  onChange={(e) => setDishForm(prev => ({ ...prev, image: e.target.value }))}
-                  placeholder="Link ảnh món ăn..."
-                  className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
+                  ref={dishImageRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleDishImageUpload}
                 />
               </div>
 

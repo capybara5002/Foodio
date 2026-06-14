@@ -4,6 +4,7 @@ using Foodio.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Foodio.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260614022338_IncreaseImageLengthLimit")]
+    partial class IncreaseImageLengthLimit
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -78,46 +81,36 @@ namespace Foodio.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AudioTours");
-                });
 
-            modelBuilder.Entity("Foodio.API.Models.AuditLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Actor")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Details")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("EntityId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("EntityType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTimeOffset>("Timestamp")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AuditLogs");
+                    b.HasData(
+                        new
+                        {
+                            Id = "tour_1",
+                            Description = "A vibrant nighttime walk through seafood alleys, noodle counters, and quick snack stops.",
+                            Duration = "2.5 hrs",
+                            Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                            IsTrending = true,
+                            Location = "District 1 and District 4 alleys",
+                            MapImage = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                            Rating = 4.9m,
+                            StopsCount = 6,
+                            Title = "Midnight Snacking",
+                            Vibe = "Energetic"
+                        },
+                        new
+                        {
+                            Id = "tour_2",
+                            Description = "Fresh shellfish, grilled oysters, and local ordering tips from the canal-side stalls.",
+                            Duration = "1.5 hrs",
+                            Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                            IsTrending = false,
+                            Location = "Vinh Khanh Food Street",
+                            MapImage = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                            Rating = 4.7m,
+                            StopsCount = 4,
+                            Title = "Seafood Heaven Tour",
+                            Vibe = "Premium"
+                        });
                 });
 
             modelBuilder.Entity("Foodio.API.Models.AuditLog", b =>
@@ -239,6 +232,36 @@ namespace Foodio.API.Migrations
                         .IsUnique();
 
                     b.ToTable("Categories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Icon = "waves",
+                            Name = "Seafood",
+                            Slug = "seafood"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Icon = "soup",
+                            Name = "Noodles",
+                            Slug = "noodles"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Icon = "store",
+                            Name = "Street Food",
+                            Slug = "street-food"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Icon = "coffee",
+                            Name = "Cafe",
+                            Slug = "cafe"
+                        });
                 });
 
             modelBuilder.Entity("Foodio.API.Models.ChatMessage", b =>
@@ -509,9 +532,6 @@ namespace Foodio.API.Migrations
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("IsLiked")
                         .HasColumnType("bit");
 
@@ -619,6 +639,38 @@ namespace Foodio.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("FoodStreets");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CenterLatitude = 10.759245m,
+                            CenterLongitude = 106.706566m,
+                            Description = "A dense seafood corridor known for snails, grilled shellfish, and canal-side tables.",
+                            District = "District 4, Ho Chi Minh City",
+                            Name = "Vinh Khanh Food Street",
+                            OpeningWindow = "5:00 PM - 12:00 AM"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CenterLatitude = 10.767611m,
+                            CenterLongitude = 106.693641m,
+                            Description = "Late-night noodle shops and quick street snacks near the backpacker quarter.",
+                            District = "District 1, Ho Chi Minh City",
+                            Name = "Pham Ngu Lao Night Bites",
+                            OpeningWindow = "Open late"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CenterLatitude = 10.764812m,
+                            CenterLongitude = 106.688938m,
+                            Description = "Small alley stalls serving seafood, banh mi, and local comfort food.",
+                            District = "District 1, Ho Chi Minh City",
+                            Name = "Nguyen Trai Alley Eats",
+                            OpeningWindow = "10:00 AM - 11:00 PM"
+                        });
                 });
 
             modelBuilder.Entity("Foodio.API.Models.MenuItem", b =>
@@ -656,89 +708,58 @@ namespace Foodio.API.Migrations
                     b.HasIndex("RestaurantId");
 
                     b.ToTable("MenuItems");
-                });
 
-            modelBuilder.Entity("Foodio.API.Models.Notification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("PayloadJson")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("RestaurantId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Notifications");
-                });
-
-            modelBuilder.Entity("Foodio.API.Models.PostComment", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Author")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)");
-
-                    b.Property<string>("Avatar")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("CommunityPostId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CommunityPostId");
-
-                    b.ToTable("PostComments");
+                    b.HasData(
+                        new
+                        {
+                            Id = "dish_1",
+                            Description = "Spicy stir-fried crab with rich garlic butter sauce.",
+                            Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                            IsAvailable = true,
+                            Name = "Garlic Butter Crab",
+                            Price = 15.00m,
+                            RestaurantId = "oc_dao"
+                        },
+                        new
+                        {
+                            Id = "dish_2",
+                            Description = "Fresh oysters grilled with scallion oil and toasted peanuts.",
+                            Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                            IsAvailable = true,
+                            Name = "Grilled Oysters",
+                            Price = 12.50m,
+                            RestaurantId = "oc_dao"
+                        },
+                        new
+                        {
+                            Id = "dish_oanh_1",
+                            Description = "Sweet and sour tamarind snails with morning glory.",
+                            Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                            IsAvailable = true,
+                            Name = "Spicy Tamarind Snails",
+                            Price = 8.50m,
+                            RestaurantId = "oc_oanh"
+                        },
+                        new
+                        {
+                            Id = "dish_pq_1",
+                            Description = "Beef pho with rare beef, brisket, tendon, and beef balls.",
+                            Image = "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10",
+                            IsAvailable = true,
+                            Name = "Beef Pho Special",
+                            Price = 4.50m,
+                            RestaurantId = "pho_quynh"
+                        },
+                        new
+                        {
+                            Id = "dish_bm25_1",
+                            Description = "Crisp baguette with pate, pork, herbs, pickles, and chili.",
+                            Image = "https://images.unsplash.com/photo-1608039829572-78524f79c4c7",
+                            IsAvailable = true,
+                            Name = "Original Pate Banh Mi",
+                            Price = 3.25m,
+                            RestaurantId = "banh_mi_25"
+                        });
                 });
 
             modelBuilder.Entity("Foodio.API.Models.Notification", b =>
@@ -1170,6 +1191,89 @@ namespace Foodio.API.Migrations
                     b.HasIndex("RestaurantId");
 
                     b.ToTable("Reviews");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "rev_1",
+                            Author = "Jane Doe",
+                            Avatar = "JD",
+                            Comment = "Incredible alley spot. The garlic butter sauce is perfect with bread.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ImageUrl = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                            Rating = 5.0m,
+                            RestaurantId = "oc_dao",
+                            Role = "Local Guide"
+                        },
+                        new
+                        {
+                            Id = "rev_2",
+                            Author = "Alex Smith",
+                            Avatar = "AS",
+                            Comment = "Great crab but a bit crowded. Prices are moderate.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Rating = 4.0m,
+                            RestaurantId = "oc_dao",
+                            Role = "Food Traveler"
+                        },
+                        new
+                        {
+                            Id = "rev_3",
+                            Author = "Nguyen Van A",
+                            Avatar = "NV",
+                            Comment = "Average snails. The service is nice though.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Rating = 3.0m,
+                            RestaurantId = "oc_dao",
+                            Role = "Street Food Lover"
+                        },
+                        new
+                        {
+                            Id = "rev_oanh_1",
+                            Author = "Minh Tuan",
+                            Avatar = "MT",
+                            Comment = "Fast service and a lively street-side seafood atmosphere.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ImageUrl = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                            Rating = 5.0m,
+                            RestaurantId = "oc_oanh",
+                            Role = "Snail aficionado"
+                        },
+                        new
+                        {
+                            Id = "rev_oanh_2",
+                            Author = "Tran Binh",
+                            Avatar = "TB",
+                            Comment = "Lively place. Highly recommend the tamarind sauce snails.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Rating = 4.0m,
+                            RestaurantId = "oc_oanh",
+                            Role = "Snack critic"
+                        },
+                        new
+                        {
+                            Id = "rev_pq_1",
+                            Author = "An Binh",
+                            Avatar = "AB",
+                            Comment = "Open all night and very popular near Bui Vien walking street.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ImageUrl = "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10",
+                            Rating = 4.0m,
+                            RestaurantId = "pho_quynh",
+                            Role = "Pho lover"
+                        },
+                        new
+                        {
+                            Id = "rev_pq_2",
+                            Author = "John C",
+                            Avatar = "JC",
+                            Comment = "Delicious hot broth, super fresh herbs. Best late night meal!",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ImageUrl = "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10",
+                            Rating = 5.0m,
+                            RestaurantId = "pho_quynh",
+                            Role = "Backpacker"
+                        });
                 });
 
             modelBuilder.Entity("Foodio.API.Models.User", b =>

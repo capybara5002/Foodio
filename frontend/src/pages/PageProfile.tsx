@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/Admin/AdminDashboard';
 import OwnerDashboard from '../components/Owner/OwnerDashboard';
-import { Restaurant } from '../types';
+import { CommunityPost, Restaurant } from '../types';
 import { UserCircle, BadgeCheck, FileText, Star, Globe, LogOut, User, Shield, Store, Edit2, Key, ChevronRight, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
@@ -10,6 +10,7 @@ import { useLanguage } from '../hooks/useLanguage';
 interface PageProfileProps {
   userEmail: string;
   onLoginTrigger: () => void;
+  sessionCommunityPosts?: CommunityPost[];
   onRestaurantUpdated?: (updated: Restaurant) => void;
 }
 
@@ -22,12 +23,12 @@ const AVATAR_PRESETS = [
   "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=150&auto=format&fit=crop&q=60"  // Seafood/Snails
 ];
 
-export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: PageProfileProps) {
+export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = [], onRestaurantUpdated }: PageProfileProps) {
   const { user, logout, updateAvatar, updatePassword } = useAuth();
   const { t } = useTranslation();
   const { language, changeLanguage } = useLanguage();
   const [showStatus, setShowStatus] = useState<string | null>(null);
-  const [postsCount, setPostsCount] = useState<number>(0);
+  const [remotePostIds, setRemotePostIds] = useState<Set<string>>(new Set());
   
   // Tab control: profile, admin (if admin), owner (if owner)
   const [activeConsole, setActiveConsole] = useState<'profile' | 'admin' | 'owner'>('profile');
@@ -36,6 +37,26 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
   const [isEditingAvatar, setIsEditingAvatar] = useState(false);
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState('');
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleAvatarFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await fileToBase64(file);
+      setSelectedAvatarUrl(base64);
+    } catch (err) {
+      console.error("Failed to read avatar file", err);
+    }
+  };
 
   // Password update states
   const [isEditingPassword, setIsEditingPassword] = useState(false);
@@ -56,11 +77,18 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
     const fetchPostsCount = async () => {
       try {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const response = await fetch(`${baseUrl}/api/communityposts`);
+        let response = await fetch(`${baseUrl}/api/admin/posts`);
+        if (!response.ok) {
+          response = await fetch(`${baseUrl}/api/communityposts`);
+        }
         if (!response.ok) throw new Error("Failed to fetch posts count");
         const data = await response.json();
-        const userPosts = data.filter((p: any) => p.author === user.username);
-        setPostsCount(userPosts.length);
+        const userPosts = data.filter((p: any) =>
+          p.author === user.username ||
+          p.handle === `@${user.username}` ||
+          (user.restaurantId && p.handle === `@${user.restaurantId}`)
+        );
+        setRemotePostIds(new Set(userPosts.map((post: any) => post.id)));
       } catch (error) {
         console.error("Failed to load user posts count in profile:", error);
       }
@@ -124,17 +152,17 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
   // 1. If not logged in at all or is guest session, show a beautiful login card
   if (!user || user.role === 'Guest') {
     return (
-      <div className="w-full min-h-[calc(100vh-72px)] bg-[#fdfcf9] pb-24 text-[#1a1a1a]">
-        <div className="max-w-md mx-auto px-4 py-16 flex flex-col gap-6 text-center animate-in fade-in duration-300">
-          <div className="bg-white border-2 border-[#1a1a1a] p-8 shadow-[6px_6px_0px_0px_#1a1a1a] flex flex-col items-center gap-4">
-            <UserCircle size={48} className="text-[#e2533b]" />
-            <h2 className="font-serif italic font-bold text-2xl uppercase">{t('profile.login_required')}</h2>
-            <p className="text-xs text-[#1a1a1a]/60 leading-relaxed max-w-xs">
+      <div className="foodio-page w-full min-h-[calc(100vh-72px)] pb-32 text-[#2c211b]">
+        <div className="max-w-md mx-auto px-4 py-20 flex flex-col gap-6 text-center foodio-reveal">
+          <div className="bg-[#fffaf4]/92 border border-white/70 p-8 shadow-[0_24px_70px_rgba(77,49,31,0.16)] flex flex-col items-center gap-4 rounded-[2rem]">
+            <UserCircle size={48} className="text-[#b76548]" />
+            <h2 className="font-serif font-bold text-3xl tracking-[-0.055em]">{t('profile.login_required')}</h2>
+            <p className="text-sm text-[#6f655b] leading-relaxed max-w-xs">
               {t('profile.login_required_desc')}
             </p>
             <button
               onClick={onLoginTrigger}
-              className="mt-2 w-full bg-[#1a1a1a] text-white hover:bg-[#e2533b] py-3.5 border-2 border-[#1a1a1a] font-mono text-xs uppercase tracking-widest transition-all cursor-pointer shadow active:translate-y-0.5"
+              className="foodio-btn foodio-btn-primary mt-2 w-full font-mono text-xs uppercase tracking-widest cursor-pointer"
             >
               {t('profile.login_now')}
             </button>
@@ -148,21 +176,27 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
   const isOwner = user.role === 'Owner';
   const isAdmin = user.role === 'Admin';
 
+  const sessionUserPosts = sessionCommunityPosts.filter((post) =>
+    post.author === user.username ||
+    post.handle === `@${user.username}` ||
+    (user.restaurantId && (post.restaurantId === user.restaurantId || post.handle === `@${user.restaurantId}`))
+  );
+  const postsCount = remotePostIds.size + sessionUserPosts.filter((post) => !remotePostIds.has(post.id)).length;
   const defaultAvatar = "https://ui-avatars.com/api/?name=" + encodeURIComponent(user.username) + "&background=1a1a1a&color=ffffff&size=128";
 
   return (
-    <div className="w-full min-h-[calc(100vh-72px)] bg-[#fdfcf9] pb-24 text-[#1a1a1a]">
-      <div className="max-w-4xl mx-auto px-4 py-8 flex flex-col gap-6">
+    <div className="foodio-page w-full min-h-[calc(100vh-72px)] pb-32 text-[#2c211b]">
+      <div className="max-w-5xl mx-auto px-4 py-10 md:py-14 flex flex-col gap-8">
         
         {/* Navigation Tabs if User has Admin/Owner roles */}
         {(isAdmin || isOwner) && (
-          <div className="flex flex-wrap gap-3 font-mono text-xs uppercase tracking-wider font-extrabold pb-3 border-b border-[#1a1a1a]/10">
+          <div className="flex flex-wrap gap-3 font-mono text-xs uppercase tracking-wider font-extrabold pb-4 border-b border-[#4b362a]/10 foodio-reveal">
             <button
               onClick={() => setActiveConsole('profile')}
               className={`px-5 py-3 border-2 transition-all cursor-pointer flex items-center gap-2 font-bold ${
                 activeConsole === 'profile' 
-                  ? 'bg-[#1a1a1a] text-white border-[#1a1a1a] shadow-[3px_3px_0px_0px_#e2533b]' 
-                  : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2] shadow-[3px_3px_0px_0px_#1a1a1a] active:translate-y-0.5 active:shadow-none'
+                  ? 'bg-[#2c211b] text-white border-[#2c211b] shadow-[0_16px_30px_rgba(77,49,31,0.16)] rounded-full' 
+                  : 'bg-[#fffaf4] text-[#2c211b] border-[#4b362a]/10 hover:bg-white shadow-[0_12px_30px_rgba(77,49,31,0.08)] active:scale-[0.98] rounded-full'
               }`}
             >
               <User size={15} className={activeConsole === 'profile' ? 'fill-current text-[#e2533b]' : 'text-[#1a1a1a]/60'} />
@@ -174,8 +208,8 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
                 onClick={() => setActiveConsole('admin')}
                 className={`px-5 py-3 border-2 transition-all cursor-pointer flex items-center gap-2 font-bold ${
                   activeConsole === 'admin' 
-                    ? 'bg-[#1a1a1a] text-white border-[#1a1a1a] shadow-[3px_3px_0px_0px_#e2533b]' 
-                    : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2] shadow-[3px_3px_0px_0px_#1a1a1a] active:translate-y-0.5 active:shadow-none'
+                    ? 'bg-[#2c211b] text-white border-[#2c211b] shadow-[0_16px_30px_rgba(77,49,31,0.16)] rounded-full' 
+                    : 'bg-[#fffaf4] text-[#2c211b] border-[#4b362a]/10 hover:bg-white shadow-[0_12px_30px_rgba(77,49,31,0.08)] active:scale-[0.98] rounded-full'
                 }`}
               >
                 <Shield size={15} className={activeConsole === 'admin' ? 'fill-current text-[#e2533b]' : 'text-[#1a1a1a]/60'} />
@@ -188,8 +222,8 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
                 onClick={() => setActiveConsole('owner')}
                 className={`px-5 py-3 border-2 transition-all cursor-pointer flex items-center gap-2 font-bold ${
                   activeConsole === 'owner' 
-                    ? 'bg-[#1a1a1a] text-white border-[#1a1a1a] shadow-[3px_3px_0px_0px_#e2533b]' 
-                    : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2] shadow-[3px_3px_0px_0px_#1a1a1a] active:translate-y-0.5 active:shadow-none'
+                    ? 'bg-[#2c211b] text-white border-[#2c211b] shadow-[0_16px_30px_rgba(77,49,31,0.16)] rounded-full' 
+                    : 'bg-[#fffaf4] text-[#2c211b] border-[#4b362a]/10 hover:bg-white shadow-[0_12px_30px_rgba(77,49,31,0.08)] active:scale-[0.98] rounded-full'
                 }`}
               >
                 <Store size={15} className={activeConsole === 'owner' ? 'fill-current text-[#e2533b]' : 'text-[#1a1a1a]/60'} />
@@ -201,17 +235,17 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
 
         {/* Tab 1: Profile View */}
         {activeConsole === 'profile' && (
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 w-full animate-in fade-in duration-300">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 w-full foodio-reveal">
             
             {/* Left column - Avatar & Stats */}
             <div className="md:col-span-5 flex flex-col gap-6">
               
               {/* User Card Segment */}
-              <div className="bg-white border-2 border-[#1a1a1a] rounded-none p-6 shadow-[4px_4px_0px_0px_#1a1a1a] text-center flex flex-col items-center gap-4 relative">
+              <div className="bg-[#fffaf4]/92 border border-white/70 rounded-[2rem] p-6 shadow-[0_24px_70px_rgba(77,49,31,0.14)] text-center flex flex-col items-center gap-4 relative overflow-hidden">
                 
                 {/* Avatar Display with Edit overlay */}
                 <div className="relative group">
-                  <div className="w-24 h-24 rounded-none overflow-hidden border-2 border-[#1a1a1a] shadow-sm bg-[#f9f7f2]">
+                  <div className="w-28 h-28 rounded-[2rem] overflow-hidden border border-white/70 shadow-[0_18px_46px_rgba(77,49,31,0.14)] bg-[#f5eadf]">
                     <img 
                       src={user.avatar || defaultAvatar} 
                       alt="Profile Avatar" 
@@ -220,7 +254,7 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
                   </div>
                   <button 
                     onClick={() => setIsEditingAvatar(!isEditingAvatar)}
-                    className="absolute -bottom-1 -right-1 bg-[#1a1a1a] hover:bg-[#e2533b] text-white p-2 border border-[#1a1a1a] cursor-pointer transition-colors shadow active:translate-y-0.5"
+                    className="absolute -bottom-1 -right-1 bg-[#2c211b] hover:bg-[#8f4f3b] text-white p-2 border border-white/60 cursor-pointer transition-all rounded-full shadow active:scale-95"
                     title={t('profile.change_avatar')}
                   >
                     <Edit2 size={12} />
@@ -228,11 +262,11 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
                 </div>
 
                 <div>
-                  <h2 className="font-serif italic font-bold text-xl text-[#1a1a1a] uppercase">{user.username}</h2>
-                  <p className="font-mono text-[10px] uppercase text-[#1a1a1a]/50 font-bold tracking-wider mt-1">{user.email}</p>
+                  <h2 className="font-serif font-bold text-3xl tracking-[-0.055em] text-[#2c211b]">{user.username}</h2>
+                  <p className="font-mono text-[10px] uppercase text-[#6f655b] font-bold tracking-wider mt-1">{user.email}</p>
                 </div>
 
-                <div className="flex gap-1.5 items-center bg-[#e2533b] text-white px-3 py-1 rounded-none text-[10px] font-mono uppercase tracking-wider select-none shadow">
+                <div className="flex gap-1.5 items-center bg-[#b76548] text-white px-3 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-wider select-none shadow">
                   <BadgeCheck size={14} className="fill-white text-[#e2533b]" />
                   <span>{user.role} {t('profile.member_suffix')}</span>
                 </div>
@@ -240,7 +274,7 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
 
               {/* Avatar Selector Panel */}
               {isEditingAvatar && (
-                <div className="bg-white border-2 border-[#1a1a1a] p-4 shadow-[4px_4px_0px_0px_#1a1a1a] flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-[#fffaf4] border border-white/70 p-4 shadow-[0_18px_46px_rgba(77,49,31,0.12)] flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200 rounded-[1.5rem]">
                   <h3 className="font-mono text-xs uppercase font-extrabold tracking-wider border-b border-[#1a1a1a]/15 pb-2 text-[#e2533b]">
                     {t('profile.change_avatar')}
                   </h3>
@@ -267,18 +301,28 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
                     </div>
                   </div>
 
-                  {/* Custom URL Input */}
+                   {/* Custom File Upload Input */}
                   <div className="flex flex-col gap-1.5">
                     <label className="font-mono text-[9px] text-[#1a1a1a]/60 uppercase tracking-wider font-extrabold">
-                      {t('profile.custom_avatar_url')}
+                      Ảnh đại diện từ thiết bị
                     </label>
+                    <button
+                      type="button"
+                      onClick={() => avatarFileRef.current?.click()}
+                      className="w-full py-2 bg-white text-[#1a1a1a] hover:bg-[#f9f7f2] border-2 border-dashed border-[#1a1a1a]/40 hover:border-[#e2533b] hover:text-[#e2533b] font-mono text-xs font-bold uppercase transition-all cursor-pointer text-center"
+                    >
+                      Chọn file ảnh từ thiết bị
+                    </button>
                     <input
-                      type="text"
-                      value={selectedAvatarUrl}
-                      onChange={(e) => setSelectedAvatarUrl(e.target.value)}
-                      placeholder="https://example.com/avatar.png"
-                      className="w-full px-3 py-2 border-2 border-[#1a1a1a] font-mono text-xs focus:outline-none focus:border-[#e2533b] bg-white rounded-none"
+                      ref={avatarFileRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarFileUpload}
                     />
+                    {selectedAvatarUrl && selectedAvatarUrl.startsWith('data:') && (
+                      <span className="text-[10px] text-green-600 font-mono font-bold mt-1 text-center">✓ Đã chọn ảnh từ máy</span>
+                    )}
                   </div>
 
                   {/* Actions */}
@@ -302,13 +346,13 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
 
               {/* Counts indicators bento grid */}
               <div className="grid grid-cols-2 gap-4 text-center">
-                <div className="bg-white p-4 rounded-none border-2 border-[#1a1a1a] flex flex-col gap-1 items-center shadow-[4px_4px_0px_0px_#1a1a1a]">
+                <div className="bg-[#fffaf4] p-5 rounded-[1.5rem] border border-white/70 flex flex-col gap-1 items-center shadow-[0_18px_46px_rgba(77,49,31,0.1)]">
                   <FileText size={20} className="text-[#e2533b]" />
                   <span className="font-serif italic font-bold text-2xl text-[#1a1a1a]">{postsCount}</span>
                   <span className="font-mono text-[9px] text-[#1a1a1a]/50 uppercase tracking-wider font-extrabold">{t('profile.posts_count')}</span>
                 </div>
 
-                <div className="bg-white p-4 rounded-none border-2 border-[#1a1a1a] flex flex-col gap-1 items-center shadow-[4px_4px_0px_0px_#1a1a1a]">
+                <div className="bg-[#fffaf4] p-5 rounded-[1.5rem] border border-white/70 flex flex-col gap-1 items-center shadow-[0_18px_46px_rgba(77,49,31,0.1)]">
                   <Star size={20} className="fill-[#e2533b] text-[#e2533b]" />
                   <span className="font-serif italic font-bold text-2xl text-[#1a1a1a]">5</span>
                   <span className="font-mono text-[9px] text-[#1a1a1a]/50 uppercase tracking-wider font-extrabold">{t('profile.saved_places')}</span>
@@ -321,10 +365,10 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
             <div className="md:col-span-7 flex flex-col gap-6">
               
               {/* Language Settings Card */}
-              <div className="bg-white border-2 border-[#1a1a1a] rounded-none overflow-hidden shadow-[4px_4px_0px_0px_#1a1a1a]">
+              <div className="bg-[#fffaf4] border border-white/70 rounded-[1.5rem] overflow-hidden shadow-[0_18px_46px_rgba(77,49,31,0.1)]">
                 <div 
                   onClick={handleToggleLanguage}
-                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-[#f9f7f2] transition-colors"
+                  className="flex items-center justify-between p-5 cursor-pointer hover:bg-white transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Globe size={18} className="text-[#1a1a1a]" />
@@ -340,7 +384,7 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
               {!isEditingPassword ? (
                 <div 
                   onClick={() => setIsEditingPassword(true)}
-                  className="bg-white border-2 border-[#1a1a1a] p-4 cursor-pointer hover:bg-[#f9f7f2] transition-colors shadow-[4px_4px_0px_0px_#1a1a1a] flex items-center justify-between"
+                  className="bg-[#fffaf4] border border-white/70 p-5 cursor-pointer hover:bg-white transition-colors shadow-[0_18px_46px_rgba(77,49,31,0.1)] flex items-center justify-between rounded-[1.5rem]"
                 >
                   <div className="flex items-center gap-3">
                     <Key size={18} className="text-[#1a1a1a]" />
@@ -351,7 +395,7 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
                   <ChevronRight size={16} />
                 </div>
               ) : (
-                <div className="bg-white border-2 border-[#1a1a1a] p-6 shadow-[4px_4px_0px_0px_#1a1a1a] flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-[#fffaf4] border border-white/70 p-6 shadow-[0_18px_46px_rgba(77,49,31,0.1)] flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200 rounded-[1.5rem]">
                   <div className="flex items-center justify-between border-b border-[#1a1a1a]/10 pb-3">
                     <div className="flex items-center gap-2">
                       <Key size={18} className="text-[#e2533b]" />
@@ -435,7 +479,7 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
               {/* Logout button */}
               <button
                 onClick={logout}
-                className="w-full bg-[#fdfcf9] hover:bg-red-50 text-red-600 py-3.5 border-2 border-red-600 font-mono text-xs uppercase tracking-widest transition-all cursor-pointer shadow-[4px_4px_0px_0px_#dc2626] active:translate-y-0.5 flex items-center justify-center gap-2 font-bold"
+                className="w-full bg-red-50 hover:bg-red-100 text-red-700 py-3.5 border border-red-200 font-mono text-xs uppercase tracking-widest transition-all cursor-pointer shadow-[0_18px_46px_rgba(127,29,29,0.08)] active:scale-[0.98] flex items-center justify-center gap-2 font-bold rounded-full"
               >
                 <LogOut size={16} />
                 {t('profile.logout')}
@@ -464,7 +508,7 @@ export default function PageProfile({ onLoginTrigger, onRestaurantUpdated }: Pag
 
       {/* Dynamic Toast Status indicators */}
       {showStatus && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white px-5 py-3 rounded-none text-xs font-mono tracking-wide shadow-2xl z-[100] border border-white/10 animate-in fade-in slide-in-from-bottom-3 select-none">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-[#2c211b] text-white px-5 py-3 rounded-full text-xs font-mono tracking-wide shadow-[0_18px_46px_rgba(77,49,31,0.22)] z-[100] border border-white/10 animate-in fade-in slide-in-from-bottom-3 select-none">
           {showStatus}
         </div>
       )}

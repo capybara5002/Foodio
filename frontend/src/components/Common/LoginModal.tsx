@@ -17,7 +17,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -52,76 +51,75 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div
-        className="w-full max-w-md bg-[#fdfcf9] border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a] relative animate-in zoom-in-95 duration-200"
-      >
-        {/* Close Button */}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2c211b]/55 p-4 backdrop-blur-xl">
+      <div className="relative w-full max-w-md rounded-[2rem] border border-white/70 bg-[#fffaf4] p-6 text-[#2c211b] shadow-[0_24px_70px_rgba(44,33,27,0.3)] animate-in zoom-in-95 duration-200">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center border-2 border-[#1a1a1a] bg-white hover:bg-[#e2533b] hover:text-white transition-colors cursor-pointer"
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-[#4b362a]/10 bg-white transition-colors hover:bg-[#f0e5d8] hover:text-[#8f4f3b]"
+          aria-label="Close login modal"
         >
-          <X size={14} strokeWidth={3} />
+          <X size={15} />
         </button>
 
-        {/* Header */}
         <div className="mb-6">
-          <span className="text-[9px] tracking-[0.3em] uppercase text-[#e2533b] font-mono font-bold block mb-1">
-            SECURE TERMINAL ACCESS // AUTH
-          </span>
-          <h2 className="font-serif italic font-bold text-2xl uppercase">
+          <span className="foodio-eyebrow mb-3">Secure access</span>
+          <h2 className="font-serif text-4xl font-bold tracking-[-0.06em]">
             {isRegister ? t('login.register_title') : t('login.login_title')}
           </h2>
           {message && (
-            <p className="mt-2 text-xs font-mono text-[#e2533b] bg-[#e2533b]/10 border border-[#e2533b]/25 p-2 font-semibold">
-              ⚠️ {message}
+            <p className="mt-3 rounded-2xl border border-[#b76548]/20 bg-[#f0d5c8]/45 p-3 font-mono text-xs font-semibold text-[#8f4f3b]">
+              {message}
             </p>
           )}
         </div>
 
-        {/* Error Notification */}
         {error && (
-          <div className="mb-4 bg-red-100 border-2 border-[#1a1a1a] p-3 text-xs font-mono font-bold text-[#e2533b]">
+          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-3 font-mono text-xs font-bold text-red-700">
             Error: {error}
           </div>
         )}
 
-        {/* Input Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {isRegister && (
-            <div className="flex flex-col gap-1">
-              <label className="font-mono text-[10px] uppercase font-bold tracking-wider">{t('login.username')}</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#6f655b]">
+                {t('login.username')}
+              </label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Ex: son_hoang"
-                className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-2 text-sm focus:outline-none focus:bg-[#f9f7f2]"
+                className="foodio-input w-full px-4 py-3 text-sm focus:outline-none"
                 required
               />
             </div>
           )}
 
-          <div className="flex flex-col gap-1">
-            <label className="font-mono text-[10px] uppercase font-bold tracking-wider">{t('login.email')}</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#6f655b]">
+              {t('login.email')}
+            </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@foodio.com"
-              className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-2 text-sm focus:outline-none focus:bg-[#f9f7f2]"
+              className="foodio-input w-full px-4 py-3 text-sm focus:outline-none"
               required
             />
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="font-mono text-[10px] uppercase font-bold tracking-wider">{t('login.password')}</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#6f655b]">
+              {t('login.password')}
+            </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-2 text-sm focus:outline-none focus:bg-[#f9f7f2]"
+              className="foodio-input w-full px-4 py-3 text-sm focus:outline-none"
               required
             />
           </div>
@@ -129,52 +127,49 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-[#1a1a1a] text-white hover:bg-[#e2533b] py-3 font-mono text-xs uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-md active:translate-y-0.5 disabled:opacity-50"
+            className="foodio-btn foodio-btn-primary w-full cursor-pointer font-mono text-xs uppercase tracking-widest disabled:opacity-50"
           >
-            {isLoading ? 'Processing...' : (isRegister ? t('login.register_button') : t('login.login_button'))}
+            {isLoading ? 'Processing...' : isRegister ? t('login.register_button') : t('login.login_button')}
           </button>
         </form>
 
-        {/* Toggle Mode */}
         <div className="mt-4 text-center">
           <button
             onClick={() => {
               setIsRegister(!isRegister);
               setError(null);
             }}
-            className="text-xs font-mono font-bold text-[#e2533b] hover:underline cursor-pointer"
+            className="cursor-pointer font-mono text-xs font-bold text-[#8f4f3b] hover:underline"
           >
             {isRegister ? t('login.switch_login') : t('login.switch_register')}
           </button>
         </div>
 
-        {/* Quick Testing logins */}
-        <div className="mt-6 border-t-2 border-dashed border-[#1a1a1a]/25 pt-4">
-          <span className="font-mono text-[9px] uppercase font-bold tracking-wider text-[#1a1a1a]/60 block mb-2">
-            DEVELOPMENT QUICK ACCESS CREDENTIALS:
+        <div className="mt-6 border-t border-dashed border-[#4b362a]/20 pt-4">
+          <span className="mb-2 block font-mono text-[9px] font-bold uppercase tracking-wider text-[#6f655b]">
+            Development quick access
           </span>
           <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => fillQuickLogin('customer@foodio.com', '123456')}
-              className="px-2 py-1.5 bg-white border border-[#1a1a1a]/25 hover:border-[#1a1a1a] text-[9px] font-mono font-bold uppercase transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1"
+              className="flex cursor-pointer items-center justify-center gap-1 rounded-full border border-[#4b362a]/10 bg-white px-2 py-2 font-mono text-[9px] font-bold uppercase shadow-xs transition-all hover:border-[#b76548]/30"
             >
               <User size={10} /> Customer
             </button>
             <button
               onClick={() => fillQuickLogin('owner@foodio.com', '123456')}
-              className="px-2 py-1.5 bg-white border border-[#1a1a1a]/25 hover:border-[#1a1a1a] text-[9px] font-mono font-bold uppercase transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1"
+              className="flex cursor-pointer items-center justify-center gap-1 rounded-full border border-[#4b362a]/10 bg-white px-2 py-2 font-mono text-[9px] font-bold uppercase shadow-xs transition-all hover:border-[#b76548]/30"
             >
               <Store size={10} /> Owner
             </button>
             <button
               onClick={() => fillQuickLogin('admin@foodio.com', '123456')}
-              className="px-2 py-1.5 bg-white border border-[#1a1a1a]/25 hover:border-[#1a1a1a] text-[9px] font-mono font-bold uppercase transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1"
+              className="flex cursor-pointer items-center justify-center gap-1 rounded-full border border-[#4b362a]/10 bg-white px-2 py-2 font-mono text-[9px] font-bold uppercase shadow-xs transition-all hover:border-[#b76548]/30"
             >
               <Shield size={10} /> Admin
             </button>
           </div>
         </div>
-
       </div>
     </div>
   );
