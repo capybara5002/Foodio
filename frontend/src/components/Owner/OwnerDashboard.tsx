@@ -3,6 +3,65 @@ import { useAuth } from '../../context/AuthContext';
 import { Restaurant, Category, BookingMessagePayload, Notification } from '../../types';
 import { Trash2, X, Plus, Store, Users, Calendar, Ban, QrCode, TrendingUp, Settings, Check, Clock, MapPin, Star, CheckCircle2, XCircle, FileText, Grid, Megaphone, Bell, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Leaflet standard icon fixes
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
+
+const VINH_KHANH_CENTER: [number, number] = [10.7580, 106.7020];
+const SW_BOUNDS: [number, number] = [10.7500, 106.6950];
+const NE_BOUNDS: [number, number] = [10.7650, 106.7150];
+const MAX_BOUNDS = L.latLngBounds(SW_BOUNDS, NE_BOUNDS);
+
+const getIconSvg = (category: string, size: number) => {
+  if (category?.toLowerCase() === 'seafood') {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-fish" style="transform: rotate(-45deg);"><path d="M2 16c.8-1 2-2.2 3.5-3 1.7.5 3.5.8 5.2.8 3.7 0 7.3-1.7 9.8-4.7L22 7l-1.9 1.2a15.7 15.7 0 0 1-9.8 3.5c-1.8 0-3.5-.3-5.2-.8-1.5-.8-2.7-2-3.5-3L2 6v10Z"/><path d="M16 8h.01"/><path d="M12 3h.01"/><path d="M22 17c-.8-1.2-2.2-2-3.5-2"/></svg>`;
+  } else {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flame" style="transform: rotate(-45deg);"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`;
+  }
+};
+
+const getRestaurantIcon = (category: string, isSelected: boolean) => {
+  const bgColor = isSelected ? '#b76548' : '#3b2a21';
+  const size = isSelected ? 42 : 34;
+  const innerSize = isSelected ? 22 : 18;
+
+  return L.divIcon({
+    className: `custom-restaurant-pin-${category}`,
+    html: `
+      <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s;">
+        <div style="display: flex; align-items: center; justify-content: center; width: ${size}px; height: ${size}px; background-color: ${bgColor}; border: 2px solid white; border-radius: 50% 50% 0 50%; transform: rotate(45deg); box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+          ${getIconSvg(category, innerSize)}
+        </div>
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size]
+  });
+};
+
+const selectionIcon = L.divIcon({
+  className: 'custom-selection-marker',
+  html: `
+    <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;">
+      <div class="animate-ping" style="position: absolute; width: 24px; height: 24px; background-color: #e2533b; border-radius: 50%; opacity: 0.38;"></div>
+      <div style="position: relative; width: 14px; height: 14px; background-color: #e2533b; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 8px 18px rgba(226,83,59,0.28);"></div>
+    </div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12]
+});
 
 interface OwnerDashboardProps {
   onRestaurantUpdated?: (updated: Restaurant) => void;
@@ -29,6 +88,15 @@ interface AnalyticsDto {
   averageRating: number;
 }
 
+function LocationSelector({ onLocationSelected }: { onLocationSelected: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onLocationSelected(e.latlng.lat, e.latlng.lng);
+    }
+  });
+  return null;
+}
+
 export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardProps) {
   const { user, syncUser } = useAuth();
   const { t } = useTranslation();
@@ -45,6 +113,11 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   const [requestStatus, setRequestStatus] = useState<{ status: string; note?: string } | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [existingRestaurants, setExistingRestaurants] = useState<Restaurant[]>([]);
+  const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
+  const [open247, setOpen247] = useState(false);
+  const [openingTime, setOpeningTime] = useState('16:00');
+  const [closingTime, setClosingTime] = useState('23:00');
 
   // Edit Restaurant Form state
   const [restForm, setRestForm] = useState({
@@ -108,6 +181,8 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   const newsPostImageRef = useRef<HTMLInputElement>(null);
   const restSettingsImageRef = useRef<HTMLInputElement>(null);
   const dishImageRef = useRef<HTMLInputElement>(null);
+
+
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -242,10 +317,11 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
         }
       }
 
-      // Fetch categories and streets first
-      const [catRes, streetRes] = await Promise.all([
+      // Fetch categories, streets, and all restaurants
+      const [catRes, streetRes, restListRes] = await Promise.all([
         fetch(`${baseUrl}/api/cravemap/categories`),
-        fetch(`${baseUrl}/api/food-streets`)
+        fetch(`${baseUrl}/api/food-streets`),
+        fetch(`${baseUrl}/api/restaurants`)
       ]);
 
       if (catRes.ok) {
@@ -255,6 +331,10 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       if (streetRes.ok) {
         const streetData = await streetRes.json();
         setFoodStreets(streetData);
+      }
+      if (restListRes.ok) {
+        const restListData = await restListRes.json();
+        setExistingRestaurants(restListData);
       }
 
       if (activeRestaurantId) {
@@ -346,9 +426,55 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     void fetchRestaurant();
   }, [activeRestaurantId, user]);
 
+  useEffect(() => {
+    if (open247) {
+      setCreateForm(prev => ({ ...prev, openingHours: 'Open 24/7' }));
+    } else {
+      setCreateForm(prev => ({ ...prev, openingHours: `${openingTime} - ${closingTime}` }));
+    }
+  }, [open247, openingTime, closingTime]);
+
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    // Validation
+    if (createForm.name.trim().length < 3) {
+      setError("Tên quán ăn phải có ít nhất 3 ký tự.");
+      return;
+    }
+
+    const addr = createForm.address.toLowerCase();
+    if (!addr.includes("vĩnh khánh") && !addr.includes("vinh khanh")) {
+      setError("Quán ăn đăng ký phải thuộc khu vực đường Vĩnh Khánh (Quận 4). Vui lòng điền đúng địa chỉ.");
+      return;
+    }
+
+    if (!createForm.openingHours.trim()) {
+      setError("Giờ mở cửa không được để trống.");
+      return;
+    }
+
+    if (!createForm.image) {
+      setError("Vui lòng chọn/tải ảnh đại diện cho quán ăn.");
+      return;
+    }
+
+    if (!hasSelectedLocation) {
+      setError("Vui lòng chọn tọa độ vị trí của quán ăn trên bản đồ Vĩnh Khánh.");
+      return;
+    }
+
+    // Check duplicate coordinates locally
+    const isOverlapping = existingRestaurants.some(
+      r => Math.abs(r.latitude - createForm.latitude) < 0.000001 &&
+           Math.abs(r.longitude - createForm.longitude) < 0.000001
+    );
+    if (isOverlapping) {
+      setError("Tọa độ này đã trùng với một quán ăn hiện có. Vui lòng chọn tọa độ khác trên bản đồ.");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
@@ -753,19 +879,6 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Phố ẩm thực</label>
-                <select
-                  value={createForm.foodStreetId}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, foodStreetId: parseInt(e.target.value) }))}
-                  className="w-full bg-white border-2 border-[#1a1a1a] px-2.5 py-1.5 text-sm focus:outline-none"
-                >
-                  {foodStreets.map(st => (
-                    <option key={st.id} value={st.id}>{st.name} ({st.district})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Địa chỉ chi tiết</label>
                 <input
                   type="text"
@@ -775,32 +888,53 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                   className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
                   required
                 />
+                <p className="text-[10px] text-gray-500 italic mt-0.5">Lưu ý: Quán phải nằm trên phố ẩm thực Vĩnh Khánh.</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Khu vực (Quận)</label>
-                  <input
-                    type="text"
-                    value={createForm.area}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, area: e.target.value }))}
-                    placeholder="Ví dụ: Quận 4"
-                    className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
-                    required
-                  />
+              <div className="flex flex-col gap-2 border-2 border-dashed border-[#1a1a1a]/20 p-3 bg-slate-50/50">
+                <div className="flex items-center justify-between">
+                  <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Thời gian hoạt động</label>
+                  <label className="flex items-center gap-1.5 font-mono text-[9px] uppercase font-bold tracking-wider cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={open247}
+                      onChange={(e) => setOpen247(e.target.checked)}
+                      className="accent-[#e2533b]"
+                    />
+                    Mở cửa 24/7
+                  </label>
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Giờ mở cửa</label>
-                  <input
-                    type="text"
-                    value={createForm.openingHours}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, openingHours: e.target.value }))}
-                    placeholder="Ví dụ: 16:00 - 23:00"
-                    className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none"
-                    required
-                  />
-                </div>
+                {!open247 ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 flex flex-col gap-1">
+                      <span className="text-[8px] font-mono uppercase text-[#1a1a1a]/50">Giờ mở cửa</span>
+                      <input
+                        type="time"
+                        value={openingTime}
+                        onChange={(e) => setOpeningTime(e.target.value)}
+                        className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono"
+                        required
+                      />
+                    </div>
+                    <span className="font-bold text-xs mt-4">đến</span>
+                    <div className="flex-1 flex flex-col gap-1">
+                      <span className="text-[8px] font-mono uppercase text-[#1a1a1a]/50">Giờ đóng cửa</span>
+                      <input
+                        type="time"
+                        value={closingTime}
+                        onChange={(e) => setClosingTime(e.target.value)}
+                        className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono"
+                        required
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-green-50 border border-green-200 text-green-800 text-xs font-mono py-2 px-3 text-center">
+                    📢 Quán sẽ được cấu hình mở cửa liên tục 24/7
+                  </div>
+                )}
+                <input type="hidden" value={createForm.openingHours} required />
               </div>
 
               <div className="flex flex-col gap-1">
@@ -831,11 +965,9 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                   <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Vĩ độ (Latitude)</label>
                   <input
                     type="number"
-                    step="0.000001"
                     value={createForm.latitude}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, latitude: parseFloat(e.target.value) }))}
-                    className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono"
-                    required
+                    readOnly
+                    className="w-full bg-gray-100 border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono text-gray-500 cursor-not-allowed"
                   />
                 </div>
 
@@ -843,12 +975,67 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                   <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Kinh độ (Longitude)</label>
                   <input
                     type="number"
-                    step="0.000001"
                     value={createForm.longitude}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, longitude: parseFloat(e.target.value) }))}
-                    className="w-full bg-white border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono"
-                    required
+                    readOnly
+                    className="w-full bg-gray-100 border-2 border-[#1a1a1a] px-3 py-1.5 text-sm focus:outline-none font-mono text-gray-500 cursor-not-allowed"
                   />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Chọn vị trí quán ăn trên bản đồ Vĩnh Khánh</label>
+                <p className="text-[10px] text-gray-500 mb-1">Nhấp vào bản đồ để chọn tọa độ chính xác. Tránh chọn trùng vị trí với các quán có sẵn (màu tối).</p>
+                <div className="w-full border-2 border-[#1a1a1a] z-0 relative" style={{ height: '320px' }}>
+                  <MapContainer
+                    center={VINH_KHANH_CENTER}
+                    zoom={16}
+                    minZoom={16}
+                    maxBounds={MAX_BOUNDS}
+                    maxBoundsViscosity={1.0}
+                    className="w-full h-full z-0"
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    
+                    {existingRestaurants
+                      .filter(r => r.latitude !== undefined && r.latitude !== null && r.longitude !== undefined && r.longitude !== null)
+                      .map(r => {
+                        const lat = Number(r.latitude);
+                        const lng = Number(r.longitude);
+                        if (isNaN(lat) || isNaN(lng)) return null;
+                        const categoryName = r.category || 'Seafood';
+                        return (
+                          <Marker
+                            key={r.id}
+                            position={[lat, lng]}
+                            icon={getRestaurantIcon(categoryName, false)}
+                          >
+                            <Popup>
+                              <div className="text-xs font-sans">
+                                <p className="font-bold">{r.name}</p>
+                                <p className="text-gray-500">{r.address}</p>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        );
+                      })}
+
+                    {hasSelectedLocation && (
+                      <Marker
+                        position={[Number(createForm.latitude), Number(createForm.longitude)]}
+                        icon={selectionIcon}
+                      />
+                    )}
+
+                    <LocationSelector
+                      onLocationSelected={(lat, lng) => {
+                        setCreateForm(prev => ({ ...prev, latitude: lat, longitude: lng }));
+                        setHasSelectedLocation(true);
+                      }}
+                    />
+                  </MapContainer>
                 </div>
               </div>
 

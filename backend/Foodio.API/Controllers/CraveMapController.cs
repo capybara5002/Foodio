@@ -29,15 +29,20 @@ public class CraveMapController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<RestaurantDto>>> GetRestaurants(
         [FromQuery] int? categoryId,
         [FromQuery] int? foodStreetId,
-        [FromQuery] string? search)
+        [FromQuery] string? search,
+        [FromQuery] bool includeInactive = false)
     {
         var query = _db.Restaurants
             .AsNoTracking()
-            .Where(restaurant => restaurant.IsActive)
             .Include(restaurant => restaurant.Category)
             .Include(restaurant => restaurant.Dishes)
             .Include(restaurant => restaurant.Reviews)
             .AsQueryable();
+
+        if (!includeInactive)
+        {
+            query = query.Where(restaurant => restaurant.IsActive);
+        }
 
         if (categoryId.HasValue)
         {

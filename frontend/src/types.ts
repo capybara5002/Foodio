@@ -71,6 +71,7 @@ export interface Restaurant {
   tableStatuses?: string;
   image: string;
   isVerified: boolean;
+  isActive?: boolean;
   replySpeed: string;
   latitude?: number;
   longitude?: number;

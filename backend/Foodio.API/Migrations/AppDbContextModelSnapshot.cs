@@ -1179,8 +1179,7 @@ namespace Foodio.API.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Avatar")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");

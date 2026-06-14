@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/Admin/AdminDashboard';
 import OwnerDashboard from '../components/Owner/OwnerDashboard';
 import { CommunityPost, Restaurant } from '../types';
-import { UserCircle, BadgeCheck, FileText, Star, Globe, LogOut, User, Shield, Store, Edit2, Key, ChevronRight, ChevronDown } from 'lucide-react';
+import { UserCircle, BadgeCheck, FileText, Star, Globe, LogOut, User, Shield, Store, Edit2, Key, ChevronRight, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
 
@@ -12,6 +12,7 @@ interface PageProfileProps {
   onLoginTrigger: () => void;
   sessionCommunityPosts?: CommunityPost[];
   onRestaurantUpdated?: (updated: Restaurant) => void;
+  onRefreshRestaurants?: () => void;
 }
 
 const AVATAR_PRESETS = [
@@ -23,7 +24,7 @@ const AVATAR_PRESETS = [
   "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=150&auto=format&fit=crop&q=60"  // Seafood/Snails
 ];
 
-export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = [], onRestaurantUpdated }: PageProfileProps) {
+export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = [], onRestaurantUpdated, onRefreshRestaurants }: PageProfileProps) {
   const { user, logout, updateAvatar, updatePassword } = useAuth();
   const { t } = useTranslation();
   const { language, changeLanguage } = useLanguage();
@@ -63,6 +64,9 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   useEffect(() => {
@@ -139,6 +143,9 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
       setIsEditingPassword(false);
     } catch (err: any) {
       console.error(err);
@@ -418,13 +425,23 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
                       <label className="font-mono text-[9px] text-[#1a1a1a]/60 uppercase tracking-wider font-extrabold">
                         {t('profile.current_password')}
                       </label>
-                      <input
-                        type="password"
-                        required
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        className="w-full px-3 py-2.5 border-2 border-[#1a1a1a] font-mono text-xs focus:outline-none focus:border-[#e2533b] bg-white rounded-none"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showCurrentPassword ? 'text' : 'password'}
+                          required
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          className="w-full px-3 py-2.5 pr-11 border-2 border-[#1a1a1a] font-mono text-xs focus:outline-none focus:border-[#e2533b] bg-white rounded-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword((current) => !current)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6f655b] hover:text-[#2c211b] cursor-pointer transition-colors"
+                          aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                        >
+                          {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                     </div>
 
                     {/* New Password */}
@@ -432,13 +449,23 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
                       <label className="font-mono text-[9px] text-[#1a1a1a]/60 uppercase tracking-wider font-extrabold">
                         {t('profile.new_password')}
                       </label>
-                      <input
-                        type="password"
-                        required
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full px-3 py-2.5 border-2 border-[#1a1a1a] font-mono text-xs focus:outline-none focus:border-[#e2533b] bg-white rounded-none"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showNewPassword ? 'text' : 'password'}
+                          required
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full px-3 py-2.5 pr-11 border-2 border-[#1a1a1a] font-mono text-xs focus:outline-none focus:border-[#e2533b] bg-white rounded-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword((current) => !current)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6f655b] hover:text-[#2c211b] cursor-pointer transition-colors"
+                          aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                        >
+                          {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                     </div>
 
                     {/* Confirm New Password */}
@@ -446,13 +473,23 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
                       <label className="font-mono text-[9px] text-[#1a1a1a]/60 uppercase tracking-wider font-extrabold">
                         {t('profile.confirm_new_password')}
                       </label>
-                      <input
-                        type="password"
-                        required
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full px-3 py-2.5 border-2 border-[#1a1a1a] font-mono text-xs focus:outline-none focus:border-[#e2533b] bg-white rounded-none"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          required
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full px-3 py-2.5 pr-11 border-2 border-[#1a1a1a] font-mono text-xs focus:outline-none focus:border-[#e2533b] bg-white rounded-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword((current) => !current)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6f655b] hover:text-[#2c211b] cursor-pointer transition-colors"
+                          aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                        >
+                          {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                     </div>
 
                     {/* Actions */}
@@ -493,7 +530,7 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
         {/* Tab 2: Admin Dashboard Console */}
         {activeConsole === 'admin' && isAdmin && (
           <div className="animate-in fade-in duration-300">
-            <AdminDashboard />
+            <AdminDashboard onRestaurantUpdated={onRestaurantUpdated} onRefreshRestaurants={onRefreshRestaurants} />
           </div>
         )}
 
