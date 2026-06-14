@@ -88,6 +88,15 @@ interface AnalyticsDto {
   averageRating: number;
 }
 
+function LocationSelector({ onLocationSelected }: { onLocationSelected: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onLocationSelected(e.latlng.lat, e.latlng.lng);
+    }
+  });
+  return null;
+}
+
 export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardProps) {
   const { user, syncUser } = useAuth();
   const { t } = useTranslation();
@@ -170,19 +179,7 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   const restSettingsImageRef = useRef<HTMLInputElement>(null);
   const dishImageRef = useRef<HTMLInputElement>(null);
 
-  function LocationSelector() {
-    useMapEvents({
-      click(e) {
-        setCreateForm(prev => ({
-          ...prev,
-          latitude: e.latlng.lat,
-          longitude: e.latlng.lng
-        }));
-        setHasSelectedLocation(true);
-      }
-    });
-    return null;
-  }
+
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -442,8 +439,16 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       return;
     }
 
-    if (!createForm.openingHours.trim()) {
+    const openingHoursStr = createForm.openingHours.trim().toLowerCase();
+    const isAlwaysOpen = openingHoursStr.includes("24/7") || openingHoursStr.includes("24/24") || openingHoursStr.includes("24h");
+    const hasTimeFormat = /\d+/.test(openingHoursStr) && (openingHoursStr.includes("-") || openingHoursStr.includes("to") || openingHoursStr.includes("đến") || openingHoursStr.includes("h"));
+
+    if (!openingHoursStr) {
       setError("Giờ mở cửa không được để trống.");
+      return;
+    }
+    if (!isAlwaysOpen && !hasTimeFormat) {
+      setError("Giờ mở cửa không hợp lệ. Vui lòng nhập đúng định dạng (Ví dụ: 16:00 - 23:00 hoặc Open 24/7).");
       return;
     }
 
@@ -943,44 +948,54 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               <div className="flex flex-col gap-1">
                 <label className="font-mono text-[9px] uppercase font-bold tracking-wider">Chọn vị trí quán ăn trên bản đồ Vĩnh Khánh</label>
                 <p className="text-[10px] text-gray-500 mb-1">Nhấp vào bản đồ để chọn tọa độ chính xác. Tránh chọn trùng vị trí với các quán có sẵn (màu tối).</p>
-                <div className="w-full h-72 border-2 border-[#1a1a1a] z-0 relative">
+                <div className="w-full border-2 border-[#1a1a1a] z-0 relative" style={{ height: '320px' }}>
                   <MapContainer
                     center={VINH_KHANH_CENTER}
                     zoom={16}
                     maxBounds={MAX_BOUNDS}
-                    style={{ height: '100%', width: '100%' }}
+                    className="w-full h-full z-0"
                   >
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
                     
-                    {existingRestaurants.map(r => {
-                      const categoryName = r.category || 'Seafood';
-                      return (
-                        <Marker
-                          key={r.id}
-                          position={[r.latitude, r.longitude]}
-                          icon={getRestaurantIcon(categoryName, false)}
-                        >
-                          <Popup>
-                            <div className="text-xs font-sans">
-                              <p className="font-bold">{r.name}</p>
-                              <p className="text-gray-500">{r.address}</p>
-                            </div>
-                          </Popup>
-                        </Marker>
-                      );
-                    })}
+                    {existingRestaurants
+                      .filter(r => r.latitude !== undefined && r.latitude !== null && r.longitude !== undefined && r.longitude !== null)
+                      .map(r => {
+                        const lat = Number(r.latitude);
+                        const lng = Number(r.longitude);
+                        if (isNaN(lat) || isNaN(lng)) return null;
+                        const categoryName = r.category || 'Seafood';
+                        return (
+                          <Marker
+                            key={r.id}
+                            position={[lat, lng]}
+                            icon={getRestaurantIcon(categoryName, false)}
+                          >
+                            <Popup>
+                              <div className="text-xs font-sans">
+                                <p className="font-bold">{r.name}</p>
+                                <p className="text-gray-500">{r.address}</p>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        );
+                      })}
 
                     {hasSelectedLocation && (
                       <Marker
-                        position={[createForm.latitude, createForm.longitude]}
+                        position={[Number(createForm.latitude), Number(createForm.longitude)]}
                         icon={selectionIcon}
                       />
                     )}
 
-                    <LocationSelector />
+                    <LocationSelector
+                      onLocationSelected={(lat, lng) => {
+                        setCreateForm(prev => ({ ...prev, latitude: lat, longitude: lng }));
+                        setHasSelectedLocation(true);
+                      }}
+                    />
                   </MapContainer>
                 </div>
               </div>
