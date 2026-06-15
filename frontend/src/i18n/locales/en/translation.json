@@ -78,7 +78,7 @@
     "stops_suffix": "Spots",
     "start_audio": "Start Audio Tour",
     "for_you": "For You",
-    "following": "Following",
+    "following": "Saved Posts",
     "loading_feed": "Loading Feed...",
     "error_feed": "Could not load posts. Please try again later.",
     "no_posts": "No posts found."
@@ -270,5 +270,9 @@
     "validation_comment": "⚠️ Please write your comment!",
     "success_toast": "⭐ Thanks for reviewing this restaurant!",
     "error_toast": "❌ Failed to submit review. Please try again."
+  },
+  "inbox": {
+    "no_conversation_active": "No active conversation",
+    "select_conversation": "Select a conversation from the sidebar or contact a restaurant from the map to start chatting."
   }
 }

@@ -21,7 +21,9 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddHttpClient();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
 builder.Services.AddCors(options =>
 {
@@ -52,7 +54,6 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
-
 app.UseCors("Frontend");
 
 // Cấu hình Request Localization Middleware để nhận diện ngôn ngữ

@@ -164,7 +164,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
         ...prev,
         [postId]: [...(prev[postId] || []), newComment]
       }));
-      setPosts(prev => prev.map(p => 
+      setPosts(prev => prev.map(p =>
         p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p
       ));
       setCommentInput('');
@@ -187,8 +187,8 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
             type="button"
             onClick={() => setSubTab('tours')}
             className={`flex-grow py-2.5 rounded-full font-extrabold text-[10px] uppercase tracking-[0.16em] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer flex items-center justify-center gap-1.5 ${subTab === 'tours'
-                ? 'bg-[#2c211b] text-white shadow-[0_12px_28px_rgba(77,49,31,0.16)] font-black'
-                : 'text-[#6f655b] hover:bg-white/70'
+              ? 'bg-[#2c211b] text-white shadow-[0_12px_28px_rgba(77,49,31,0.16)] font-black'
+              : 'text-[#6f655b] hover:bg-white/70'
               }`}
           >
             <Volume2 size={12} /> Tours
@@ -197,8 +197,8 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
             type="button"
             onClick={() => setSubTab('feed')}
             className={`flex-grow py-2.5 rounded-full font-extrabold text-[10px] uppercase tracking-[0.16em] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer flex items-center justify-center gap-1.5 ${subTab === 'feed'
-                ? 'bg-[#2c211b] text-white shadow-[0_12px_28px_rgba(77,49,31,0.16)] font-black'
-                : 'text-[#6f655b] hover:bg-white/70'
+              ? 'bg-[#2c211b] text-white shadow-[0_12px_28px_rgba(77,49,31,0.16)] font-black'
+              : 'text-[#6f655b] hover:bg-white/70'
               }`}
           >
             <Users size={12} /> Feed
@@ -220,7 +220,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
               {t('discover.audio_tours_desc')}
             </p>
           </div>
- 
+
           {/* Scollable Categories Horizon Filters */}
           <div className="flex overflow-x-auto no-scrollbar gap-2 py-1">
             {tourCategories.map((cat) => (
@@ -229,8 +229,8 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
                 type="button"
                 onClick={() => setTourFilter(cat)}
                 className={`whitespace-nowrap px-4 py-2.5 font-mono text-[10px] uppercase tracking-wider border rounded-full transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer ${(cat === 'All' && tourFilter === 'All') || tourFilter === cat
-                    ? 'bg-[#2c211b] text-white border-transparent shadow-[0_12px_28px_rgba(77,49,31,0.16)] font-black'
-                    : 'bg-[#fffaf4] text-[#6f655b] border-[#4b362a]/10 hover:bg-white hover:text-[#2c211b]'
+                  ? 'bg-[#2c211b] text-white border-transparent shadow-[0_12px_28px_rgba(77,49,31,0.16)] font-black'
+                  : 'bg-[#fffaf4] text-[#6f655b] border-[#4b362a]/10 hover:bg-white hover:text-[#2c211b]'
                   }`}
               >
                 {cat === 'All' ? t('discover.all_tours') : cat}
@@ -360,8 +360,8 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
               type="button"
               onClick={() => setFeedFilter('forYou')}
               className={`flex-1 py-1.5 text-center rounded-none font-sans text-[10px] tracking-wider uppercase transition-all cursor-pointer ${feedFilter === 'forYou'
-                  ? 'bg-[#2c211b] text-white font-bold rounded-full'
-                  : 'text-[#6f655b] hover:bg-white/70 rounded-full'
+                ? 'bg-[#2c211b] text-white font-bold rounded-full'
+                : 'text-[#6f655b] hover:bg-white/70 rounded-full'
                 }`}
             >
               {t('discover.for_you')}
@@ -370,15 +370,14 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
               type="button"
               onClick={() => setFeedFilter('following')}
               className={`flex-1 py-1.5 text-center rounded-none font-sans text-[10px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 ${feedFilter === 'following'
-                  ? 'bg-[#2c211b] text-white font-bold rounded-full'
-                  : 'text-[#6f655b] hover:bg-white/70 rounded-full'
+                ? 'bg-[#2c211b] text-white font-bold rounded-full'
+                : 'text-[#6f655b] hover:bg-white/70 rounded-full'
                 }`}
             >
               <span>{t('discover.saved_feed', 'Saved')}</span>
               {savedPostsCount > 0 && (
-                <span className={`min-w-4 rounded-full px-1.5 py-0.5 text-[8px] leading-none ${
-                  feedFilter === 'following' ? 'bg-white/20 text-white' : 'bg-[#2c211b]/10 text-[#2c211b]'
-                }`}>
+                <span className={`min-w-4 rounded-full px-1.5 py-0.5 text-[8px] leading-none ${feedFilter === 'following' ? 'bg-white/20 text-white' : 'bg-[#2c211b]/10 text-[#2c211b]'
+                  }`}>
                   {savedPostsCount}
                 </span>
               )}
@@ -445,11 +444,10 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
           {visiblePosts.map((post) => (
             <article
               key={post.id}
-              className={`bg-[#fffaf4] rounded-[2rem] border shadow-[0_24px_70px_rgba(77,49,31,0.12)] overflow-hidden flex flex-col transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-                post.isRestaurantPost
+              className={`bg-[#fffaf4] rounded-[2rem] border shadow-[0_24px_70px_rgba(77,49,31,0.12)] overflow-hidden flex flex-col transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${post.isRestaurantPost
                   ? 'border-[#b76548]/35 bg-amber-50/20'
                   : 'border-white/70'
-              }`}
+                }`}
             >
               {/* User profile header badge row */}
               <div className="p-4 flex items-center gap-3 border-b border-[#1a1a1a]/5">
@@ -515,7 +513,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
                       <span className="font-mono text-[10px] font-bold">{post.likesCount}</span>
                     </button>
 
-                    <button 
+                    <button
                       onClick={() => handleToggleComments(post.id)}
                       className="flex items-center gap-1 text-[#1a1a1a]/55 hover:text-[#e2533b] px-1 py-1 cursor-pointer"
                     >
@@ -560,9 +558,9 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
                         ))
                       )}
                     </div>
-                    
+
                     <div className="flex gap-2 items-center mt-1">
-                      <input 
+                      <input
                         type="text"
                         value={commentInput}
                         onChange={e => setCommentInput(e.target.value)}
@@ -572,7 +570,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
                           if (e.key === 'Enter') handleSubmitComment(post.id);
                         }}
                       />
-                      <button 
+                      <button
                         onClick={() => handleSubmitComment(post.id)}
                         disabled={!commentInput.trim() || isSubmittingComment}
                         className="bg-[#1a1a1a] hover:bg-[#e2533b] disabled:bg-[#1a1a1a]/40 text-white px-3 py-1.5 rounded-sm font-mono text-[9px] font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:cursor-not-allowed"

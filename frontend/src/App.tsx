@@ -43,7 +43,7 @@ function AppContent() {
   const [audioTours, setAudioTours] = useState<AudioTour[]>(initialAudioTours);
   const [sessionCommunityPosts, setSessionCommunityPosts] = useState<CommunityPost[]>([]);
 
-  const [activeThreadId, setActiveThreadId] = useState<string>('oc_oanh_thread');
+  const [activeThreadId, setActiveThreadId] = useState<string>('');
 
   // Authentication interception states
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -307,10 +307,14 @@ function AppContent() {
 
   const handleConfirmBooking = (bookingDetails: { date: string; time: string; guests: number; seating: string; tableNumber?: string }) => {
     const bookingRestaurant = selectedRestaurantId
-      ? restaurants.find((r) => r.id === selectedRestaurantId) || restaurants[0]
+      ? restaurants.find((r) => r.id === selectedRestaurantId)
       : restaurants.find((r) => r.id === 'oc_oanh') || restaurants[0];
 
-    void createBooking({
+    if (!bookingRestaurant) {
+      return Promise.reject(new Error(t('booking.no_restaurant', 'No restaurant available for booking.')));
+    }
+
+    return createBooking({
       restaurantId: bookingRestaurant.id,
       date: bookingDetails.date,
       time: bookingDetails.time,
@@ -319,8 +323,7 @@ function AppContent() {
       userId: activeChatUserId,
       tableNumber: bookingDetails.tableNumber
     })
-      .then(() => handleRefreshThreads())
-      .catch(() => undefined);
+      .then(() => handleRefreshThreads());
   };
 
   const handleRestaurantUpdated = (updated: Restaurant) => {
@@ -406,13 +409,13 @@ function AppContent() {
         );
       case 'profile':
         return (
-          <PageProfile 
-            userEmail={userEmail} 
+          <PageProfile
+            userEmail={userEmail}
             onLoginTrigger={() => {
               setLoginMessage(t('auth.login_title'));
               setPendingAction(null);
               setIsLoginOpen(true);
-            }} 
+            }}
             sessionCommunityPosts={sessionCommunityPosts}
             onRestaurantUpdated={handleRestaurantUpdated}
             onRefreshRestaurants={handleRefreshRestaurants}
@@ -442,7 +445,7 @@ function AppContent() {
         onChangeTab={(tab) => {
           try {
             stopNarration();
-          } catch (e) {}
+          } catch (e) { }
           if (tab === 'create') {
             handleOpenCreatePost();
           } else {
@@ -460,9 +463,8 @@ function AppContent() {
       <OfflineBanner />
 
       {qrStatus && (
-        <div className={`fixed top-24 left-1/2 z-[90] -translate-x-1/2 rounded-full border px-5 py-3 shadow-[0_18px_46px_rgba(77,49,31,0.16)] backdrop-blur-xl font-mono text-[11px] font-bold tracking-wide animate-in slide-in-from-top-4 ${
-          qrStatus.type === 'success' ? 'border-emerald-600/20 bg-emerald-50/90 text-emerald-900' : 'border-red-600/20 bg-red-50/90 text-red-900'
-        }`}>
+        <div className={`fixed top-24 left-1/2 z-[90] -translate-x-1/2 rounded-full border px-5 py-3 shadow-[0_18px_46px_rgba(77,49,31,0.16)] backdrop-blur-xl font-mono text-[11px] font-bold tracking-wide animate-in slide-in-from-top-4 ${qrStatus.type === 'success' ? 'border-emerald-600/20 bg-emerald-50/90 text-emerald-900' : 'border-red-600/20 bg-red-50/90 text-red-900'
+          }`}>
           {qrStatus.message}
         </div>
       )}
@@ -471,7 +473,7 @@ function AppContent() {
         <div className="fixed bottom-24 left-4 z-[70] flex items-center gap-2 rounded-full border border-[#b76548]/20 bg-[#fffaf4]/88 px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider text-[#8f4f3b] shadow-[0_18px_46px_rgba(77,49,31,0.14)] backdrop-blur-xl select-none md:bottom-6">
           <span className="w-2 h-2 rounded-full bg-[#b76548] animate-pulse" />
           <span>{t('auth.guest_mode', { table: user.tableNumber })}</span>
-          <button 
+          <button
             onClick={logout}
             className="ml-1 rounded-full px-2 py-0.5 text-[#2c211b] transition-colors hover:bg-[#f0e5d8] hover:text-[#8f4f3b]"
           >
@@ -491,7 +493,7 @@ function AppContent() {
         onConfirm={handleConfirmBooking}
       />
 
-      <LoginModal 
+      <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
         message={loginMessage}

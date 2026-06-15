@@ -328,6 +328,22 @@ public class CraveMapController : ControllerBase
             return NotFound("Restaurant was not found.");
         }
 
+        // Check for double bookings on the same date, same time, and same table by a different user
+        var conflictExists = await _db.Bookings.AnyAsync(b =>
+            b.RestaurantId == dto.RestaurantId &&
+            b.Date == date &&
+            b.Time == time &&
+            (b.TableNumber == dto.TableNumber || b.Seating == dto.Seating) &&
+            b.UserId != (dto.UserId ?? "usr_3") &&
+            b.Status != "Cancelled" &&
+            b.Status != "Rejected" &&
+            b.Status != "Đã hủy");
+
+        if (conflictExists)
+        {
+            return BadRequest("Bàn này đã được khách hàng khác đặt vào thời gian này.");
+        }
+
         var booking = new Booking
         {
             RestaurantId = dto.RestaurantId,

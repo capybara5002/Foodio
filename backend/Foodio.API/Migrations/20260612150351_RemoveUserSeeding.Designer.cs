@@ -4,6 +4,7 @@ using Foodio.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Foodio.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260612150351_RemoveUserSeeding")]
+    partial class RemoveUserSeeding
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -78,46 +81,6 @@ namespace Foodio.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AudioTours");
-                });
-
-            modelBuilder.Entity("Foodio.API.Models.AuditLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Actor")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Details")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("EntityId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("EntityType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTimeOffset>("Timestamp")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AuditLogs");
                 });
 
             modelBuilder.Entity("Foodio.API.Models.AuditLog", b =>
@@ -303,82 +266,6 @@ namespace Foodio.API.Migrations
                     b.HasIndex("ChatThreadId");
 
                     b.ToTable("ChatMessages");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "msg_1",
-                            ChatThreadId = "oc_oanh_thread",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsSystemNotification = false,
-                            MessageType = "Text",
-                            Sender = "user",
-                            SenderId = "usr_3",
-                            Status = "read",
-                            Text = "Hi, do you have a table for 4 tonight around 7 PM?",
-                            Timestamp = "4:30 PM"
-                        },
-                        new
-                        {
-                            Id = "msg_2",
-                            ChatThreadId = "oc_oanh_thread",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 2, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsSystemNotification = false,
-                            MessageType = "Text",
-                            Sender = "restaurant",
-                            SenderId = "owner_oc_oanh",
-                            Text = "Hello! Yes, we have space. Do you prefer indoor or street-side outdoor seating?",
-                            Timestamp = "4:32 PM"
-                        },
-                        new
-                        {
-                            Id = "msg_3",
-                            ChatThreadId = "oc_oanh_thread",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 3, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsSystemNotification = false,
-                            MessageType = "Text",
-                            Sender = "restaurant",
-                            SenderId = "owner_oc_oanh",
-                            Text = "Perfect. We will hold an outdoor table for you.",
-                            Timestamp = "Just now"
-                        },
-                        new
-                        {
-                            Id = "msg_pq_1",
-                            ChatThreadId = "pho_quynh_thread",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 4, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsSystemNotification = true,
-                            MessageType = "Text",
-                            Sender = "system",
-                            SenderId = "system",
-                            Text = "Your reservation is confirmed!",
-                            Timestamp = "10:42 AM"
-                        },
-                        new
-                        {
-                            Id = "msg_bm25_1",
-                            ChatThreadId = "banh_mi_25_thread",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsSystemNotification = false,
-                            MessageType = "Text",
-                            Sender = "user",
-                            SenderId = "usr_3",
-                            Status = "read",
-                            Text = "Do you still have original pate banh mi?",
-                            Timestamp = "Yesterday"
-                        },
-                        new
-                        {
-                            Id = "msg_bm25_2",
-                            ChatThreadId = "banh_mi_25_thread",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 2, 0, 2, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsSystemNotification = false,
-                            MessageType = "Text",
-                            Sender = "restaurant",
-                            SenderId = "owner_banh_mi_25",
-                            Text = "We are sold out for today, sorry!",
-                            Timestamp = "Yesterday"
-                        });
                 });
 
             modelBuilder.Entity("Foodio.API.Models.ChatThread", b =>
@@ -431,44 +318,6 @@ namespace Foodio.API.Migrations
                         .IsUnique();
 
                     b.ToTable("ChatThreads");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "oc_oanh_thread",
-                            Avatar = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
-                            LastMessageText = "Perfect. We will hold an outdoor table for you.",
-                            LastMessageTime = "2026-06-03T00:03:00.0000000+00:00",
-                            Name = "Oc Oanh",
-                            RestaurantId = "oc_oanh",
-                            StatusText = "Usually replies in 5m",
-                            UnreadCount = 0,
-                            UserId = "usr_3"
-                        },
-                        new
-                        {
-                            Id = "pho_quynh_thread",
-                            Avatar = "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10",
-                            LastMessageText = "Your reservation is confirmed!",
-                            LastMessageTime = "2026-06-03T00:04:00.0000000+00:00",
-                            Name = "Pho Quynh",
-                            RestaurantId = "pho_quynh",
-                            StatusText = "Replies in standard hours",
-                            UnreadCount = 1,
-                            UserId = "usr_3"
-                        },
-                        new
-                        {
-                            Id = "banh_mi_25_thread",
-                            Avatar = "https://images.unsplash.com/photo-1608039829572-78524f79c4c7",
-                            LastMessageText = "We are sold out for today, sorry!",
-                            LastMessageTime = "2026-06-02T00:00:00.0000000+00:00",
-                            Name = "Banh Mi 25",
-                            RestaurantId = "banh_mi_25",
-                            StatusText = "Replies in 1h",
-                            UnreadCount = 0,
-                            UserId = "usr_3"
-                        });
                 });
 
             modelBuilder.Entity("Foodio.API.Models.CommunityPost", b =>
@@ -484,7 +333,8 @@ namespace Foodio.API.Migrations
 
                     b.Property<string>("Avatar")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("CommentsCount")
                         .HasColumnType("int");
@@ -504,10 +354,8 @@ namespace Foodio.API.Migrations
 
                     b.Property<string>("Image")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("bit");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
@@ -540,46 +388,6 @@ namespace Foodio.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("CommunityPosts");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "post_1",
-                            Author = "foodie_explorer",
-                            Avatar = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
-                            CommentsCount = 18,
-                            Content = "A tiny alley stall with bold seafood flavors and a packed local crowd.",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Handle = "@foodie_explorer",
-                            Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
-                            IsApproved = false,
-                            IsLiked = false,
-                            IsRestaurantPost = false,
-                            IsSaved = false,
-                            LikesCount = 245,
-                            LocationName = "Oc Dao",
-                            Rating = 4.8m,
-                            TimeAgo = "2 hours ago"
-                        },
-                        new
-                        {
-                            Id = "post_2",
-                            Author = "street_bites",
-                            Avatar = "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10",
-                            CommentsCount = 45,
-                            Content = "Rich broth, springy noodles, tight seating, and the right late-night energy.",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Handle = "@street_bites",
-                            Image = "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10",
-                            IsApproved = false,
-                            IsLiked = true,
-                            IsRestaurantPost = false,
-                            IsSaved = false,
-                            LikesCount = 892,
-                            LocationName = "Pho Quynh",
-                            Rating = 4.0m,
-                            TimeAgo = "5 hours ago"
-                        });
                 });
 
             modelBuilder.Entity("Foodio.API.Models.FoodStreet", b =>
@@ -633,7 +441,8 @@ namespace Foodio.API.Migrations
 
                     b.Property<string>("Image")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("bit");
@@ -741,109 +550,6 @@ namespace Foodio.API.Migrations
                     b.ToTable("PostComments");
                 });
 
-            modelBuilder.Entity("Foodio.API.Models.Notification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("PayloadJson")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("RestaurantId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Notifications");
-                });
-
-            modelBuilder.Entity("Foodio.API.Models.PostComment", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Author")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)");
-
-                    b.Property<string>("Avatar")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("CommunityPostId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CommunityPostId");
-
-                    b.ToTable("PostComments");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "pcom_1",
-                            Author = "local_guide_jane",
-                            Avatar = "https://ui-avatars.com/api/?name=Jane&background=random",
-                            CommunityPostId = "post_1",
-                            Content = "I completely agree! The snails here are to die for.",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 1, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = "pcom_2",
-                            Author = "mike_eats_world",
-                            Avatar = "https://ui-avatars.com/api/?name=Mike&background=random",
-                            CommunityPostId = "post_1",
-                            Content = "Is it hard to find a table on weekends?",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 1, 30, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        });
-                });
-
             modelBuilder.Entity("Foodio.API.Models.Restaurant", b =>
                 {
                     b.Property<string>("Id")
@@ -891,7 +597,8 @@ namespace Foodio.API.Migrations
 
                     b.Property<string>("Image")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -941,104 +648,6 @@ namespace Foodio.API.Migrations
                     b.HasIndex("FoodStreetId");
 
                     b.ToTable("Restaurants");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "oc_dao",
-                            Address = "212B Alley, Nguyen Trai Street",
-                            Area = "District 1, Ho Chi Minh City",
-                            AudioPriority = 70,
-                            CategoryId = 1,
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "",
-                            Distance = "1.2 km away",
-                            FoodStreetId = 3,
-                            GeofenceRadiusMeters = 35,
-                            Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
-                            IsActive = true,
-                            IsVerified = true,
-                            Latitude = 10.763921m,
-                            Longitude = 106.688515m,
-                            Name = "Oc Dao",
-                            OpeningHours = "10:00 AM - 11:00 PM",
-                            PriceRange = "$$$",
-                            Rating = 4.8m,
-                            ReplySpeed = "Usually replies in 5m",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = "oc_oanh",
-                            Address = "534 Vinh Khanh Street",
-                            Area = "District 4, Ho Chi Minh City",
-                            AudioPriority = 100,
-                            CategoryId = 1,
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "",
-                            Distance = "0.5 km away",
-                            FoodStreetId = 1,
-                            GeofenceRadiusMeters = 45,
-                            Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
-                            IsActive = true,
-                            IsVerified = true,
-                            Latitude = 10.759031m,
-                            Longitude = 106.706962m,
-                            Name = "Oc Oanh",
-                            OpeningHours = "1:00 PM - 12:00 AM",
-                            PriceRange = "$$",
-                            Rating = 4.8m,
-                            ReplySpeed = "Usually replies in 5m",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = "pho_quynh",
-                            Address = "323 Pham Ngu Lao",
-                            Area = "District 1, Ho Chi Minh City",
-                            AudioPriority = 55,
-                            CategoryId = 2,
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "",
-                            Distance = "1.8 km away",
-                            FoodStreetId = 2,
-                            GeofenceRadiusMeters = 30,
-                            Image = "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10",
-                            IsActive = true,
-                            IsVerified = false,
-                            Latitude = 10.767836m,
-                            Longitude = 106.693385m,
-                            Name = "Pho Quynh",
-                            OpeningHours = "Open 24/7",
-                            PriceRange = "$",
-                            Rating = 4.5m,
-                            ReplySpeed = "Replies in standard hours",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = "banh_mi_25",
-                            Address = "25 Huynh Khuong Ninh",
-                            Area = "District 1, Ho Chi Minh City",
-                            AudioPriority = 40,
-                            CategoryId = 3,
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "",
-                            Distance = "2.0 km away",
-                            FoodStreetId = 3,
-                            GeofenceRadiusMeters = 30,
-                            Image = "https://images.unsplash.com/photo-1608039829572-78524f79c4c7",
-                            IsActive = true,
-                            IsVerified = true,
-                            Latitude = 10.791013m,
-                            Longitude = 106.695142m,
-                            Name = "Banh Mi 25",
-                            OpeningHours = "7:00 AM - 9:00 PM",
-                            PriceRange = "$",
-                            Rating = 4.6m,
-                            ReplySpeed = "Replies in 1h",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        });
                 });
 
             modelBuilder.Entity("Foodio.API.Models.RestaurantRequest", b =>
@@ -1077,7 +686,8 @@ namespace Foodio.API.Migrations
 
                     b.Property<string>("Image")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<decimal>("Latitude")
                         .HasColumnType("decimal(9,6)");
@@ -1179,7 +789,8 @@ namespace Foodio.API.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Avatar")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
@@ -1219,42 +830,6 @@ namespace Foodio.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "usr_1",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "admin@foodio.com",
-                            IsActive = true,
-                            OwnerStatus = "None",
-                            PasswordHash = "123456",
-                            Role = "Admin",
-                            Username = "admin"
-                        },
-                        new
-                        {
-                            Id = "usr_2",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "owner@foodio.com",
-                            IsActive = true,
-                            OwnerStatus = "Verified",
-                            PasswordHash = "123456",
-                            RestaurantId = "oc_dao",
-                            Role = "Owner",
-                            Username = "owner_ocdao"
-                        },
-                        new
-                        {
-                            Id = "usr_3",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "customer@foodio.com",
-                            IsActive = true,
-                            OwnerStatus = "None",
-                            PasswordHash = "123456",
-                            Role = "User",
-                            Username = "customer"
-                        });
                 });
 
             modelBuilder.Entity("Foodio.API.Models.Booking", b =>
