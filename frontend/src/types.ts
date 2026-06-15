@@ -20,6 +20,8 @@ export interface FoodieReview {
   avatar: string;
   imageUrl?: string;
   imageUrls?: string[];
+  ownerReply?: string;
+  ownerReplyCreatedAt?: string;
 }
 
 export interface User {

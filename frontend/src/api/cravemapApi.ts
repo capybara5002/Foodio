@@ -76,6 +76,10 @@ export function createReview(restaurantId: string, review: Omit<FoodieReview, 'i
   return postJson<FoodieReview>(`/api/restaurants/${restaurantId}/reviews`, review);
 }
 
+export function replyToReview(reviewId: string, reply: string, ownerId: string) {
+  return postJson<FoodieReview>(`/api/owner/reviews/${reviewId}/reply?ownerId=${encodeURIComponent(ownerId)}`, { reply });
+}
+
 export function getPostComments(postId: string) {
   return getJson<PostComment[]>(`/api/cravemap/community-posts/${postId}/comments`);
 }

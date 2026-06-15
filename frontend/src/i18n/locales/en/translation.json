@@ -269,7 +269,15 @@
     "submit": "Submit Review",
     "validation_comment": "⚠️ Please write your comment!",
     "success_toast": "⭐ Thanks for reviewing this restaurant!",
-    "error_toast": "❌ Failed to submit review. Please try again."
+    "error_toast": "❌ Failed to submit review. Please try again.",
+    "owner_reply": "Owner's Response",
+    "reply_btn": "Reply",
+    "edit_reply_btn": "Edit Response",
+    "reply_placeholder": "Write a thank you note or reply to the customer...",
+    "submit_reply": "Submit Reply",
+    "cancel_reply": "Cancel",
+    "reply_success": "💬 Reply submitted successfully!",
+    "reply_error": "❌ Failed to submit reply. Please try again."
   },
   "inbox": {
     "no_conversation_active": "No active conversation",

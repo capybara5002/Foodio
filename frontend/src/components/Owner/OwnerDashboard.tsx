@@ -178,6 +178,11 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   // TTS state for reading restaurant description
   const [isSpeaking, setIsSpeaking] = useState(false);
 
+  // Review reply state
+  const [activeReplyReviewId, setActiveReplyReviewId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [replyLoading, setReplyLoading] = useState(false);
+
   const restRegImageRef = useRef<HTMLInputElement>(null);
   const newsPostImageRef = useRef<HTMLInputElement>(null);
   const restSettingsImageRef = useRef<HTMLInputElement>(null);
@@ -743,6 +748,45 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       }
     } catch (e: any) {
       alert("Lỗi báo cáo: " + e.message);
+    }
+  };
+
+  const handleSendReply = async (reviewId: string) => {
+    if (!replyText.trim()) {
+      alert('Vui lòng nhập nội dung phản hồi!');
+      return;
+    }
+    setReplyLoading(true);
+    try {
+      const res = await fetch(`${baseUrl}/api/owner/reviews/${reviewId}/reply?${ownerQuery}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reply: replyText.trim() })
+      });
+
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || 'Failed to submit reply.');
+      }
+
+      const updatedReview: any = await res.json();
+      
+      // Update local state restaurant.reviews
+      if (restaurant) {
+        const updatedReviews = restaurant.reviews.map(r => r.id === reviewId ? { ...r, ownerReply: updatedReview.ownerReply, ownerReplyCreatedAt: updatedReview.ownerReplyCreatedAt } : r);
+        const updatedRest = { ...restaurant, reviews: updatedReviews };
+        setRestaurant(updatedRest);
+        onRestaurantUpdated?.(updatedRest);
+      }
+
+      setActiveReplyReviewId(null);
+      setReplyText('');
+    } catch (err: any) {
+      alert(err.message || t('review_form.reply_error', 'Gửi phản hồi thất bại.'));
+    } finally {
+      setReplyLoading(false);
     }
   };
 
@@ -1830,35 +1874,101 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
               </div>
             ) : (
               restaurant.reviews.map((rev: any) => (
-                <div key={rev.id} className="p-4 border-2 border-[#1a1a1a] bg-[#fdfcf9] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-[#e2533b] transition-all">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-serif italic font-bold text-sm">{rev.author}</span>
-                      <span className="text-xs font-mono text-slate-400">({rev.role})</span>
-                      <div className="flex text-[#e2533b] ml-2">
-                        {Array.from({ length: 5 }).map((_, st) => (
-                          <Star 
-                            key={st} 
-                            size={12} 
-                            className={`select-none ${st < Math.floor(rev.rating) ? 'fill-[#e2533b] text-[#e2533b]' : 'text-slate-300'}`} 
-                          />
-                        ))}
+                <div key={rev.id} className="p-4 border-2 border-[#1a1a1a] bg-[#fdfcf9] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col gap-3 hover:border-[#e2533b] transition-all">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-serif italic font-bold text-sm">{rev.author}</span>
+                        <span className="text-xs font-mono text-slate-400">({rev.role})</span>
+                        <div className="flex text-[#e2533b] ml-2">
+                          {Array.from({ length: 5 }).map((_, st) => (
+                            <Star 
+                              key={st} 
+                              size={12} 
+                              className={`select-none ${st < Math.floor(rev.rating) ? 'fill-[#e2533b] text-[#e2533b]' : 'text-slate-300'}`} 
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-xs text-[#1a1a1a]/80 mt-1 leading-relaxed italic">"{rev.comment}"</p>
+                      {rev.imageUrl && (
+                        <img src={rev.imageUrl} alt="Attachment" className="mt-2 w-32 h-20 object-cover border border-[#1a1a1a]/20" />
+                      )}
+                      <span className="text-[10px] font-mono text-slate-400 mt-2 block">
+                        {rev.createdAt ? new Date(rev.createdAt).toLocaleString() : ''}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto justify-end sm:justify-start">
+                      <button
+                        onClick={() => {
+                          setActiveReplyReviewId(rev.id);
+                          setReplyText(rev.ownerReply || '');
+                        }}
+                        className="px-3 py-1.5 flex items-center justify-center gap-1 border-2 border-[#1a1a1a] hover:bg-[#f9f7f2] bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5 text-[#1a1a1a]"
+                      >
+                        <FileText size={11} className="text-[#e2533b]" />
+                        {rev.ownerReply ? t('review_form.edit_reply_btn', 'Sửa phản hồi') : t('review_form.reply_btn', 'Phản hồi')}
+                      </button>
+
+                      <button
+                        onClick={() => handleReportReview(rev.id)}
+                        className="px-3 py-1.5 flex items-center justify-center gap-1 border-2 border-[#1a1a1a] hover:bg-amber-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5 text-amber-600"
+                      >
+                        <AlertTriangle size={11} className="text-amber-500" /> Báo cáo vi phạm
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Existing Owner Reply */}
+                  {rev.ownerReply && (
+                    <div className="p-3 bg-[#fffaf4] border-l-4 border-[#e2533b] text-xs">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-bold text-[#e2533b]">{t('review_form.owner_reply', 'Phản hồi của chủ quán')}</span>
+                        {rev.ownerReplyCreatedAt && (
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {new Date(rev.ownerReplyCreatedAt).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[#1a1a1a]/85 italic">{rev.ownerReply}</p>
+                    </div>
+                  )}
+
+                  {/* Reply Editor Form */}
+                  {activeReplyReviewId === rev.id && (
+                    <div className="p-4 border-t border-dashed border-[#1a1a1a]/15 flex flex-col gap-3 animate-in slide-in-from-top-2 duration-150">
+                      <span className="font-mono text-[9px] uppercase font-bold text-[#e2533b]">
+                        {rev.ownerReply ? t('review_form.edit_reply_btn', 'Chỉnh sửa phản hồi') : t('review_form.reply_btn', 'Viết phản hồi')}
+                      </span>
+                      <textarea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value.slice(0, 1000))}
+                        placeholder={t('review_form.reply_placeholder', 'Nhập lời cảm ơn hoặc phản hồi của chủ quán...')}
+                        className="w-full bg-white border-2 border-[#1a1a1a] p-2.5 font-sans text-xs focus:outline-none focus:bg-[#fcfbfa] min-h-[70px] resize-none"
+                      />
+                      <div className="flex justify-end gap-2 font-mono text-[9px] uppercase font-bold">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveReplyReviewId(null);
+                            setReplyText('');
+                          }}
+                          className="px-3 py-1.5 border-2 border-[#1a1a1a] bg-white hover:bg-[#f9f7f2] cursor-pointer"
+                        >
+                          {t('review_form.cancel_reply', 'Hủy')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSendReply(rev.id)}
+                          disabled={replyLoading}
+                          className="px-4 py-1.5 bg-[#1a1a1a] hover:bg-[#e2533b] text-white border-2 border-[#1a1a1a] cursor-pointer disabled:opacity-50"
+                        >
+                          {replyLoading ? t('profile.saving', 'Đang gửi...') : t('review_form.submit_reply', 'Gửi')}
+                        </button>
                       </div>
                     </div>
-                    <p className="text-xs text-[#1a1a1a]/80 mt-1 leading-relaxed italic">"{rev.comment}"</p>
-                    {rev.imageUrl && (
-                      <img src={rev.imageUrl} alt="Attachment" className="mt-2 w-32 h-20 object-cover border border-[#1a1a1a]/20" />
-                    )}
-                    <span className="text-[10px] font-mono text-slate-400 mt-2 block">
-                      {rev.createdAt ? new Date(rev.createdAt).toLocaleString() : ''}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleReportReview(rev.id)}
-                    className="px-3 py-1.5 flex items-center gap-1 border-2 border-[#1a1a1a] hover:bg-amber-100 bg-white font-mono text-[9px] uppercase font-bold cursor-pointer transition-colors shadow-xs active:translate-y-0.5 text-amber-600 shrink-0"
-                  >
-                    <AlertTriangle size={11} className="text-amber-500" /> Báo cáo vi phạm
-                  </button>
+                  )}
                 </div>
               ))
             )}

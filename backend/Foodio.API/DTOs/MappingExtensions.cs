@@ -15,7 +15,7 @@ public static class MappingExtensions
         new(dish.Id, dish.Name, dish.Price, dish.Image, dish.Description);
 
     public static FoodieReviewDto ToDto(this Review review) =>
-        new(review.Id, review.Author, review.Role, review.Rating, review.Comment, review.Avatar, review.ImageUrl);
+        new(review.Id, review.Author, review.Role, review.Rating, review.Comment, review.Avatar, review.ImageUrl, review.OwnerReply, review.OwnerReplyCreatedAt);
 
     public static UserDto ToDto(this User user) =>
         new(user.Id, user.Username, user.Email, user.Role, user.RestaurantId, user.OwnerStatus, user.IsActive, user.CreatedAt, user.Avatar);
