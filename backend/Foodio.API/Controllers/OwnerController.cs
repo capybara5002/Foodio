@@ -437,6 +437,43 @@ public class OwnerController : ControllerBase
         return Ok(new { message = "Review reported successfully." });
     }
 
+    public record ReviewReplyDto(string Reply);
+
+    [HttpPost("reviews/{reviewId}/reply")]
+    public async Task<ActionResult<FoodieReviewDto>> ReplyToReview(string reviewId, [FromBody] ReviewReplyDto dto, [FromQuery] string ownerId)
+    {
+        var review = await _db.Reviews.Include(r => r.Restaurant).FirstOrDefaultAsync(r => r.Id == reviewId);
+        if (review == null) return NotFound("Review not found.");
+
+        var owner = await GetOwnerForRestaurantAsync(ownerId, review.RestaurantId);
+        if (owner is null)
+        {
+            return OwnerForbidden();
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Reply))
+        {
+            return BadRequest("Nội dung phản hồi không được để trống.");
+        }
+
+        review.OwnerReply = dto.Reply.Trim();
+        review.OwnerReplyCreatedAt = DateTimeOffset.UtcNow;
+
+        var log = new AuditLog
+        {
+            Actor = owner.Username,
+            Action = "Phản hồi đánh giá",
+            EntityType = "Review",
+            EntityId = reviewId,
+            Timestamp = DateTimeOffset.UtcNow,
+            Details = $"Phản hồi đánh giá của '{review.Author}': \"{dto.Reply}\""
+        };
+        _db.AuditLogs.Add(log);
+
+        await _db.SaveChangesAsync();
+        return Ok(review.ToDto());
+    }
+
     [HttpGet("restaurant/{restaurantId}/analytics")]
     public async Task<ActionResult<RestaurantAnalyticsDto>> GetAnalytics(string restaurantId, [FromQuery] string ownerId)
     {

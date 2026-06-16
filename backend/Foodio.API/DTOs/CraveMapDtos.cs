@@ -25,7 +25,9 @@ public record FoodieReviewDto(
     decimal Rating,
     string Comment,
     string Avatar,
-    string? ImageUrl);
+    string? ImageUrl,
+    string? OwnerReply = null,
+    DateTimeOffset? OwnerReplyCreatedAt = null);
 
 public record RestaurantDto(
     string Id,
