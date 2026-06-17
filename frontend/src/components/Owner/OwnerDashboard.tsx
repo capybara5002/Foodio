@@ -105,6 +105,13 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
   const [categories, setCategories] = useState<Category[]>([]);
   const [foodStreets, setFoodStreets] = useState<any[]>([]);
   const [bookings, setBookings] = useState<BookingDto[]>([]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   const [analytics, setAnalytics] = useState<AnalyticsDto | null>(null);
   const [activeTab, setActiveTab] = useState<'analytics' | 'bookings' | 'tables' | 'dishes' | 'reviews' | 'posts' | 'settings' | 'qr'>('analytics');
   const [isLoading, setIsLoading] = useState(true);
@@ -248,7 +255,9 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
       const bTable = String(b.tableNumber).trim().toLowerCase();
       const tName = String(t.name || '').trim().toLowerCase();
       const tIdStr = String(t.id).trim().toLowerCase();
-      return bTable === tName || bTable === tIdStr || bTable === tName.replace('bàn', '').trim();
+      const isTableMatch = bTable === tName || bTable === tIdStr || bTable === tName.replace('bàn', '').trim();
+      if (!isTableMatch) return false;
+      return b.date === selectedDate;
     });
 
     return matchingBookings.find(b => {
@@ -1097,6 +1106,26 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
     );
   }
 
+  if (activeRestaurantId && !restaurant) {
+    return (
+      <div className="max-w-md mx-auto w-full px-4 py-12 text-center">
+        <div className="bg-white border-3 border-[#1a1a1a] shadow-[8px_8px_0px_0px_#1a1a1a] p-6 text-[#1a1a1a]">
+          <div className="text-red-500 text-3xl mb-2">⚠️</div>
+          <h3 className="font-serif italic font-bold text-lg mb-2">Không thể tải thông tin quán</h3>
+          <p className="text-xs text-[#1a1a1a]/65 font-sans leading-relaxed mb-4">
+            {error || 'Bạn không có quyền truy cập vào quán ăn này hoặc thông tin quán ăn không tồn tại.'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-[#1a1a1a] hover:bg-[#e2533b] text-white px-4 py-2 font-mono text-[10px] uppercase tracking-widest border-2 border-[#1a1a1a] transition-all cursor-pointer shadow-xs active:translate-y-0.5"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const simulateScanUrl = `${window.location.origin}/?qr=${generatedQrToken}`;
 
   return (
@@ -1442,6 +1471,24 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
             </div>
           </div>
 
+          {/* Date Picker Selector */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 bg-[#f9f7f2] p-4 border border-[#1a1a1a]/10">
+            <span className="font-mono text-[10px] uppercase font-bold text-[#1a1a1a]/70">
+              {t('owner.view_by_date', '📅 Xem sơ đồ bàn theo ngày:')}
+            </span>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="bg-white border-2 border-[#1a1a1a] px-3 py-1 text-xs font-mono focus:outline-none focus:border-[#e2533b] shadow-xs"
+            />
+            {bookings.filter(b => b.date === selectedDate).length > 0 && (
+              <span className="text-[10px] font-mono font-bold text-[#e2533b] bg-white border border-[#e2533b]/35 px-2.5 py-1">
+                Có {bookings.filter(b => b.date === selectedDate).length} lượt đặt bàn trong ngày này
+              </span>
+            )}
+          </div>
+
           {/* Table Map Statistics bar */}
           {(() => {
             const computedTables = tablesList.map(tbl => ({ ...tbl, status: getTableStatus(tbl) }));
@@ -1525,6 +1572,12 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                           ))}
                         </select>
                       </div>
+                      {activeBooking && (
+                        <div className="bg-white/70 border border-dashed border-[#1a1a1a]/15 p-1.5 mt-1.5 text-[9px] font-mono flex flex-col gap-0.5 select-none">
+                          <span className="text-[#e2533b] font-bold">⏰ {activeBooking.time}</span>
+                          <span className="text-[#1a1a1a]/70">👥 {activeBooking.guests} khách</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Status control toggle */}

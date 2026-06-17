@@ -20,6 +20,8 @@ public static class DbInitializer
             await EnsureDemoAudioToursAsync(context);
             await EnsureDemoCommunityAsync(context);
             await EnsureDemoUsersAsync(context);
+            await SeedDefaultDataAsync(context);
+            await context.Users.AnyAsync();
             await context.PostComments.AnyAsync();
         }
         catch (Exception ex)
@@ -36,6 +38,7 @@ public static class DbInitializer
                     await EnsureDemoAudioToursAsync(context);
                     await EnsureDemoCommunityAsync(context);
                     await EnsureDemoUsersAsync(context);
+                    await SeedDefaultDataAsync(context);
                     await context.PostComments.AnyAsync();
                     return;
                 }
@@ -688,5 +691,353 @@ BEGIN
     ALTER TABLE dbo.Bookings ADD TableNumber NVARCHAR(40) NULL;
 END
 ");
+    }
+
+    private static async Task SeedDefaultDataAsync(AppDbContext context)
+    {
+        // 1. Seed Restaurants
+        if (!await context.Restaurants.AnyAsync())
+        {
+            var restaurants = new List<Restaurant>
+            {
+                new Restaurant
+                {
+                    Id = "banh_mi_25",
+                    Name = "Banh Mi 25",
+                    Rating = 4.6m,
+                    PriceRange = "$",
+                    CategoryId = 3,
+                    FoodStreetId = 3,
+                    Distance = "2.0 km away",
+                    Address = "25 Huynh Khuong Ninh",
+                    Area = "District 1, Ho Chi Minh City",
+                    OpeningHours = "7:00 AM - 9:00 PM",
+                    Description = "Delicious crispy banh mi with traditional fillings.",
+                    Image = "https://images.unsplash.com/photo-1608039829572-78524f79c4c7",
+                    IsVerified = true,
+                    ReplySpeed = "Replies in 1h",
+                    Latitude = 10.791013m,
+                    Longitude = 106.695142m,
+                    IsActive = true,
+                    AudioPriority = 40,
+                    GeofenceRadiusMeters = 30,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                },
+                new Restaurant
+                {
+                    Id = "oc_dao",
+                    Name = "Oc Dao",
+                    Rating = 4.8m,
+                    PriceRange = "$$$",
+                    CategoryId = 1,
+                    FoodStreetId = 3,
+                    Distance = "1.2 km away",
+                    Address = "212B Alley, Nguyen Trai Street",
+                    Area = "District 1, Ho Chi Minh City",
+                    OpeningHours = "10:00 AM - 11:00 PM",
+                    Description = "Famous snail street stall with rich flavorful options.",
+                    Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                    IsVerified = true,
+                    ReplySpeed = "Usually replies in 5m",
+                    Latitude = 10.763921m,
+                    Longitude = 106.688515m,
+                    IsActive = true,
+                    AudioPriority = 70,
+                    GeofenceRadiusMeters = 35,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                },
+                new Restaurant
+                {
+                    Id = "oc_oanh",
+                    Name = "Oc Oanh",
+                    Rating = 4.8m,
+                    PriceRange = "$$",
+                    CategoryId = 1,
+                    FoodStreetId = 1,
+                    Distance = "0.5 km away",
+                    Address = "534 Vinh Khanh Street",
+                    Area = "District 4, Ho Chi Minh City",
+                    OpeningHours = "1:00 PM - 12:00 AM",
+                    Description = "Vibrant local snail street food hotspot on Vinh Khanh.",
+                    Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                    IsVerified = true,
+                    ReplySpeed = "Usually replies in 5m",
+                    Latitude = 10.759031m,
+                    Longitude = 106.706962m,
+                    IsActive = true,
+                    AudioPriority = 100,
+                    GeofenceRadiusMeters = 45,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                },
+                new Restaurant
+                {
+                    Id = "pho_quynh",
+                    Name = "Pho Quynh",
+                    Rating = 4.5m,
+                    PriceRange = "$",
+                    CategoryId = 2,
+                    FoodStreetId = 2,
+                    Distance = "1.8 km away",
+                    Address = "323 Pham Ngu Lao",
+                    Area = "District 1, Ho Chi Minh City",
+                    OpeningHours = "Open 24/7",
+                    Description = "Authentic traditional beef noodle soup open all night.",
+                    Image = "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10",
+                    IsVerified = false,
+                    ReplySpeed = "Replies in standard hours",
+                    Latitude = 10.767836m,
+                    Longitude = 106.693385m,
+                    IsActive = true,
+                    AudioPriority = 55,
+                    GeofenceRadiusMeters = 30,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                }
+            };
+            await context.Restaurants.AddRangeAsync(restaurants);
+            await context.SaveChangesAsync();
+        }
+
+        // 2. Seed MenuItems (Dishes)
+        if (!await context.MenuItems.AnyAsync())
+        {
+            var dishes = new List<MenuItem>
+            {
+                new MenuItem
+                {
+                    Id = "dish_1",
+                    Name = "Garlic Butter Crab",
+                    Price = 15.00m,
+                    Description = "Spicy stir-fried crab with rich garlic butter sauce.",
+                    Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                    RestaurantId = "oc_dao",
+                    IsAvailable = true
+                },
+                new MenuItem
+                {
+                    Id = "dish_2",
+                    Name = "Grilled Oysters",
+                    Price = 12.50m,
+                    Description = "Fresh oysters grilled with scallion oil and toasted peanuts.",
+                    Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                    RestaurantId = "oc_dao",
+                    IsAvailable = true
+                },
+                new MenuItem
+                {
+                    Id = "dish_bm25_1",
+                    Name = "Original Pate Banh Mi",
+                    Price = 3.25m,
+                    Description = "Crisp baguette with pate, pork, herbs, pickles, and chili.",
+                    Image = "https://images.unsplash.com/photo-1608039829572-78524f79c4c7",
+                    RestaurantId = "banh_mi_25",
+                    IsAvailable = true
+                },
+                new MenuItem
+                {
+                    Id = "dish_oanh_1",
+                    Name = "Spicy Tamarind Snails",
+                    Price = 8.50m,
+                    Description = "Sweet and sour tamarind snails with morning glory.",
+                    Image = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                    RestaurantId = "oc_oanh",
+                    IsAvailable = true
+                },
+                new MenuItem
+                {
+                    Id = "dish_pq_1",
+                    Name = "Beef Pho Special",
+                    Price = 4.50m,
+                    Description = "Beef pho with rare beef, brisket, tendon, and beef balls.",
+                    Image = "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10",
+                    RestaurantId = "pho_quynh",
+                    IsAvailable = true
+                }
+            };
+            await context.MenuItems.AddRangeAsync(dishes);
+            await context.SaveChangesAsync();
+        }
+
+        // 3. Seed Users
+        if (!await context.Users.AnyAsync(u => u.Id == "usr_1" || u.Id == "usr_2" || u.Id == "usr_3"))
+        {
+            var users = new List<User>
+            {
+                new User
+                {
+                    Id = "usr_1",
+                    Username = "admin",
+                    Email = "admin@foodio.com",
+                    PasswordHash = "123456",
+                    Role = "Admin",
+                    IsActive = true,
+                    OwnerStatus = "None",
+                    CreatedAt = DateTimeOffset.UtcNow
+                },
+                new User
+                {
+                    Id = "usr_2",
+                    Username = "owner_ocdao",
+                    Email = "owner@foodio.com",
+                    PasswordHash = "123456",
+                    Role = "Owner",
+                    IsActive = true,
+                    OwnerStatus = "Verified",
+                    RestaurantId = "oc_dao",
+                    CreatedAt = DateTimeOffset.UtcNow
+                },
+                new User
+                {
+                    Id = "usr_3",
+                    Username = "customer",
+                    Email = "customer@foodio.com",
+                    PasswordHash = "123456",
+                    Role = "User",
+                    IsActive = true,
+                    OwnerStatus = "None",
+                    CreatedAt = DateTimeOffset.UtcNow
+                }
+            };
+
+            foreach (var u in users)
+            {
+                var existingUser = await context.Users.FindAsync(u.Id);
+                if (existingUser == null)
+                {
+                    await context.Users.AddAsync(u);
+                }
+            }
+            await context.SaveChangesAsync();
+        }
+
+        // 4. Seed Reviews
+        if (!await context.Reviews.AnyAsync())
+        {
+            var reviews = new List<Review>
+            {
+                new Review
+                {
+                    Id = "rev_1",
+                    Author = "john_doe",
+                    Role = "Local Guide",
+                    Rating = 5.0m,
+                    Comment = "Excellent food and outstanding customer service. Highly recommended!",
+                    Avatar = "JD",
+                    RestaurantId = "oc_dao",
+                    CreatedAt = DateTimeOffset.UtcNow.AddDays(-10)
+                },
+                new Review
+                {
+                    Id = "rev_2",
+                    Author = "jane_smith",
+                    Role = "Food Blogger",
+                    Rating = 4.0m,
+                    Comment = "Great street side seating and delicious snails. Tamarind sauce is a must-try.",
+                    Avatar = "JS",
+                    RestaurantId = "oc_oanh",
+                    CreatedAt = DateTimeOffset.UtcNow.AddDays(-5)
+                },
+                new Review
+                {
+                    Id = "rev_3",
+                    Author = "vietnam_eats",
+                    Role = "Pho Enthusiast",
+                    Rating = 4.5m,
+                    Comment = "Best late night pho quynh in the district. Rich broth and fresh herbs.",
+                    Avatar = "VE",
+                    RestaurantId = "pho_quynh",
+                    CreatedAt = DateTimeOffset.UtcNow.AddDays(-2)
+                }
+            };
+            await context.Reviews.AddRangeAsync(reviews);
+            await context.SaveChangesAsync();
+        }
+
+        // 5. Seed ChatThreads & ChatMessages
+        if (!await context.ChatThreads.AnyAsync())
+        {
+            var threads = new List<ChatThread>
+            {
+                new ChatThread
+                {
+                    Id = "oc_oanh_thread",
+                    RestaurantId = "oc_oanh",
+                    UserId = "usr_3",
+                    Name = "Oc Oanh",
+                    Avatar = "https://images.unsplash.com/photo-1559737558-2f5a35f4523b",
+                    StatusText = "Usually replies in 5m",
+                    LastMessageText = "Perfect. We will hold an outdoor table for you.",
+                    LastMessageTime = DateTimeOffset.UtcNow.ToString("O"),
+                    UnreadCount = 0
+                },
+                new ChatThread
+                {
+                    Id = "pho_quynh_thread",
+                    RestaurantId = "pho_quynh",
+                    UserId = "usr_3",
+                    Name = "Pho Quynh",
+                    Avatar = "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10",
+                    StatusText = "Replies in standard hours",
+                    LastMessageText = "Your reservation is confirmed!",
+                    LastMessageTime = DateTimeOffset.UtcNow.ToString("O"),
+                    UnreadCount = 0
+                }
+            };
+            await context.ChatThreads.AddRangeAsync(threads);
+            await context.SaveChangesAsync();
+
+            var messages = new List<ChatMessage>
+            {
+                new ChatMessage
+                {
+                    Id = "msg_1",
+                    ChatThreadId = "oc_oanh_thread",
+                    Sender = "user",
+                    SenderId = "usr_3",
+                    Text = "Hi, do you have a table for 4 tonight around 7 PM?",
+                    Timestamp = "4:30 PM",
+                    MessageType = "Text",
+                    IsSystemNotification = false,
+                    CreatedAt = DateTimeOffset.UtcNow.AddHours(-1)
+                },
+                new ChatMessage
+                {
+                    Id = "msg_2",
+                    ChatThreadId = "oc_oanh_thread",
+                    Sender = "restaurant",
+                    SenderId = "owner_oc_oanh",
+                    Text = "Hello! Yes, we have space. Do you prefer indoor or street-side outdoor seating?",
+                    Timestamp = "4:32 PM",
+                    MessageType = "Text",
+                    IsSystemNotification = false,
+                    CreatedAt = DateTimeOffset.UtcNow.AddHours(-1).AddMinutes(2)
+                },
+                new ChatMessage
+                {
+                    Id = "msg_3",
+                    ChatThreadId = "oc_oanh_thread",
+                    Sender = "restaurant",
+                    SenderId = "owner_oc_oanh",
+                    Text = "Perfect. We will hold an outdoor table for you.",
+                    Timestamp = "4:35 PM",
+                    MessageType = "Text",
+                    IsSystemNotification = false,
+                    CreatedAt = DateTimeOffset.UtcNow.AddHours(-1).AddMinutes(5)
+                },
+                new ChatMessage
+                {
+                    Id = "msg_pq_1",
+                    ChatThreadId = "pho_quynh_thread",
+                    Sender = "system",
+                    SenderId = "system",
+                    Text = "Your reservation is confirmed!",
+                    Timestamp = "10:42 AM",
+                    MessageType = "Text",
+                    IsSystemNotification = true,
+                    CreatedAt = DateTimeOffset.UtcNow.AddHours(-2)
+                }
+            };
+            await context.ChatMessages.AddRangeAsync(messages);
+            await context.SaveChangesAsync();
+        }
     }
 }
