@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { X, User, Store, Shield } from 'lucide-react';
+import { Eye, EyeOff, X, User, Store, Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface LoginModalProps {
@@ -17,6 +17,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -110,18 +111,26 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="relative flex flex-col gap-1.5">
             <label className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#6f655b]">
               {t('login.password')}
             </label>
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="foodio-input w-full px-4 py-3 text-sm focus:outline-none"
+              className="foodio-input w-full px-4 py-3 pr-12 text-sm focus:outline-none"
               required
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              className="absolute bottom-2 right-4 flex h-8 w-8 items-center justify-center rounded-full text-[#6f655b] transition-colors hover:bg-[#f0e5d8] hover:text-[#2c211b]"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+            </button>
           </div>
 
           <button

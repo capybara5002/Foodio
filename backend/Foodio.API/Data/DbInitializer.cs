@@ -1,9 +1,13 @@
+using Foodio.API.Models;
 using Microsoft.EntityFrameworkCore;
+using BC = BCrypt.Net.BCrypt;
 
 namespace Foodio.API.Data;
 
 public static class DbInitializer
 {
+    private const string DemoPassword = "123456";
+
     public static async Task ApplyMigrationsAsync(IServiceProvider services)
     {
         await using var scope = services.CreateAsyncScope();
@@ -12,7 +16,7 @@ public static class DbInitializer
         {
             await context.Database.MigrateAsync();
             await EnsureChatSchemaAsync(context);
-            await context.Users.AnyAsync();
+            await EnsureDemoUsersAsync(context);
             await context.PostComments.AnyAsync();
         }
         catch (Exception ex)
@@ -25,7 +29,7 @@ public static class DbInitializer
                     await context.Database.EnsureDeletedAsync();
                     await context.Database.MigrateAsync();
                     await EnsureChatSchemaAsync(context);
-                    await context.Users.AnyAsync();
+                    await EnsureDemoUsersAsync(context);
                     await context.PostComments.AnyAsync();
                     return;
                 }
@@ -41,6 +45,65 @@ public static class DbInitializer
                 "Could not initialize the SQL Server database. Check ConnectionStrings:DefaultConnection in appsettings.Development.json or appsettings.json.",
                 ex);
         }
+    }
+
+    private static async Task EnsureDemoUsersAsync(AppDbContext context)
+    {
+        var demoUsers = new[]
+        {
+            new User
+            {
+                Id = "usr_1",
+                Username = "admin",
+                Email = "admin@foodio.com",
+                Role = "Admin",
+                OwnerStatus = "None",
+                IsActive = true
+            },
+            new User
+            {
+                Id = "usr_2",
+                Username = "owner_ocdao",
+                Email = "owner@foodio.com",
+                Role = "Owner",
+                RestaurantId = "oc_dao",
+                OwnerStatus = "Verified",
+                IsActive = true
+            },
+            new User
+            {
+                Id = "usr_3",
+                Username = "customer",
+                Email = "customer@foodio.com",
+                Role = "User",
+                OwnerStatus = "None",
+                IsActive = true
+            }
+        };
+
+        foreach (var demoUser in demoUsers)
+        {
+            var existing = await context.Users.FindAsync(demoUser.Id);
+            var passwordHash = BC.HashPassword(DemoPassword);
+
+            if (existing is null)
+            {
+                demoUser.PasswordHash = passwordHash;
+                demoUser.CreatedAt = DateTimeOffset.UtcNow;
+                context.Users.Add(demoUser);
+                continue;
+            }
+
+            existing.Username = demoUser.Username;
+            existing.Email = demoUser.Email;
+            existing.PasswordHash = passwordHash;
+            existing.Role = demoUser.Role;
+            existing.RestaurantId = demoUser.RestaurantId;
+            existing.OwnerStatus = demoUser.OwnerStatus;
+            existing.IsActive = true;
+        }
+
+        await context.SaveChangesAsync();
     }
 
     private static async Task EnsureChatSchemaAsync(AppDbContext context)
