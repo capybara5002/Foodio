@@ -34,7 +34,18 @@ public class CategoriesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<CategoryDto>> Create(CategoryDto dto)
     {
-        var category = new Category { Name = dto.Name, Slug = dto.Slug, Icon = dto.Icon };
+        var validationError = ValidateAndNormalize(dto, out var name, out var slug, out var icon);
+        if (validationError is not null)
+        {
+            return BadRequest(validationError);
+        }
+
+        if (await _db.Categories.AnyAsync(category => category.Slug == slug))
+        {
+            return BadRequest("Category slug already exists.");
+        }
+
+        var category = new Category { Name = name, Slug = slug, Icon = icon };
         _db.Categories.Add(category);
         await _db.SaveChangesAsync();
         return CreatedAtAction(nameof(GetById), new { id = category.Id }, category.ToDto());
@@ -49,9 +60,20 @@ public class CategoriesController : ControllerBase
             return NotFound();
         }
 
-        category.Name = dto.Name;
-        category.Slug = dto.Slug;
-        category.Icon = dto.Icon;
+        var validationError = ValidateAndNormalize(dto, out var name, out var slug, out var icon);
+        if (validationError is not null)
+        {
+            return BadRequest(validationError);
+        }
+
+        if (await _db.Categories.AnyAsync(item => item.Id != id && item.Slug == slug))
+        {
+            return BadRequest("Category slug already exists.");
+        }
+
+        category.Name = name;
+        category.Slug = slug;
+        category.Icon = icon;
 
         await _db.SaveChangesAsync();
         return NoContent();
@@ -69,5 +91,47 @@ public class CategoriesController : ControllerBase
         _db.Categories.Remove(category);
         await _db.SaveChangesAsync();
         return NoContent();
+    }
+
+    private static string? ValidateAndNormalize(CategoryDto dto, out string name, out string slug, out string? icon)
+    {
+        name = (dto.Name ?? string.Empty).Trim();
+        slug = NormalizeSlug(dto.Slug, name);
+        icon = string.IsNullOrWhiteSpace(dto.Icon) ? null : dto.Icon.Trim();
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "Category name is required.";
+        }
+
+        if (name.Length > 80)
+        {
+            return "Category name must be 80 characters or fewer.";
+        }
+
+        if (icon?.Length > 120)
+        {
+            return "Category icon must be 120 characters or fewer.";
+        }
+
+        return null;
+    }
+
+    private static string NormalizeSlug(string? rawSlug, string name)
+    {
+        var source = string.IsNullOrWhiteSpace(rawSlug) ? name : rawSlug;
+        var slugChars = source
+            .Trim()
+            .ToLowerInvariant()
+            .Select(ch => char.IsLetterOrDigit(ch) ? ch : '-')
+            .ToArray();
+
+        var slug = string.Join("-", new string(slugChars).Split('-', StringSplitOptions.RemoveEmptyEntries));
+        if (string.IsNullOrWhiteSpace(slug))
+        {
+            slug = "category";
+        }
+
+        return slug.Length <= 32 ? slug : slug[..32].Trim('-');
     }
 }

@@ -5,7 +5,7 @@
 
 import { useState, useRef } from 'react';
 import { Restaurant } from '../types';
-import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X, CalendarCheck } from 'lucide-react';
+import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { createReview, replyToReview } from '../api/cravemapApi';
@@ -252,17 +252,8 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
           </div>
         </section>
 
-        {/* Action Row CTA: Booking, audio guide, and chat triggers */}
-        <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <button
-            type="button"
-            onClick={onOpenBooking}
-            className="foodio-btn foodio-btn-primary col-span-2 h-12 min-w-0 !px-4 !py-0 font-mono text-[10px] uppercase tracking-widest cursor-pointer md:col-span-1"
-          >
-            <CalendarCheck size={18} className="shrink-0" />
-            <span className="truncate">{t('detail.book_table')}</span>
-          </button>
-
+        {/* Action Row CTA: Audio guide and chat triggers */}
+        <section className="grid grid-cols-2 gap-3">
           <button 
             type="button"
             onClick={() => setShowAudioGuide((current) => !current)}
