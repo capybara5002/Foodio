@@ -3,10 +3,11 @@ import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/Admin/AdminDashboard';
 import OwnerDashboard from '../components/Owner/OwnerDashboard';
 import { CommunityPost, Restaurant } from '../types';
-import { UserCircle, BadgeCheck, FileText, Star, Globe, LogOut, User, Shield, Store, Edit2, Key, ChevronRight, ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { UserCircle, BadgeCheck, FileText, Star, Globe, LogOut, User, Shield, Store, Edit2, Key, ChevronRight, ChevronDown, Eye, EyeOff, LockKeyhole, WalletCards } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
 import { apiBase } from '../api/apiConfig';
+import { usePayment } from '../context/PaymentContext';
 
 interface PageProfileProps {
   userEmail: string;
@@ -27,6 +28,7 @@ const AVATAR_PRESETS = [
 
 export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = [], onRestaurantUpdated, onRefreshRestaurants }: PageProfileProps) {
   const { user, logout, updateAvatar, updatePassword } = useAuth();
+  const { paymentSession, clearPayment } = usePayment();
   const { t } = useTranslation();
   const { language, changeLanguage } = useLanguage();
   const [showStatus, setShowStatus] = useState<string | null>(null);
@@ -156,6 +158,45 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
     }
   };
 
+  const hasDashboardPass = paymentSession?.accessType === 'Owner';
+
+  const handleConsoleSelect = (consoleName: 'profile' | 'admin' | 'owner') => {
+    setActiveConsole(consoleName);
+    if (consoleName !== 'profile' && !hasDashboardPass) {
+      setShowStatus('Goi 19k chi mo app thuong. Can goi Chu quan de mo dashboard.');
+      setTimeout(() => setShowStatus(null), 2800);
+    }
+  };
+
+  const renderDashboardLock = (title: string) => (
+    <div className="animate-in fade-in duration-300">
+      <div className="rounded-[1.5rem] border border-[#b76548]/20 bg-[#fffaf4]/92 p-6 shadow-[0_24px_70px_rgba(77,49,31,0.14)]">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#2c211b] text-[#fffaf4]">
+              <LockKeyhole size={20} />
+            </div>
+            <div>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-[#b76548]">Dashboard locked</p>
+              <h3 className="mt-1 font-serif text-2xl font-black italic text-[#2c211b]">{title}</h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6f655b]">
+                Ban dang dung goi 19k Customer, goi nay chi mo ung dung Foodio nhu khach binh thuong. Hay thanh toan goi Chu quan de quan ly dashboard.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={clearPayment}
+            className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#2c211b] px-5 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-[#fffaf4] shadow-[0_18px_46px_rgba(44,33,27,0.18)] transition-all hover:bg-[#3c2b23] active:scale-[0.98]"
+          >
+            <WalletCards size={15} />
+            <span>Doi goi Chu quan</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   // 1. If not logged in at all or is guest session, show a beautiful login card
   if (!user || user.role === 'Guest') {
     return (
@@ -199,7 +240,7 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
         {(isAdmin || isOwner) && (
           <div className="flex flex-wrap gap-3 font-mono text-xs uppercase tracking-wider font-extrabold pb-4 border-b border-[#4b362a]/10 foodio-reveal">
             <button
-              onClick={() => setActiveConsole('profile')}
+              onClick={() => handleConsoleSelect('profile')}
               className={`px-5 py-3 border-2 transition-all cursor-pointer flex items-center gap-2 font-bold ${
                 activeConsole === 'profile' 
                   ? 'bg-[#2c211b] text-white border-[#2c211b] shadow-[0_16px_30px_rgba(77,49,31,0.16)] rounded-full' 
@@ -212,28 +253,36 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
 
             {isAdmin && (
               <button
-                onClick={() => setActiveConsole('admin')}
+                onClick={() => handleConsoleSelect('admin')}
                 className={`px-5 py-3 border-2 transition-all cursor-pointer flex items-center gap-2 font-bold ${
                   activeConsole === 'admin' 
                     ? 'bg-[#2c211b] text-white border-[#2c211b] shadow-[0_16px_30px_rgba(77,49,31,0.16)] rounded-full' 
                     : 'bg-[#fffaf4] text-[#2c211b] border-[#4b362a]/10 hover:bg-white shadow-[0_12px_30px_rgba(77,49,31,0.08)] active:scale-[0.98] rounded-full'
                 }`}
               >
-                <Shield size={15} className={activeConsole === 'admin' ? 'fill-current text-[#e2533b]' : 'text-[#1a1a1a]/60'} />
+                {hasDashboardPass ? (
+                  <Shield size={15} className={activeConsole === 'admin' ? 'fill-current text-[#e2533b]' : 'text-[#1a1a1a]/60'} />
+                ) : (
+                  <LockKeyhole size={15} className={activeConsole === 'admin' ? 'fill-current text-[#e2533b]' : 'text-[#1a1a1a]/60'} />
+                )}
                 <span>{t('profile.admin_console')}</span>
               </button>
             )}
 
             {isOwner && (
               <button
-                onClick={() => setActiveConsole('owner')}
+                onClick={() => handleConsoleSelect('owner')}
                 className={`px-5 py-3 border-2 transition-all cursor-pointer flex items-center gap-2 font-bold ${
                   activeConsole === 'owner' 
                     ? 'bg-[#2c211b] text-white border-[#2c211b] shadow-[0_16px_30px_rgba(77,49,31,0.16)] rounded-full' 
                     : 'bg-[#fffaf4] text-[#2c211b] border-[#4b362a]/10 hover:bg-white shadow-[0_12px_30px_rgba(77,49,31,0.08)] active:scale-[0.98] rounded-full'
                 }`}
               >
-                <Store size={15} className={activeConsole === 'owner' ? 'fill-current text-[#e2533b]' : 'text-[#1a1a1a]/60'} />
+                {hasDashboardPass ? (
+                  <Store size={15} className={activeConsole === 'owner' ? 'fill-current text-[#e2533b]' : 'text-[#1a1a1a]/60'} />
+                ) : (
+                  <LockKeyhole size={15} className={activeConsole === 'owner' ? 'fill-current text-[#e2533b]' : 'text-[#1a1a1a]/60'} />
+                )}
                 <span>{t('profile.owner_console')}</span>
               </button>
             )}
@@ -529,16 +578,20 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
 
         {/* Tab 2: Admin Dashboard Console */}
         {activeConsole === 'admin' && isAdmin && (
-          <div className="animate-in fade-in duration-300">
+          hasDashboardPass ? (
+            <div className="animate-in fade-in duration-300">
             <AdminDashboard onRestaurantUpdated={onRestaurantUpdated} onRefreshRestaurants={onRefreshRestaurants} />
-          </div>
+            </div>
+          ) : renderDashboardLock(t('profile.admin_console'))
         )}
 
         {/* Tab 3: Owner Dashboard Console */}
         {activeConsole === 'owner' && isOwner && (
-          <div className="animate-in fade-in duration-300">
+          hasDashboardPass ? (
+            <div className="animate-in fade-in duration-300">
             <OwnerDashboard onRestaurantUpdated={onRestaurantUpdated} />
-          </div>
+            </div>
+          ) : renderDashboardLock(t('profile.owner_console'))
         )}
 
       </div>

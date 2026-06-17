@@ -242,6 +242,28 @@ public record QrVerifyResponseDto(
     int TableNumber,
     string Token);
 
+public record PaymentIntentRequestDto(string AccessType = "Customer");
+
+public record PaymentConfirmRequestDto(string ClientToken, string? Method = null);
+
+public record PaymentValidateRequestDto(string ClientToken);
+
+public record PaymentSessionDto(
+    string Id,
+    string ClientToken,
+    string AccessType,
+    decimal Amount,
+    string Currency,
+    string Status,
+    string Provider,
+    string PaymentReference,
+    string QrPayload,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? PaidAt,
+    DateTimeOffset? ExpiresAt,
+    int RemainingSeconds,
+    bool IsActive);
+
 public record RestaurantRequestCreateDto(
     string Name,
     string PriceRange,

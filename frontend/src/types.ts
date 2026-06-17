@@ -37,6 +37,25 @@ export interface User {
   avatar?: string;
 }
 
+export type PaymentAccessType = 'Customer' | 'Owner';
+
+export interface PaymentSession {
+  id: string;
+  clientToken: string;
+  accessType: PaymentAccessType;
+  amount: number;
+  currency: string;
+  status: 'Pending' | 'Paid' | 'Expired' | string;
+  provider: string;
+  paymentReference: string;
+  qrPayload: string;
+  createdAt: string;
+  paidAt?: string | null;
+  expiresAt?: string | null;
+  remainingSeconds: number;
+  isActive: boolean;
+}
+
 export interface Notification {
   id: number;
   userId: string;
