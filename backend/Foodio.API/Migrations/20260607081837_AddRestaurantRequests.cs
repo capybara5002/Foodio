@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -102,7 +102,9 @@ namespace Foodio.API.Migrations
                     Role = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
                     RestaurantId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    Avatar = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    OwnerStatus = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false, defaultValue: "None")
                 },
                 constraints: table =>
                 {
