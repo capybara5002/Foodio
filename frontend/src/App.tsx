@@ -260,6 +260,19 @@ function AppContent() {
     });
   };
 
+  const handleContactUser = async (reviewerUsername: string) => {
+    if (!user || user.role !== 'Owner' || !user.restaurantId) return;
+    try {
+      const thread = await ensureChatThread(user.restaurantId, reviewerUsername);
+      upsertThread(thread);
+      setActiveThreadId(thread.id);
+      setSelectedRestaurantId(null);
+      setCurrentTab('inbox');
+    } catch (error) {
+      console.error('Failed to contact reviewer:', error);
+    }
+  };
+
   const handleAddPost = async (newPost: {
     content: string;
     image: string;
@@ -363,6 +376,7 @@ function AppContent() {
           onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
           requireAuth={requireAuth}
           onRestaurantUpdated={handleRestaurantUpdated}
+          onContactUser={handleContactUser}
         />
       );
     }
