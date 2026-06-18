@@ -506,6 +506,43 @@ public static class DbInitializer
                 Role = "User",
                 OwnerStatus = "None",
                 IsActive = true
+            },
+            new User
+            {
+                Id = "owner_oc_oanh",
+                Username = "owner_oc_oanh",
+                Email = "owner_ocoanh@foodio.com",
+                Role = "Owner",
+                RestaurantId = "oc_oanh",
+                OwnerStatus = "Verified",
+                IsActive = true
+            },
+            new User
+            {
+                Id = "usr_john_doe",
+                Username = "john_doe",
+                Email = "john_doe@foodio.com",
+                Role = "User",
+                OwnerStatus = "None",
+                IsActive = true
+            },
+            new User
+            {
+                Id = "usr_jane_smith",
+                Username = "jane_smith",
+                Email = "jane_smith@foodio.com",
+                Role = "User",
+                OwnerStatus = "None",
+                IsActive = true
+            },
+            new User
+            {
+                Id = "usr_vietnam_eats",
+                Username = "vietnam_eats",
+                Email = "vietnam_eats@foodio.com",
+                Role = "User",
+                OwnerStatus = "None",
+                IsActive = true
             }
         };
 
@@ -890,6 +927,51 @@ END
                     Id = "usr_3",
                     Username = "customer",
                     Email = "customer@foodio.com",
+                    PasswordHash = "123456",
+                    Role = "User",
+                    IsActive = true,
+                    OwnerStatus = "None",
+                    CreatedAt = DateTimeOffset.UtcNow
+                },
+                new User
+                {
+                    Id = "owner_oc_oanh",
+                    Username = "owner_oc_oanh",
+                    Email = "owner_ocoanh@foodio.com",
+                    PasswordHash = "123456",
+                    Role = "Owner",
+                    IsActive = true,
+                    OwnerStatus = "Verified",
+                    RestaurantId = "oc_oanh",
+                    CreatedAt = DateTimeOffset.UtcNow
+                },
+                new User
+                {
+                    Id = "usr_john_doe",
+                    Username = "john_doe",
+                    Email = "john_doe@foodio.com",
+                    PasswordHash = "123456",
+                    Role = "User",
+                    IsActive = true,
+                    OwnerStatus = "None",
+                    CreatedAt = DateTimeOffset.UtcNow
+                },
+                new User
+                {
+                    Id = "usr_jane_smith",
+                    Username = "jane_smith",
+                    Email = "jane_smith@foodio.com",
+                    PasswordHash = "123456",
+                    Role = "User",
+                    IsActive = true,
+                    OwnerStatus = "None",
+                    CreatedAt = DateTimeOffset.UtcNow
+                },
+                new User
+                {
+                    Id = "usr_vietnam_eats",
+                    Username = "vietnam_eats",
+                    Email = "vietnam_eats@foodio.com",
                     PasswordHash = "123456",
                     Role = "User",
                     IsActive = true,

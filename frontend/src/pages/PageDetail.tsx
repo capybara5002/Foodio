@@ -5,7 +5,7 @@
 
 import { useState, useRef } from 'react';
 import { Restaurant } from '../types';
-import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X } from 'lucide-react';
+import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { createReview, replyToReview } from '../api/cravemapApi';
@@ -19,9 +19,10 @@ interface PageDetailProps {
   onGoToChat: () => void;
   requireAuth: (message: string, action: () => void) => void;
   onRestaurantUpdated: (updated: Restaurant) => void;
+  onContactUser?: (reviewerUsername: string) => void;
 }
 
-export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToChat, requireAuth, onRestaurantUpdated }: PageDetailProps) {
+export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToChat, requireAuth, onRestaurantUpdated, onContactUser }: PageDetailProps) {
   const { t, i18n } = useTranslation();
   const [isFavorite, setIsFavorite] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -560,7 +561,19 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                     </div>
                     
                     <div className="flex-1">
-                      <p className="font-bold text-xs text-[#1a1a1a]">{rev.author}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-xs text-[#1a1a1a]">{rev.author}</p>
+                        {user && user.role === 'Owner' && user.restaurantId === restaurant.id && (
+                          <button
+                            type="button"
+                            onClick={() => onContactUser?.(rev.author)}
+                            className="w-5 h-5 inline-flex items-center justify-center rounded-full bg-[#e2533b]/10 hover:bg-[#e2533b]/20 text-[#e2533b] border border-[#e2533b]/20 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                            title="Liên hệ"
+                          >
+                            <Send size={9} />
+                          </button>
+                        )}
+                      </div>
                       <p className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 mt-0.5">{rev.role}</p>
                     </div>
 

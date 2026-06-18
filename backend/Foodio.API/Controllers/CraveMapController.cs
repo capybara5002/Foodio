@@ -215,7 +215,14 @@ public class CraveMapController : ControllerBase
 
         try
         {
-            var thread = await _chatService.EnsureThreadAsync(dto.RestaurantId, dto.UserId);
+            var resolvedUserId = dto.UserId;
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == dto.UserId || u.Username == dto.UserId);
+            if (user != null)
+            {
+                resolvedUserId = user.Id;
+            }
+
+            var thread = await _chatService.EnsureThreadAsync(dto.RestaurantId, resolvedUserId);
             await _chatHub.Clients.Group($"restaurant:{thread.RestaurantId}").SendAsync("ThreadUpdated", thread);
             return Ok(thread);
         }
