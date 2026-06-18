@@ -26,6 +26,31 @@ public static class MappingExtensions
     public static AuditLogDto ToDto(this AuditLog log) =>
         new(log.Id, log.Actor, log.Action, log.EntityType, log.EntityId, log.Timestamp, log.Details);
 
+    public static PaymentSessionDto ToDto(this PaymentSession session)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var remainingSeconds = session.ExpiresAt is null
+            ? 0
+            : Math.Max(0, (int)Math.Floor((session.ExpiresAt.Value - now).TotalSeconds));
+        var isActive = session.Status == "Paid" && remainingSeconds > 0;
+
+        return new(
+            session.Id,
+            session.ClientToken,
+            session.AccessType,
+            session.Amount,
+            session.Currency,
+            session.Status,
+            session.Provider,
+            session.PaymentReference,
+            session.QrPayload,
+            session.CreatedAt,
+            session.PaidAt,
+            session.ExpiresAt,
+            remainingSeconds,
+            isActive);
+    }
+
     public static RestaurantDto ToDto(this Restaurant restaurant) =>
         new(
             restaurant.Id,

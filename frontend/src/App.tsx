@@ -14,6 +14,8 @@ import NavBar from './components/NavBar';
 import AudioPlayer from './components/AudioPlayer';
 import BookingModal from './components/BookingModal';
 import LoginModal from './components/Common/LoginModal';
+import PaymentGate from './components/Common/PaymentGate';
+import PaymentStatusPill from './components/Common/PaymentStatusPill';
 import PageMap from './pages/PageMap';
 import PageDiscover from './pages/PageDiscover';
 import PageDetail from './pages/PageDetail';
@@ -25,6 +27,7 @@ import OfflineBanner from './components/Common/OfflineBanner';
 import { getCachedRestaurants, saveRestaurants, getCachedAudioTours, saveAudioTours, saveLastSyncInfo } from './services/offlineStore';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { PaymentProvider } from './context/PaymentContext';
 import { useTranslation } from 'react-i18next';
 import { stopNarration } from './services/narrationEngine';
 
@@ -475,6 +478,7 @@ function AppContent() {
       />
 
       <OfflineBanner />
+      <PaymentStatusPill />
 
       {qrStatus && (
         <div className={`fixed top-24 left-1/2 z-[90] -translate-x-1/2 rounded-full border px-5 py-3 shadow-[0_18px_46px_rgba(77,49,31,0.16)] backdrop-blur-xl font-mono text-[11px] font-bold tracking-wide animate-in slide-in-from-top-4 ${qrStatus.type === 'success' ? 'border-emerald-600/20 bg-emerald-50/90 text-emerald-900' : 'border-red-600/20 bg-red-50/90 text-red-900'
@@ -525,8 +529,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <PaymentProvider>
+      <PaymentGate>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </PaymentGate>
+    </PaymentProvider>
   );
 }

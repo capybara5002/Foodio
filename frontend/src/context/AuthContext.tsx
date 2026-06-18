@@ -33,6 +33,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
     setIsLoading(false);
+
+    const handleAuthCleared = () => {
+      setUser(null);
+    };
+
+    window.addEventListener('foodio_auth_cleared', handleAuthCleared);
+    return () => window.removeEventListener('foodio_auth_cleared', handleAuthCleared);
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {

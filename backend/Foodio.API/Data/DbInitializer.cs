@@ -16,6 +16,7 @@ public static class DbInitializer
         {
             await context.Database.MigrateAsync();
             await EnsureChatSchemaAsync(context);
+            await EnsurePaymentSchemaAsync(context);
             await EnsureDemoCatalogAsync(context);
             await EnsureDemoAudioToursAsync(context);
             await EnsureDemoCommunityAsync(context);
@@ -34,6 +35,7 @@ public static class DbInitializer
                     await context.Database.EnsureDeletedAsync();
                     await context.Database.MigrateAsync();
                     await EnsureChatSchemaAsync(context);
+                    await EnsurePaymentSchemaAsync(context);
                     await EnsureDemoCatalogAsync(context);
                     await EnsureDemoAudioToursAsync(context);
                     await EnsureDemoCommunityAsync(context);
@@ -726,6 +728,45 @@ END
 IF COL_LENGTH('dbo.Bookings', 'TableNumber') IS NULL
 BEGIN
     ALTER TABLE dbo.Bookings ADD TableNumber NVARCHAR(40) NULL;
+END
+");
+    }
+
+    private static async Task EnsurePaymentSchemaAsync(AppDbContext context)
+    {
+        await context.Database.ExecuteSqlRawAsync(@"
+IF OBJECT_ID('dbo.PaymentSessions', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.PaymentSessions (
+        Id NVARCHAR(64) NOT NULL CONSTRAINT PK_PaymentSessions PRIMARY KEY,
+        ClientToken NVARCHAR(128) NOT NULL,
+        AccessType NVARCHAR(32) NOT NULL,
+        Amount DECIMAL(18,2) NOT NULL,
+        Currency NVARCHAR(8) NOT NULL,
+        Status NVARCHAR(24) NOT NULL,
+        Provider NVARCHAR(32) NOT NULL,
+        PaymentReference NVARCHAR(64) NOT NULL,
+        QrPayload NVARCHAR(500) NOT NULL,
+        CreatedAt DATETIMEOFFSET NOT NULL,
+        PaidAt DATETIMEOFFSET NULL,
+        ExpiresAt DATETIMEOFFSET NULL,
+        LastValidatedAt DATETIMEOFFSET NULL
+    );
+END
+
+IF COL_LENGTH('dbo.PaymentSessions', 'LastValidatedAt') IS NULL
+BEGIN
+    ALTER TABLE dbo.PaymentSessions ADD LastValidatedAt DATETIMEOFFSET NULL;
+END
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_PaymentSessions_ClientToken' AND object_id = OBJECT_ID('dbo.PaymentSessions'))
+BEGIN
+    CREATE UNIQUE INDEX IX_PaymentSessions_ClientToken ON dbo.PaymentSessions(ClientToken);
+END
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_PaymentSessions_ExpiresAt' AND object_id = OBJECT_ID('dbo.PaymentSessions'))
+BEGIN
+    CREATE INDEX IX_PaymentSessions_ExpiresAt ON dbo.PaymentSessions(ExpiresAt);
 END
 ");
     }

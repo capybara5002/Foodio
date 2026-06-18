@@ -24,6 +24,7 @@ public class AppDbContext : DbContext
     public DbSet<RestaurantRequest> RestaurantRequests => Set<RestaurantRequest>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<PaymentSession> PaymentSessions => Set<PaymentSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -85,5 +86,11 @@ public class AppDbContext : DbContext
             .HasForeignKey(comment => comment.CommunityPostId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<PaymentSession>()
+            .HasIndex(session => session.ClientToken)
+            .IsUnique();
+
+        modelBuilder.Entity<PaymentSession>()
+            .HasIndex(session => session.ExpiresAt);
     }
 }
