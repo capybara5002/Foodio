@@ -59,6 +59,7 @@ function AppContent() {
   const userEmail = user ? user.email : t('auth.not_logged_in');
   const activeChatUserId = user?.id ?? 'usr_3';
   const activeChatRestaurantId = user?.role === 'Owner' ? user.restaurantId : undefined;
+  const isSignedInUser = Boolean(user && user.role !== 'Guest');
 
   const getThreadSortTime = (value: string) => {
     const time = new Date(value).getTime();
@@ -196,7 +197,7 @@ function AppContent() {
   }, [qrLogin]);
 
   const requireAuth = (message: string, action: () => void) => {
-    if (user && user.role !== 'Guest') {
+    if (isSignedInUser) {
       action();
     } else {
       setLoginMessage(message);
@@ -204,6 +205,19 @@ function AppContent() {
       setIsLoginOpen(true);
     }
   };
+
+  useEffect(() => {
+    if (currentTab !== 'inbox' || isSignedInUser) return;
+
+    setSelectedRestaurantId(null);
+    setCurrentTab('map');
+    setLoginMessage(t('auth.require_login_chat'));
+    setPendingAction(() => () => {
+      setSelectedRestaurantId(null);
+      setCurrentTab('inbox');
+    });
+    setIsLoginOpen(true);
+  }, [currentTab, isSignedInUser, t]);
 
   const handleSelectRestaurant = (id: string) => {
     setSelectedRestaurantId(id);
@@ -222,6 +236,28 @@ function AppContent() {
       setSelectedRestaurantId(null);
       setCurrentTab('create');
     });
+  };
+
+  const handleChangeTab = (tab: 'map' | 'discover' | 'create' | 'inbox' | 'profile') => {
+    try {
+      stopNarration();
+    } catch (e) { }
+
+    if (tab === 'create') {
+      handleOpenCreatePost();
+      return;
+    }
+
+    if (tab === 'inbox') {
+      requireAuth(t('auth.require_login_chat'), () => {
+        setSelectedRestaurantId(null);
+        setCurrentTab('inbox');
+      });
+      return;
+    }
+
+    setSelectedRestaurantId(null);
+    setCurrentTab(tab);
   };
 
   const handleMapSearchSelect = (restaurantId: string) => {
@@ -362,7 +398,7 @@ function AppContent() {
     }
   }, []);
 
-  const unreadInboxCount = chatThreads.reduce((total, t) => total + t.unreadCount, 0);
+  const unreadInboxCount = isSignedInUser ? chatThreads.reduce((total, t) => total + t.unreadCount, 0) : 0;
 
   const renderMainContent = () => {
     if (selectedRestaurantId) {
@@ -408,6 +444,18 @@ function AppContent() {
       case 'create':
         return <PageCreate restaurants={restaurants.filter(r => r.isActive !== false)} onAddPost={handleAddPost} onCancel={() => setCurrentTab('discover')} />;
       case 'inbox':
+        if (!isSignedInUser) {
+          return (
+            <PageMap
+              restaurants={restaurants.filter(r => r.isActive !== false)}
+              onSelectRestaurant={handleSelectRestaurant}
+              onSelectTour={handleSelectTour}
+              onContactRestaurant={handleContactRestaurant}
+              searchSelection={mapSearchSelection}
+            />
+          );
+        }
+
         return (
           <PageInbox
             threads={chatThreads}
@@ -459,17 +507,7 @@ function AppContent() {
     <div className="foodio-shell min-h-screen pb-24 md:pb-0 pt-[72px] flex flex-col font-sans text-on-surface">
       <NavBar
         currentTab={currentTab}
-        onChangeTab={(tab) => {
-          try {
-            stopNarration();
-          } catch (e) { }
-          if (tab === 'create') {
-            handleOpenCreatePost();
-          } else {
-            setSelectedRestaurantId(null);
-            setCurrentTab(tab);
-          }
-        }}
+        onChangeTab={handleChangeTab}
         unreadInboxCount={unreadInboxCount}
         restaurants={restaurants.filter(r => r.isActive !== false)}
         searchQuery={mapSearchQuery}
