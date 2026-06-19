@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Search, X, MapPin, Star, Map as MapIcon, Compass, Mail, User, Globe, Volume2 } from 'lucide-react';
 import { Restaurant } from '../types';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,7 @@ interface NavBarProps {
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   onSearchRestaurantSelect: (restaurantId: string) => void;
+  paymentStatus?: ReactNode;
 }
 
 const normalizeString = (str: string) =>
@@ -40,7 +41,8 @@ export default function NavBar({
   restaurants,
   searchQuery,
   onSearchQueryChange,
-  onSearchRestaurantSelect
+  onSearchRestaurantSelect,
+  paymentStatus
 }: NavBarProps) {
   const { t } = useTranslation();
   const { language, changeLanguage } = useLanguage();
@@ -155,6 +157,8 @@ export default function NavBar({
               )}
             </div>
           )}
+
+          {paymentStatus}
 
           <nav className="ml-auto hidden items-center gap-1 rounded-full bg-[#f0e5d8]/72 p-1 md:flex">
             {navItems.map((item) => {

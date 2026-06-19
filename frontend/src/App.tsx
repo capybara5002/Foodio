@@ -502,6 +502,7 @@ function AppContent() {
   const selectedRestaurantForBooking = selectedRestaurantId
     ? restaurants.find((r) => r.id === selectedRestaurantId) || restaurants[0]
     : restaurants.find((r) => r.id === 'oc_oanh') || restaurants[0];
+  const showMobileHeaderPaymentStatus = currentTab !== 'map';
 
   return (
     <div className="foodio-shell min-h-screen pb-24 md:pb-0 pt-[72px] flex flex-col font-sans text-on-surface">
@@ -513,10 +514,16 @@ function AppContent() {
         searchQuery={mapSearchQuery}
         onSearchQueryChange={setMapSearchQuery}
         onSearchRestaurantSelect={handleMapSearchSelect}
+        paymentStatus={(
+          <>
+            <PaymentStatusPill placement="header" />
+            {showMobileHeaderPaymentStatus && <PaymentStatusPill placement="mobile-header" />}
+          </>
+        )}
       />
 
       <OfflineBanner />
-      <PaymentStatusPill />
+      {!showMobileHeaderPaymentStatus && <PaymentStatusPill placement="floating" />}
 
       {qrStatus && (
         <div className={`fixed top-24 left-1/2 z-[90] -translate-x-1/2 rounded-full border px-5 py-3 shadow-[0_18px_46px_rgba(77,49,31,0.16)] backdrop-blur-xl font-mono text-[11px] font-bold tracking-wide animate-in slide-in-from-top-4 ${qrStatus.type === 'success' ? 'border-emerald-600/20 bg-emerald-50/90 text-emerald-900' : 'border-red-600/20 bg-red-50/90 text-red-900'
