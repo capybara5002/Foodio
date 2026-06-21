@@ -813,32 +813,6 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
               <LocateFixed size={22} className="group-hover:scale-110 transition-transform" />
             </button>
           </div>
-
-          <div
-            onClick={onSelectTour}
-            className="w-full md:w-[380px] self-start md:self-end bg-white rounded-none p-3 shadow-xl border-2 border-[#1a1a1a] pointer-events-auto flex items-center gap-3 transform transition-transform hover:-translate-y-1 cursor-pointer"
-          >
-            <div
-              className="w-16 h-16 rounded-none bg-cover bg-center shrink-0 border border-[#1a1a1a]/15 grayscale"
-              style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBDjvGT6gPlZtXxuECzVxFZA8EEO6irjnnzNm5dhbe_NgWa3EeWsxrWIIABSP3XyA3AbrFQAcGEqIzhi9lKRnwGi034jy7uRSUQnjW6xBD1rrw_Uhe0CEF3qcPN_rno8GRzuVlD_sMExHBf5wQMGp5p6gBf1D5b1LmHi4frvclFfTPXEPz4UNk8BqaFVDrKmZ8uP51ERO88KQb-E2iqOYYwZy8oztX-MBx4M-EjtaSzoQaPOyZGRzc2OX8WB7ksMcxEzPKr2c09xA')" }}
-            />
-            <div className="flex-1 min-w-0 text-left">
-              <div className="flex items-center gap-1.5 mb-1 text-[9px] select-none font-semibold">
-                <span className="px-1.5 py-0.5 bg-[#e2533b] text-white rounded-none font-mono uppercase tracking-wider text-[8px]">{t('map.curated')}</span>
-                <span className="flex items-center text-[#e2533b] font-mono uppercase tracking-wider text-[8px] font-extrabold">
-                  <Flame size={11} className="mr-1 inline-block align-middle fill-current" />{t('map.hot')}
-                </span>
-              </div>
-              <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] mb-0.5 truncate">Vinh Khanh Night Tour</h3>
-              <p className="font-sans font-light text-[11px] text-[#1a1a1a]/60 truncate">5 stops • Guided local tasting</p>
-            </div>
-            <button
-              type="button"
-              className="w-8 h-8 rounded-none bg-[#1a1a1a] hover:bg-[#e2533b] text-white flex items-center justify-center shrink-0 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
-            >
-              <ArrowRight size={16} />
-            </button>
-          </div>
         </div>
       </div>
 
