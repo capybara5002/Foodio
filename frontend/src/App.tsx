@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { initialRestaurants, initialChatThreads, initialAudioTours } from './data';
 import { Restaurant, ChatThread, AudioTour, CommunityPost } from './types';
 import {
@@ -16,6 +16,7 @@ import BookingModal from './components/BookingModal';
 import LoginModal from './components/Common/LoginModal';
 import PaymentGate from './components/Common/PaymentGate';
 import PaymentStatusPill from './components/Common/PaymentStatusPill';
+import LoadingSpinner from './components/Common/LoadingSpinner';
 import PageMap from './pages/PageMap';
 import PageDiscover from './pages/PageDiscover';
 import PageDetail from './pages/PageDetail';
@@ -30,18 +31,33 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { PaymentProvider } from './context/PaymentContext';
 import { useTranslation } from 'react-i18next';
 import { stopNarration } from './services/narrationEngine';
+import { matchPath, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+
+type AppTab = 'map' | 'discover' | 'create' | 'inbox' | 'profile';
+
+const getTabFromPath = (pathname: string): AppTab => {
+  if (pathname === '/discover') return 'discover';
+  if (pathname === '/posts/new') return 'create';
+  if (pathname === '/inbox') return 'inbox';
+  if (pathname === '/profile' || pathname === '/admin' || pathname === '/owner') return 'profile';
+  return 'map';
+};
 
 function AppContent() {
   const { t, i18n } = useTranslation();
-  const { user, qrLogin, logout } = useAuth();
-  const [currentTab, setCurrentTab] = useState<'map' | 'discover' | 'create' | 'inbox' | 'profile'>('map');
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
+  const { user, isLoading: isAuthLoading, qrLogin, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentTab = getTabFromPath(location.pathname);
+  const restaurantRoute = matchPath('/restaurants/:restaurantId', location.pathname);
+  const selectedRestaurantId = restaurantRoute?.params.restaurantId ?? null;
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [activeAudioTour, setActiveAudioTour] = useState<AudioTour | null>(null);
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [mapSearchSelection, setMapSearchSelection] = useState<{ restaurantId: string; requestId: number } | null>(null);
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>(initialRestaurants);
+  const [hasLoadedRestaurantData, setHasLoadedRestaurantData] = useState(false);
   const [chatThreads, setChatThreads] = useState<ChatThread[]>(initialChatThreads);
   const [audioTours, setAudioTours] = useState<AudioTour[]>(initialAudioTours);
   const [sessionCommunityPosts, setSessionCommunityPosts] = useState<CommunityPost[]>([]);
@@ -55,6 +71,7 @@ function AppContent() {
 
   // QR verification status banner states
   const [qrStatus, setQrStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const handledQrTokenRef = useRef<string | null>(null);
 
   const userEmail = user ? user.email : t('auth.not_logged_in');
   const activeChatUserId = user?.id ?? 'usr_3';
@@ -153,6 +170,10 @@ function AppContent() {
         void saveLastSyncInfo({ timestamp: Date.now() });
       } catch (error) {
         console.warn('CraveMap API unavailable, using local/cached data.', error);
+      } finally {
+        if (!cancelled) {
+          setHasLoadedRestaurantData(true);
+        }
       }
     };
 
@@ -167,7 +188,8 @@ function AppContent() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const qrToken = params.get('qr');
-    if (qrToken) {
+    if (qrToken && handledQrTokenRef.current !== qrToken) {
+      handledQrTokenRef.current = qrToken;
       const verifySession = async () => {
         try {
           const guestUser = await qrLogin(qrToken);
@@ -177,7 +199,9 @@ function AppContent() {
           });
           // Redirect to the restaurant scanned if possible
           if (guestUser.restaurantId) {
-            setSelectedRestaurantId(guestUser.restaurantId);
+            navigate(`/restaurants/${encodeURIComponent(guestUser.restaurantId)}`, { replace: true });
+          } else {
+            navigate(location.pathname, { replace: true });
           }
           setTimeout(() => setQrStatus(null), 5000);
         } catch (err: any) {
@@ -185,16 +209,13 @@ function AppContent() {
             type: 'error',
             message: t('qr.verify_error', { error: err.message || (i18n.language === 'vi' ? 'Mã hết hạn hoặc không hợp lệ' : 'Code expired or invalid') })
           });
+          navigate(location.pathname, { replace: true });
           setTimeout(() => setQrStatus(null), 5000);
-        } finally {
-          // Clear query params to clean URL
-          const newUrl = window.location.pathname;
-          window.history.replaceState({}, document.title, newUrl);
         }
       };
       void verifySession();
     }
-  }, [qrLogin]);
+  }, [i18n.language, location.pathname, navigate, qrLogin, t]);
 
   const requireAuth = (message: string, action: () => void) => {
     if (isSignedInUser) {
@@ -207,24 +228,28 @@ function AppContent() {
   };
 
   useEffect(() => {
-    if (currentTab !== 'inbox' || isSignedInUser) return;
+    if (isAuthLoading || isSignedInUser) return;
 
-    setSelectedRestaurantId(null);
-    setCurrentTab('map');
-    setLoginMessage(t('auth.require_login_chat'));
-    setPendingAction(() => () => {
-      setSelectedRestaurantId(null);
-      setCurrentTab('inbox');
-    });
+    const protectedRoute = location.pathname === '/inbox'
+      ? { message: t('auth.require_login_chat'), path: '/inbox' }
+      : location.pathname === '/posts/new'
+        ? { message: t('auth.require_login_post'), path: '/posts/new' }
+        : null;
+
+    if (!protectedRoute) return;
+
+    navigate('/map', { replace: true });
+    setLoginMessage(protectedRoute.message);
+    setPendingAction(() => () => navigate(protectedRoute.path));
     setIsLoginOpen(true);
-  }, [currentTab, isSignedInUser, t]);
+  }, [isAuthLoading, isSignedInUser, location.pathname, navigate, t]);
 
   const handleSelectRestaurant = (id: string) => {
-    setSelectedRestaurantId(id);
+    navigate(`/restaurants/${encodeURIComponent(id)}`);
   };
 
   const handleSelectTour = () => {
-    setCurrentTab('discover');
+    navigate('/discover');
     const firstTour = audioTours[0];
     if (firstTour) {
       setActiveAudioTour(firstTour);
@@ -233,12 +258,11 @@ function AppContent() {
 
   const handleOpenCreatePost = () => {
     requireAuth(t('auth.require_login_post'), () => {
-      setSelectedRestaurantId(null);
-      setCurrentTab('create');
+      navigate('/posts/new');
     });
   };
 
-  const handleChangeTab = (tab: 'map' | 'discover' | 'create' | 'inbox' | 'profile') => {
+  const handleChangeTab = (tab: AppTab) => {
     try {
       stopNarration();
     } catch (e) { }
@@ -250,19 +274,21 @@ function AppContent() {
 
     if (tab === 'inbox') {
       requireAuth(t('auth.require_login_chat'), () => {
-        setSelectedRestaurantId(null);
-        setCurrentTab('inbox');
+        navigate('/inbox');
       });
       return;
     }
 
-    setSelectedRestaurantId(null);
-    setCurrentTab(tab);
+    if (tab === 'profile') {
+      navigate(user?.role === 'Admin' ? '/admin' : user?.role === 'Owner' ? '/owner' : '/profile');
+      return;
+    }
+
+    navigate(tab === 'discover' ? '/discover' : '/map');
   };
 
   const handleMapSearchSelect = (restaurantId: string) => {
-    setSelectedRestaurantId(null);
-    setCurrentTab('map');
+    navigate('/map');
     setMapSearchSelection({ restaurantId, requestId: Date.now() });
   };
 
@@ -279,14 +305,12 @@ function AppContent() {
     const thread = await ensureChatThread(restaurantId, activeChatUserId);
     upsertThread(thread);
     setActiveThreadId(thread.id);
-    setSelectedRestaurantId(null);
-    setCurrentTab('inbox');
+    navigate('/inbox');
   };
 
   const handleContactRestaurant = async (restaurantId: string) => {
     if (user?.role === 'Owner' && user.restaurantId === restaurantId) {
-      setSelectedRestaurantId(null);
-      setCurrentTab('inbox');
+      navigate('/inbox');
       return;
     }
 
@@ -305,8 +329,7 @@ function AppContent() {
       const thread = await ensureChatThread(user.restaurantId, reviewerUsername);
       upsertThread(thread);
       setActiveThreadId(thread.id);
-      setSelectedRestaurantId(null);
-      setCurrentTab('inbox');
+      navigate('/inbox');
     } catch (error) {
       console.error('Failed to contact reviewer:', error);
     }
@@ -349,7 +372,7 @@ function AppContent() {
       freshPost,
       ...prevPosts.filter((post) => post.id !== freshPost.id)
     ]);
-    setCurrentTab('discover');
+    navigate('/discover');
     try {
       await createCommunityPost(freshPost);
     } catch (error) {
@@ -400,39 +423,42 @@ function AppContent() {
 
   const unreadInboxCount = isSignedInUser ? chatThreads.reduce((total, t) => total + t.unreadCount, 0) : 0;
 
-  const renderMainContent = () => {
-    if (selectedRestaurantId) {
-      const selectedRestaurant = restaurants.find((r) => r.id === selectedRestaurantId) || restaurants[0];
-      return (
-        <PageDetail
-          restaurant={selectedRestaurant}
-          onBack={() => setSelectedRestaurantId(null)}
-          onOpenBooking={() => {
-            requireAuth(t('auth.require_login_booking'), () => {
-              setIsBookingOpen(true);
-            });
-          }}
-          onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
-          requireAuth={requireAuth}
-          onRestaurantUpdated={handleRestaurantUpdated}
-          onContactUser={handleContactUser}
-        />
-      );
-    }
+  const activeRestaurants = restaurants.filter((restaurant) => restaurant.isActive !== false);
+  const selectedRestaurant = selectedRestaurantId
+    ? restaurants.find((restaurant) => restaurant.id === selectedRestaurantId)
+    : undefined;
 
-    switch (currentTab) {
-      case 'map':
-        return (
-          <PageMap
-            restaurants={restaurants.filter(r => r.isActive !== false)}
-            onSelectRestaurant={handleSelectRestaurant}
-            onSelectTour={handleSelectTour}
-            onContactRestaurant={handleContactRestaurant}
-            searchSelection={mapSearchSelection}
-          />
-        );
-      case 'discover':
-        return (
+  const renderMap = () => (
+    <PageMap
+      restaurants={activeRestaurants}
+      onSelectRestaurant={handleSelectRestaurant}
+      onSelectTour={handleSelectTour}
+      onContactRestaurant={handleContactRestaurant}
+      searchSelection={mapSearchSelection}
+    />
+  );
+
+  const renderProfile = () => (
+    <PageProfile
+      userEmail={userEmail}
+      onLoginTrigger={() => {
+        setLoginMessage(t('auth.login_title'));
+        setPendingAction(null);
+        setIsLoginOpen(true);
+      }}
+      sessionCommunityPosts={sessionCommunityPosts}
+      onRestaurantUpdated={handleRestaurantUpdated}
+      onRefreshRestaurants={handleRefreshRestaurants}
+    />
+  );
+
+  const renderMainContent = () => (
+    <Routes>
+      <Route path="/" element={<Navigate to="/map" replace />} />
+      <Route path="/map" element={renderMap()} />
+      <Route
+        path="/discover"
+        element={(
           <PageDiscover
             tours={audioTours}
             onPlayTour={(tour) => setActiveAudioTour(tour)}
@@ -440,23 +466,21 @@ function AppContent() {
             sessionCommunityPosts={sessionCommunityPosts}
             onCreatePost={handleOpenCreatePost}
           />
-        );
-      case 'create':
-        return <PageCreate restaurants={restaurants.filter(r => r.isActive !== false)} onAddPost={handleAddPost} onCancel={() => setCurrentTab('discover')} />;
-      case 'inbox':
-        if (!isSignedInUser) {
-          return (
-            <PageMap
-              restaurants={restaurants.filter(r => r.isActive !== false)}
-              onSelectRestaurant={handleSelectRestaurant}
-              onSelectTour={handleSelectTour}
-              onContactRestaurant={handleContactRestaurant}
-              searchSelection={mapSearchSelection}
-            />
-          );
-        }
-
-        return (
+        )}
+      />
+      <Route
+        path="/posts/new"
+        element={isAuthLoading ? <LoadingSpinner /> : isSignedInUser ? (
+          <PageCreate
+            restaurants={activeRestaurants}
+            onAddPost={handleAddPost}
+            onCancel={() => navigate('/discover')}
+          />
+        ) : <Navigate to="/map" replace />}
+      />
+      <Route
+        path="/inbox"
+        element={isAuthLoading ? <LoadingSpinner /> : isSignedInUser ? (
           <PageInbox
             threads={chatThreads}
             activeThreadId={activeThreadId}
@@ -466,38 +490,56 @@ function AppContent() {
             currentUserRole={user?.role ?? 'Guest'}
             onSelectThread={(tid) => {
               setActiveThreadId(tid);
-              setChatThreads((prev) => sortThreads(prev.map((t) => (t.id === tid ? { ...t, unreadCount: 0 } : t))));
+              setChatThreads((prev) => sortThreads(prev.map((thread) => (
+                thread.id === tid ? { ...thread, unreadCount: 0 } : thread
+              ))));
             }}
             onStartThread={user && user.role !== 'Guest' ? openRestaurantChat : undefined}
             onThreadUpdated={upsertThread}
           />
-        );
-      case 'profile':
-        return (
-          <PageProfile
-            userEmail={userEmail}
-            onLoginTrigger={() => {
-              setLoginMessage(t('auth.login_title'));
-              setPendingAction(null);
-              setIsLoginOpen(true);
+        ) : <Navigate to="/map" replace />}
+      />
+      <Route path="/profile" element={renderProfile()} />
+      <Route
+        path="/admin"
+        element={isAuthLoading
+          ? <LoadingSpinner />
+          : user?.role === 'Admin' ? renderProfile() : <Navigate to="/profile" replace />}
+      />
+      <Route
+        path="/owner"
+        element={isAuthLoading
+          ? <LoadingSpinner />
+          : user?.role === 'Owner' ? renderProfile() : <Navigate to="/profile" replace />}
+      />
+      <Route
+        path="/restaurants/:restaurantId"
+        element={selectedRestaurant ? (
+          <PageDetail
+            restaurant={selectedRestaurant}
+            onBack={() => {
+              const historyIndex = window.history.state?.idx;
+              if (typeof historyIndex === 'number' && historyIndex > 0) {
+                navigate(-1);
+              } else {
+                navigate('/map', { replace: true });
+              }
             }}
-            sessionCommunityPosts={sessionCommunityPosts}
+            onOpenBooking={() => {
+              requireAuth(t('auth.require_login_booking'), () => {
+                setIsBookingOpen(true);
+              });
+            }}
+            onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
+            requireAuth={requireAuth}
             onRestaurantUpdated={handleRestaurantUpdated}
-            onRefreshRestaurants={handleRefreshRestaurants}
+            onContactUser={handleContactUser}
           />
-        );
-      default:
-        return (
-          <PageMap
-            restaurants={restaurants.filter(r => r.isActive !== false)}
-            onSelectRestaurant={handleSelectRestaurant}
-            onSelectTour={handleSelectTour}
-            onContactRestaurant={handleContactRestaurant}
-            searchSelection={mapSearchSelection}
-          />
-        );
-    }
-  };
+        ) : hasLoadedRestaurantData ? <Navigate to="/map" replace /> : <LoadingSpinner />}
+      />
+      <Route path="*" element={<Navigate to="/map" replace />} />
+    </Routes>
+  );
 
   const selectedRestaurantForBooking = selectedRestaurantId
     ? restaurants.find((r) => r.id === selectedRestaurantId) || restaurants[0]
