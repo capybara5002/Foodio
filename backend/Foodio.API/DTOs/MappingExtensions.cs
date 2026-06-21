@@ -14,8 +14,45 @@ public static class MappingExtensions
     public static DishDto ToDto(this MenuItem dish) =>
         new(dish.Id, dish.Name, dish.Price, dish.Image, dish.Description);
 
-    public static FoodieReviewDto ToDto(this Review review) =>
-        new(review.Id, review.Author, review.Role, review.Rating, review.Comment, review.Avatar, review.ImageUrl);
+    public static FoodieReviewDto ToDto(this Review review)
+    {
+        var imageUrls = DeserializeReviewImages(review.ImageUrlsJson);
+        if (imageUrls.Count == 0 && !string.IsNullOrWhiteSpace(review.ImageUrl))
+        {
+            imageUrls.Add(review.ImageUrl);
+        }
+
+        return new(
+            review.Id,
+            review.Author,
+            review.Role,
+            review.Rating,
+            review.Comment,
+            review.Avatar,
+            review.ImageUrl,
+            review.OwnerReply,
+            review.OwnerReplyCreatedAt,
+            imageUrls);
+    }
+
+    private static List<string> DeserializeReviewImages(string? imageUrlsJson)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrlsJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(imageUrlsJson)?
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .ToList() ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
 
     public static UserDto ToDto(this User user) =>
         new(user.Id, user.Username, user.Email, user.Role, user.RestaurantId, user.OwnerStatus, user.IsActive, user.CreatedAt, user.Avatar);
@@ -25,6 +62,31 @@ public static class MappingExtensions
 
     public static AuditLogDto ToDto(this AuditLog log) =>
         new(log.Id, log.Actor, log.Action, log.EntityType, log.EntityId, log.Timestamp, log.Details);
+
+    public static PaymentSessionDto ToDto(this PaymentSession session)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var remainingSeconds = session.ExpiresAt is null
+            ? 0
+            : Math.Max(0, (int)Math.Floor((session.ExpiresAt.Value - now).TotalSeconds));
+        var isActive = session.Status == "Paid" && remainingSeconds > 0;
+
+        return new(
+            session.Id,
+            session.ClientToken,
+            session.AccessType,
+            session.Amount,
+            session.Currency,
+            session.Status,
+            session.Provider,
+            session.PaymentReference,
+            session.QrPayload,
+            session.CreatedAt,
+            session.PaidAt,
+            session.ExpiresAt,
+            remainingSeconds,
+            isActive);
+    }
 
     public static RestaurantDto ToDto(this Restaurant restaurant) =>
         new(
@@ -42,6 +104,7 @@ public static class MappingExtensions
             restaurant.Image,
             restaurant.IsVerified,
             restaurant.ReplySpeed,
+            restaurant.IsActive,
             restaurant.Latitude,
             restaurant.Longitude,
             restaurant.CategoryId,

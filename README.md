@@ -146,10 +146,11 @@ http://localhost:3000
 Nội dung `.env` mặc định:
 
 ```env
-VITE_API_URL=http://localhost:5000
+VITE_API_URL=
+VITE_PROXY_API_TARGET=http://localhost:5000
 ```
 
-Nếu đổi port backend, hãy sửa `VITE_API_URL` tương ứng.
+Khi chạy local, để `VITE_API_URL` rỗng để Vite proxy `/api` và `/hubs` về backend. Cách này giúp điện thoại truy cập qua LAN/dev tunnel vẫn gọi được API, DB, SignalR và audio guide. Nếu đổi port backend, hãy sửa `VITE_PROXY_API_TARGET`.
 
 ## Tài khoản mẫu
 
@@ -295,7 +296,8 @@ Không kết nối được SQL Server:
 Frontend báo không gọi được API:
 
 - Đảm bảo backend đang chạy ở `http://localhost:5000`.
-- Kiểm tra `frontend/.env` có `VITE_API_URL=http://localhost:5000`.
+- Khi chạy local/dev tunnel, kiểm tra `frontend/.env` có `VITE_API_URL=` và `VITE_PROXY_API_TARGET=http://localhost:5000`.
+- Nếu mở bằng điện thoại, không dùng `VITE_API_URL=http://localhost:5000` vì `localhost` trên điện thoại là chính điện thoại, không phải máy chạy backend.
 - Sau khi sửa `.env`, tắt và chạy lại `npm run dev`.
 
 Port `3000` bị chiếm:

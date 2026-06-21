@@ -1,6 +1,5 @@
 import { AudioTour, ChatMessage, ChatThread, CommunityPost, FoodieReview, PostComment, Restaurant } from '../types';
-
-const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { apiBase } from './apiConfig';
 
 async function getJson<T>(path: string): Promise<T> {
   const response = await fetch(`${apiBase}${path}`, {
@@ -25,7 +24,19 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
+    let errMsg = `Request failed: ${response.status}`;
+    try {
+      const text = await response.text();
+      if (text) {
+        try {
+          const parsed = JSON.parse(text);
+          errMsg = parsed.message || parsed.error || text;
+        } catch {
+          errMsg = text;
+        }
+      }
+    } catch (_) {}
+    throw new Error(errMsg);
   }
 
   return response.json() as Promise<T>;
@@ -63,6 +74,10 @@ export function createCommunityPost(post: CommunityPost) {
 
 export function createReview(restaurantId: string, review: Omit<FoodieReview, 'id'>) {
   return postJson<FoodieReview>(`/api/restaurants/${restaurantId}/reviews`, review);
+}
+
+export function replyToReview(reviewId: string, reply: string, ownerId: string) {
+  return postJson<FoodieReview>(`/api/owner/reviews/${reviewId}/reply?ownerId=${encodeURIComponent(ownerId)}`, { reply });
 }
 
 export function getPostComments(postId: string) {

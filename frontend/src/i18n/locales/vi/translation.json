@@ -78,7 +78,7 @@
     "stops_suffix": "Điểm",
     "start_audio": "Bắt đầu Audio Tour",
     "for_you": "Dành cho bạn",
-    "following": "Đang theo dõi",
+    "following": "Bài viết đã lưu",
     "loading_feed": "Đang tải bảng tin...",
     "error_feed": "Không thể tải bảng tin. Vui lòng thử lại sau.",
     "no_posts": "Không tìm thấy bài đăng nào."
@@ -155,7 +155,7 @@
     "control_center": "TRUNG TÂM ĐIỀU KHIỂN",
     "tabs": {
       "accounts": "Tài khoản",
-      "requests": "Yêu cầu mở quán",
+      "requests": "Quản lý quán ăn",
       "categories": "Danh mục",
       "streets": "Phố ẩm thực",
       "tours": "Audio Tours",
@@ -264,11 +264,25 @@
     "photo_attachment": "Ảnh đính kèm",
     "photo_delete": "Xóa ảnh",
     "photo_change": "Đổi ảnh khác",
+    "photo_upload": "Tải ảnh lên",
+    "photo_add_more": "Thêm ảnh",
     "photo_preset": "Gắn ảnh mẫu",
     "cancel": "Hủy",
     "submit": "Gửi đánh giá",
     "validation_comment": "⚠️ Vui lòng viết bình luận của bạn!",
     "success_toast": "⭐ Cảm ơn bạn đã đánh giá quán ăn!",
-    "error_toast": "❌ Không thể gửi đánh giá. Vui lòng thử lại."
+    "error_toast": "❌ Không thể gửi đánh giá. Vui lòng thử lại.",
+    "owner_reply": "Phản hồi của chủ quán",
+    "reply_btn": "Phản hồi",
+    "edit_reply_btn": "Sửa phản hồi",
+    "reply_placeholder": "Nhập lời cảm ơn hoặc phản hồi của chủ quán...",
+    "submit_reply": "Gửi phản hồi",
+    "cancel_reply": "Hủy bỏ",
+    "reply_success": "💬 Đã gửi phản hồi thành công!",
+    "reply_error": "❌ Không thể gửi phản hồi. Vui lòng thử lại."
+  },
+  "inbox": {
+    "no_conversation_active": "Không có cuộc hội thoại nào đang hoạt động",
+    "select_conversation": "Chọn một cuộc hội thoại từ danh sách bên trái hoặc liên hệ quán từ bản đồ để bắt đầu nhắn tin."
   }
 }

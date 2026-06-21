@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Search, X, MapPin, Star, Map as MapIcon, Compass, Mail, User, Globe, Volume2 } from 'lucide-react';
 import { Restaurant } from '../types';
 import { useTranslation } from 'react-i18next';
@@ -17,13 +17,14 @@ interface NavBarProps {
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   onSearchRestaurantSelect: (restaurantId: string) => void;
+  paymentStatus?: ReactNode;
 }
 
 const normalizeString = (str: string) =>
   str
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[đĐ]/g, 'd')
+    .replace(/[\u0111\u0110]/g, 'd')
     .toLowerCase();
 
 const navItems = [
@@ -40,7 +41,8 @@ export default function NavBar({
   restaurants,
   searchQuery,
   onSearchQueryChange,
-  onSearchRestaurantSelect
+  onSearchRestaurantSelect,
+  paymentStatus
 }: NavBarProps) {
   const { t } = useTranslation();
   const { language, changeLanguage } = useLanguage();
@@ -49,16 +51,21 @@ export default function NavBar({
   const normalizedSearchQuery = normalizeString(searchQuery.trim());
   const searchSuggestions = normalizedSearchQuery
     ? restaurants
-        .filter((restaurant) => {
-          const searchableText = normalizeString(
-            `${restaurant.name} ${restaurant.category} ${restaurant.address} ${restaurant.area}`
-          );
-          return searchableText.includes(normalizedSearchQuery);
-        })
-        .slice(0, 8)
+      .filter((restaurant) => {
+        const searchableText = normalizeString(
+          `${restaurant.name} ${restaurant.category} ${restaurant.address} ${restaurant.area}`
+        );
+        return searchableText.includes(normalizedSearchQuery);
+      })
+      .slice(0, 8)
     : [];
 
   const showSearchSuggestions = currentTab === 'map' && isSearchFocused && normalizedSearchQuery.length > 0;
+  const selectSearchSuggestion = (restaurant: Restaurant) => {
+    onSearchQueryChange(restaurant.name);
+    onSearchRestaurantSelect(restaurant.id);
+    setIsSearchFocused(false);
+  };
 
   return (
     <>
@@ -71,16 +78,7 @@ export default function NavBar({
             aria-label="Open Foodio map"
           >
             <div className="foodio-logo-box">
-              <svg viewBox="0 0 100 100" className="foodio-svg-icon select-none" aria-hidden="true">
-                <path
-                  d="M28 35A18 18 0 0028 65M72 35A18 18 0 0172 65M43 23A7 7 0 0157 23L57 39A7 7 0 0143 39ZM46 28L54 28M45 33L55 33M34 26L34 39A16 16 0 0066 39L66 26M50 55L50 72M38 72L62 72M24 76L38 62M56 44L70 30M76 76L62 62M44 44L30 30M27 33L33 27M31 37L37 31"
-                  fill="none"
-                  stroke="#d8a078"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="4.5"
-                />
-              </svg>
+              <img src="/logo.png" alt="Foodio Logo" className="foodio-svg-icon object-contain select-none rounded-md" />
             </div>
 
             <div className="foodio-text-group">
@@ -104,6 +102,12 @@ export default function NavBar({
                   }}
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => window.setTimeout(() => setIsSearchFocused(false), 180)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchSuggestions[0]) {
+                      e.preventDefault();
+                      selectSearchSuggestion(searchSuggestions[0]);
+                    }
+                  }}
                   placeholder={t('search.placeholder')}
                   className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#2c211b] outline-none placeholder:text-[#8d8074]"
                   aria-label="Search restaurants on the map"
@@ -121,25 +125,22 @@ export default function NavBar({
               </div>
 
               {showSearchSuggestions && (
-                <div className="absolute left-0 right-0 top-[calc(100%+10px)] max-h-[360px] overflow-y-auto rounded-[1.5rem] border border-[#4b362a]/10 bg-[#fffaf4] p-2 shadow-[0_24px_70px_rgba(77,49,31,0.2)] hide-scrollbar">
+                <div className="fixed left-3 right-3 top-[82px] z-[95] max-h-[min(48vh,360px)] overflow-y-auto rounded-[1.5rem] border border-[#4b362a]/10 bg-[#fffaf4] p-2 shadow-[0_24px_70px_rgba(77,49,31,0.2)] hide-scrollbar md:absolute md:left-0 md:right-0 md:top-[calc(100%+10px)] md:max-h-[360px]">
                   {searchSuggestions.length > 0 ? (
                     searchSuggestions.map((restaurant) => (
                       <button
                         key={restaurant.id}
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => {
-                          onSearchRestaurantSelect(restaurant.id);
-                          setIsSearchFocused(false);
-                        }}
-                        className="group flex w-full items-start gap-3 rounded-[1.15rem] px-3 py-3 text-left transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white active:scale-[0.99]"
+                        onClick={() => selectSearchSuggestion(restaurant)}
+                        className="group flex w-full min-w-0 items-start gap-3 rounded-[1.15rem] px-3 py-3 text-left transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white active:scale-[0.99]"
                       >
                         <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f0d5c8] text-[#8f4f3b]">
                           <MapPin size={17} />
                         </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-[#2c211b]">{restaurant.name}</span>
-                          <span className="mt-0.5 block truncate text-xs text-[#6f655b]">
+                        <span className="flex min-w-0 flex-1 flex-col pr-1">
+                          <span className="block min-w-0 truncate text-sm font-semibold leading-5 text-[#2c211b]">{restaurant.name}</span>
+                          <span className="mt-0.5 block min-w-0 truncate text-xs leading-4 text-[#6f655b]">
                             {restaurant.category} · {restaurant.area}
                           </span>
                         </span>
@@ -157,6 +158,8 @@ export default function NavBar({
             </div>
           )}
 
+          {paymentStatus}
+
           <nav className="ml-auto hidden items-center gap-1 rounded-full bg-[#f0e5d8]/72 p-1 md:flex">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -166,11 +169,10 @@ export default function NavBar({
                   key={item.id}
                   type="button"
                   onClick={() => onChangeTab(item.id)}
-                  className={`relative flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] ${
-                    isActive
+                  className={`relative flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] ${isActive
                       ? 'bg-[#fffaf4] text-[#8f4f3b] shadow-[0_8px_22px_rgba(77,49,31,0.12)]'
                       : 'text-[#6f655b] hover:bg-[#fffaf4]/74 hover:text-[#2c211b]'
-                  }`}
+                    }`}
                 >
                   <Icon size={17} />
                   <span>{t(item.labelKey)}</span>
@@ -208,9 +210,8 @@ export default function NavBar({
               className="relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-95"
             >
               <div
-                className={`relative flex h-8 min-w-14 items-center justify-center rounded-full px-4 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-                  isActive ? 'bg-[#2c211b] text-[#fffaf4]' : 'text-[#6f655b] hover:bg-[#f0e5d8]'
-                }`}
+                className={`relative flex h-8 min-w-14 items-center justify-center rounded-full px-4 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${isActive ? 'bg-[#2c211b] text-[#fffaf4]' : 'text-[#6f655b] hover:bg-[#f0e5d8]'
+                  }`}
               >
                 <Icon size={18} />
                 {item.id === 'inbox' && unreadInboxCount > 0 && (

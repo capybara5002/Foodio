@@ -78,7 +78,7 @@
     "stops_suffix": "Spots",
     "start_audio": "Start Audio Tour",
     "for_you": "For You",
-    "following": "Following",
+    "following": "Saved Posts",
     "loading_feed": "Loading Feed...",
     "error_feed": "Could not load posts. Please try again later.",
     "no_posts": "No posts found."
@@ -155,7 +155,7 @@
     "control_center": "CONTROL CENTER",
     "tabs": {
       "accounts": "Accounts",
-      "requests": "Open Requests",
+      "requests": "Manage Restaurants",
       "categories": "Categories",
       "streets": "Food Streets",
       "tours": "Audio Tours",
@@ -264,11 +264,25 @@
     "photo_attachment": "Photo Attachment",
     "photo_delete": "Delete Photo",
     "photo_change": "Change Photo",
+    "photo_upload": "Upload photos",
+    "photo_add_more": "Add more",
     "photo_preset": "Attach Preset Photo",
     "cancel": "Cancel",
     "submit": "Submit Review",
     "validation_comment": "⚠️ Please write your comment!",
     "success_toast": "⭐ Thanks for reviewing this restaurant!",
-    "error_toast": "❌ Failed to submit review. Please try again."
+    "error_toast": "❌ Failed to submit review. Please try again.",
+    "owner_reply": "Owner's Response",
+    "reply_btn": "Reply",
+    "edit_reply_btn": "Edit Response",
+    "reply_placeholder": "Write a thank you note or reply to the customer...",
+    "submit_reply": "Submit Reply",
+    "cancel_reply": "Cancel",
+    "reply_success": "💬 Reply submitted successfully!",
+    "reply_error": "❌ Failed to submit reply. Please try again."
+  },
+  "inbox": {
+    "no_conversation_active": "No active conversation",
+    "select_conversation": "Select a conversation from the sidebar or contact a restaurant from the map to start chatting."
   }
 }

@@ -5,10 +5,10 @@
 
 import { useState, useRef } from 'react';
 import { Restaurant } from '../types';
-import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X } from 'lucide-react';
+import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { createReview } from '../api/cravemapApi';
+import { createReview, replyToReview } from '../api/cravemapApi';
 import MultiLanguageAudioGuide from '../components/MultiLanguageAudioGuide';
 import ImageGallery from '../components/Common/ImageGallery';
 
@@ -19,9 +19,10 @@ interface PageDetailProps {
   onGoToChat: () => void;
   requireAuth: (message: string, action: () => void) => void;
   onRestaurantUpdated: (updated: Restaurant) => void;
+  onContactUser?: (reviewerUsername: string) => void;
 }
 
-export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToChat, requireAuth, onRestaurantUpdated }: PageDetailProps) {
+export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToChat, requireAuth, onRestaurantUpdated, onContactUser }: PageDetailProps) {
   const { t, i18n } = useTranslation();
   const [isFavorite, setIsFavorite] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -35,6 +36,42 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
   const [newPhotoBase64s, setNewPhotoBase64s] = useState<string[]>([]);
   const { user } = useAuth();
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Reply states for owner
+  const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
+  const [replyValue, setReplyValue] = useState('');
+  const [replySubmitting, setReplySubmitting] = useState(false);
+
+  const handleSendDetailReply = async (reviewId: string) => {
+    if (!replyValue.trim()) {
+      setToastMessage(t('review_form.validation_comment'));
+      setTimeout(() => setToastMessage(null), 2000);
+      return;
+    }
+    if (!user?.id) return;
+    setReplySubmitting(true);
+    try {
+      const updatedReview = await replyToReview(reviewId, replyValue.trim(), user.id);
+      
+      const updatedReviews = (restaurant.reviews || []).map(r => r.id === reviewId ? { ...r, ownerReply: updatedReview.ownerReply, ownerReplyCreatedAt: updatedReview.ownerReplyCreatedAt } : r);
+      
+      onRestaurantUpdated({
+        ...restaurant,
+        reviews: updatedReviews
+      });
+
+      setActiveReplyId(null);
+      setReplyValue('');
+      setToastMessage(t('review_form.reply_success'));
+      setTimeout(() => setToastMessage(null), 2500);
+    } catch (err: any) {
+      console.error("Failed to send reply", err);
+      setToastMessage(t('review_form.reply_error'));
+      setTimeout(() => setToastMessage(null), 2500);
+    } finally {
+      setReplySubmitting(false);
+    }
+  };
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -216,24 +253,25 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
           </div>
         </section>
 
-        {/* Action Row CTA: Audio Guide and Chat triggers */}
-        <section className="flex items-center gap-3">
+        {/* Action Row CTA: Audio guide and chat triggers */}
+        <section className="grid grid-cols-2 gap-3">
           <button 
             type="button"
             onClick={() => setShowAudioGuide((current) => !current)}
-            className="foodio-btn foodio-btn-primary group flex-1 font-mono text-[10px] uppercase tracking-widest cursor-pointer"
+            className="foodio-btn foodio-btn-primary group h-12 min-w-0 !px-3 !py-0 font-mono text-[9px] uppercase tracking-wider cursor-pointer"
           >
-            <Volume2 size={14} /> {t('detail.play_audio')}
+            <Volume2 size={22} className="shrink-0" />
+            <span className="min-w-0 leading-tight text-wrap-balance">{t('detail.play_audio')}</span>
           </button>
           
           <button 
             type="button"
             onClick={onGoToChat}
             aria-label="Direct message with restaurant owner"
-            className="foodio-btn foodio-btn-secondary h-12 font-mono text-[10px] uppercase tracking-widest cursor-pointer"
+            className="foodio-btn foodio-btn-secondary h-12 min-w-0 !px-3 !py-0 font-mono text-[9px] uppercase tracking-wider cursor-pointer"
           >
-            <MessageSquare size={18} />
-            {t('nav.contact')}
+            <MessageSquare size={19} className="shrink-0" />
+            <span className="min-w-0 leading-tight text-wrap-balance">{t('nav.contact')}</span>
           </button>
         </section>
 
@@ -401,44 +439,29 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                   )}
                 </div>
                 
-                {newPhotoBase64s.length > 0 ? (
-                  <div className="relative aspect-video w-full max-w-[200px] border border-[#1a1a1a]/15 overflow-hidden group cursor-pointer" onClick={() => photoInputRef.current?.click()}>
-                    <img 
-                      src={newPhotoBase64s[0]} 
-                      alt="Uploaded Food" 
-                      className="w-full h-full object-cover" 
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <span className="text-white text-[9px] uppercase font-mono tracking-wider font-bold">{t('review_form.photo_change')}</span>
+                <div className="grid grid-cols-3 gap-2 pt-1 sm:grid-cols-5">
+                  {newPhotoBase64s.map((photo, index) => (
+                    <div key={`${photo}-${index}`} className="relative aspect-square overflow-hidden rounded-xl border border-[#1a1a1a]/10 bg-[#f9f7f2]">
+                      <img src={photo} alt={`Review upload ${index + 1}`} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setNewPhotoBase64s((photos) => photos.filter((_, currentIndex) => currentIndex !== index))}
+                        className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-[#2c211b]/80 text-white hover:bg-[#e2533b]"
+                        aria-label="Remove review photo"
+                      >
+                        <X size={11} strokeWidth={3} />
+                      </button>
                     </div>
-                  </div>
-                ) : (
+                  ))}
                   <button
                     type="button"
                     onClick={() => photoInputRef.current?.click()}
-                    className="flex items-center justify-center gap-1.5 border border-dashed border-[#1a1a1a]/25 py-3 text-[#1a1a1a]/60 hover:text-[#e2533b] hover:border-[#e2533b] transition-all cursor-pointer font-mono text-[10px] uppercase tracking-wider font-bold max-w-[200px] self-start"
+                    className="flex aspect-square items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#1a1a1a]/25 px-2 text-[#1a1a1a]/60 hover:text-[#e2533b] hover:border-[#e2533b] transition-all cursor-pointer font-mono text-[9px] uppercase tracking-wider font-bold"
                   >
                     <Camera size={14} />
-                    <span>Tải ảnh từ thiết bị</span>
+                    <span>{newPhotoBase64s.length > 0 ? t('review_form.photo_add_more') : t('review_form.photo_upload')}</span>
                   </button>
-                )}
-                {newPhotoBase64s.length > 1 && (
-                  <div className="grid grid-cols-4 gap-2 pt-1 sm:grid-cols-6">
-                    {newPhotoBase64s.map((photo, index) => (
-                      <div key={`${photo}-${index}`} className="relative aspect-square overflow-hidden rounded-xl border border-[#1a1a1a]/10 bg-[#f9f7f2]">
-                        <img src={photo} alt={`Review upload ${index + 1}`} className="h-full w-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setNewPhotoBase64s((photos) => photos.filter((_, currentIndex) => currentIndex !== index))}
-                          className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-[#2c211b]/80 text-white hover:bg-[#e2533b]"
-                          aria-label="Remove review photo"
-                        >
-                          <X size={11} strokeWidth={3} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                </div>
                 <input
                   ref={photoInputRef}
                   type="file"
@@ -523,38 +546,120 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                     </div>
                     
                     <div className="flex-1">
-                      <p className="font-bold text-xs text-[#1a1a1a]">{rev.author}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-xs text-[#1a1a1a]">{rev.author}</p>
+                        {user && user.role === 'Owner' && user.restaurantId === restaurant.id && (
+                          <button
+                            type="button"
+                            onClick={() => onContactUser?.(rev.author)}
+                            className="w-5 h-5 inline-flex items-center justify-center rounded-full bg-[#e2533b]/10 hover:bg-[#e2533b]/20 text-[#e2533b] border border-[#e2533b]/20 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                            title="Liên hệ"
+                          >
+                            <Send size={9} />
+                          </button>
+                        )}
+                      </div>
                       <p className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/40 mt-0.5">{rev.role}</p>
                     </div>
 
-                    {/* Stars indicators */}
-                    <div className="flex text-[#e2533b]">
-                      {Array.from({ length: 5 }).map((_, st) => (
-                        <Star 
-                          key={st} 
-                          size={12} 
-                          className={`select-none ${st < Math.floor(rev.rating) ? 'fill-[#e2533b] text-[#e2533b]' : 'text-slate-300'}`} 
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <p className="font-serif italic text-sm text-[#1a1a1a]/70 leading-relaxed font-light mt-1">
-                    "{rev.comment}"
-                  </p>
-
-                  {getReviewImages(rev).length > 0 && (
-                    <div className="mt-2 w-full max-w-sm overflow-hidden rounded-2xl border border-[#1a1a1a]/10 bg-[#f9f7f2]">
-                      <ImageGallery
-                        images={getReviewImages(rev)}
-                        alt={`${rev.author} review photos`}
-                        className="h-40"
-                        imageClassName="grayscale hover:grayscale-0"
+                  {/* Stars indicators */}
+                  <div className="flex text-[#e2533b]">
+                    {Array.from({ length: 5 }).map((_, st) => (
+                      <Star 
+                        key={st} 
+                        size={12} 
+                        className={`select-none ${st < Math.floor(rev.rating) ? 'fill-[#e2533b] text-[#e2533b]' : 'text-slate-300'}`} 
                       />
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              ))
+
+                <p className="font-serif italic text-sm text-[#1a1a1a]/70 leading-relaxed font-light mt-1">
+                  "{rev.comment}"
+                </p>
+
+                {getReviewImages(rev).length > 0 && (
+                  <div className="mt-2 w-full max-w-sm overflow-hidden rounded-2xl border border-[#1a1a1a]/10 bg-[#f9f7f2]">
+                    <ImageGallery
+                      images={getReviewImages(rev)}
+                      alt={`${rev.author} review photos`}
+                      className="h-40"
+                    />
+                  </div>
+                )}
+
+                {/* Existing Owner Reply */}
+                {rev.ownerReply && (
+                  <div className="mt-2.5 p-4 bg-[#fffcf8] border-l-2 border-[#b76548] rounded-r-2xl text-xs flex flex-col gap-1.5 shadow-[0_2px_8px_rgba(77,49,31,0.04)] animate-in slide-in-from-top-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-mono text-[9px] uppercase font-bold tracking-wider text-[#b76548] flex items-center gap-1">
+                        <BadgeCheck size={11} className="fill-[#b76548] text-white" />
+                        {t('review_form.owner_reply', 'Phản hồi từ chủ quán')}
+                      </span>
+                      {rev.ownerReplyCreatedAt && (
+                        <span className="font-mono text-[8px] uppercase tracking-widest text-[#1a1a1a]/45">
+                          {new Date(rev.ownerReplyCreatedAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-sans text-xs text-[#4c4038] leading-relaxed font-light italic">
+                      "{rev.ownerReply}"
+                    </p>
+                  </div>
+                )}
+
+                {/* Owner Reply Button (only if logged-in user is the owner of this restaurant) */}
+                {user && user.role === 'Owner' && user.restaurantId === restaurant.id && (
+                  <div className="mt-2 flex flex-col gap-2 border-t border-dashed border-[#4b362a]/10 pt-2">
+                    {activeReplyId !== rev.id ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveReplyId(rev.id);
+                          setReplyValue(rev.ownerReply || '');
+                        }}
+                        className="self-start text-[10px] font-mono uppercase tracking-wider font-extrabold text-[#e2533b] hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <MessageSquare size={12} />
+                        {rev.ownerReply ? t('review_form.edit_reply_btn', 'Sửa phản hồi') : t('review_form.reply_btn', 'Phản hồi')}
+                      </button>
+                    ) : (
+                      <div className="flex flex-col gap-2 mt-1 animate-in slide-in-from-top-1">
+                        <span className="font-mono text-[9px] uppercase font-bold text-[#b76548]">
+                          {rev.ownerReply ? t('review_form.edit_reply_btn', 'Sửa phản hồi') : t('review_form.reply_btn', 'Phản hồi')}
+                        </span>
+                        <textarea
+                          value={replyValue}
+                          onChange={(e) => setReplyValue(e.target.value.slice(0, 1000))}
+                          placeholder={t('review_form.reply_placeholder', 'Nhập lời cảm ơn hoặc phản hồi của chủ quán...')}
+                          className="w-full bg-[#fdfcf9] border border-[#1a1a1a]/15 p-2 font-sans text-xs text-[#1a1a1a] focus:outline-none focus:border-[#e2533b] min-h-[60px] resize-none"
+                        />
+                        <div className="flex justify-end gap-2 font-mono text-[9px] uppercase font-bold">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveReplyId(null);
+                              setReplyValue('');
+                            }}
+                            className="px-3 py-1 border border-[#1a1a1a]/15 bg-white text-[#1a1a1a] hover:bg-[#fdfcf9] cursor-pointer"
+                          >
+                            {t('review_form.cancel', 'Hủy')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSendDetailReply(rev.id)}
+                            disabled={replySubmitting}
+                            className="px-4 py-1 bg-[#1a1a1a] hover:bg-[#e2533b] text-white cursor-pointer disabled:opacity-50"
+                          >
+                            {replySubmitting ? t('profile.saving', 'Đang lưu...') : t('review_form.submit', 'Gửi')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))
             )}
           </div>
         </section>
@@ -562,10 +667,10 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
       </main>
 
       {/* Sticky Bottom Action Sheet Row */}
-      <div className="fixed bottom-0 left-0 w-full bg-[#fffaf4]/86 border-t border-white/70 px-4 py-3 shadow-[0_-18px_46px_rgba(77,49,31,0.12)] z-40 flex justify-center pb-safe backdrop-blur-xl">
+      <div className="fixed bottom-20 left-0 w-full bg-[#fffaf4]/86 border-t border-white/70 px-4 py-3 shadow-[0_-18px_46px_rgba(77,49,31,0.12)] z-[70] flex justify-center pb-safe backdrop-blur-xl md:bottom-0">
         <button 
           onClick={onOpenBooking}
-          className="foodio-btn foodio-btn-primary w-full max-w-md font-mono text-[10px] uppercase tracking-widest text-center cursor-pointer"
+          className="foodio-btn foodio-btn-primary h-12 w-full max-w-md !py-0 font-mono text-[10px] uppercase tracking-widest text-center cursor-pointer"
         >
           {t('detail.book_table')}
         </button>

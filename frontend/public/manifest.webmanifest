@@ -2,7 +2,7 @@
   "name": "Foodio CraveMap",
   "short_name": "CraveMap",
   "description": "Culinary tourism guide and food exploration system",
-  "start_url": "/",
+  "start_url": "/map",
   "display": "standalone",
   "background_color": "#fdfcf9",
   "theme_color": "#e2533b",

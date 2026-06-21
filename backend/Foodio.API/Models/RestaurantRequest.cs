@@ -43,7 +43,6 @@ public class RestaurantRequest
     public string OpeningHours { get; set; } = string.Empty;
 
     [Required]
-    [MaxLength(1000)]
     public string Image { get; set; } = string.Empty;
 
     [Column(TypeName = "decimal(9,6)")]

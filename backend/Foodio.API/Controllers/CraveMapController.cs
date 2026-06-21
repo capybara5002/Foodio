@@ -29,15 +29,20 @@ public class CraveMapController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<RestaurantDto>>> GetRestaurants(
         [FromQuery] int? categoryId,
         [FromQuery] int? foodStreetId,
-        [FromQuery] string? search)
+        [FromQuery] string? search,
+        [FromQuery] bool includeInactive = false)
     {
         var query = _db.Restaurants
             .AsNoTracking()
-            .Where(restaurant => restaurant.IsActive)
             .Include(restaurant => restaurant.Category)
             .Include(restaurant => restaurant.Dishes)
             .Include(restaurant => restaurant.Reviews)
             .AsQueryable();
+
+        if (!includeInactive)
+        {
+            query = query.Where(restaurant => restaurant.IsActive);
+        }
 
         if (categoryId.HasValue)
         {
@@ -210,7 +215,14 @@ public class CraveMapController : ControllerBase
 
         try
         {
-            var thread = await _chatService.EnsureThreadAsync(dto.RestaurantId, dto.UserId);
+            var resolvedUserId = dto.UserId;
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == dto.UserId || u.Username == dto.UserId);
+            if (user != null)
+            {
+                resolvedUserId = user.Id;
+            }
+
+            var thread = await _chatService.EnsureThreadAsync(dto.RestaurantId, resolvedUserId);
             await _chatHub.Clients.Group($"restaurant:{thread.RestaurantId}").SendAsync("ThreadUpdated", thread);
             return Ok(thread);
         }
@@ -296,9 +308,19 @@ public class CraveMapController : ControllerBase
     [HttpPost("bookings")]
     public async Task<ActionResult<BookingDto>> CreateBooking([FromBody] BookingRequestDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.RestaurantId))
+        var restaurantId = dto.RestaurantId?.Trim();
+        var seating = dto.Seating?.Trim();
+        var userId = string.IsNullOrWhiteSpace(dto.UserId) ? "usr_3" : dto.UserId.Trim();
+        var tableNumber = string.IsNullOrWhiteSpace(dto.TableNumber) ? null : dto.TableNumber.Trim();
+
+        if (string.IsNullOrWhiteSpace(restaurantId))
         {
             return BadRequest("RestaurantId is required.");
+        }
+
+        if (restaurantId.Length > 64)
+        {
+            return BadRequest("RestaurantId must be 64 characters or fewer.");
         }
 
         if (dto.Guests <= 0)
@@ -306,9 +328,24 @@ public class CraveMapController : ControllerBase
             return BadRequest("Guests must be greater than zero.");
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Seating))
+        if (string.IsNullOrWhiteSpace(seating))
         {
             return BadRequest("Seating is required.");
+        }
+
+        if (seating.Length > 40)
+        {
+            return BadRequest("Seating must be 40 characters or fewer.");
+        }
+
+        if (userId.Length > 64)
+        {
+            return BadRequest("UserId must be 64 characters or fewer.");
+        }
+
+        if (tableNumber?.Length > 40)
+        {
+            return BadRequest("TableNumber must be 40 characters or fewer.");
         }
 
         if (!DateOnly.TryParseExact(dto.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ||
@@ -317,34 +354,50 @@ public class CraveMapController : ControllerBase
             return BadRequest("Date and time must be valid ISO-compatible values.");
         }
 
-        var restaurantExists = await _db.Restaurants.AnyAsync(restaurant => restaurant.Id == dto.RestaurantId);
+        var restaurantExists = await _db.Restaurants.AnyAsync(restaurant => restaurant.Id == restaurantId);
         if (!restaurantExists)
         {
             return NotFound("Restaurant was not found.");
         }
 
+        // Check for double bookings on the same date, same time, and same table by a different user
+        var conflictExists = await _db.Bookings.AnyAsync(b =>
+            b.RestaurantId == restaurantId &&
+            b.Date == date &&
+            b.Time == time &&
+            (b.TableNumber == tableNumber || b.Seating == seating) &&
+            b.UserId != userId &&
+            b.Status != "Cancelled" &&
+            b.Status != "Rejected" &&
+            b.Status != "Đã hủy");
+
+        if (conflictExists)
+        {
+            return BadRequest("Bàn này đã được khách hàng khác đặt vào thời gian này.");
+        }
+
         var booking = new Booking
         {
-            RestaurantId = dto.RestaurantId,
+            RestaurantId = restaurantId,
             Date = date,
             Time = time,
             Guests = dto.Guests,
-            Seating = dto.Seating,
+            Seating = seating,
             Status = "Pending",
-            UserId = dto.UserId ?? "usr_3",
-            TableNumber = dto.TableNumber,
+            UserId = userId,
+            TableNumber = tableNumber,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         _db.Bookings.Add(booking);
 
-        var owner = await _db.Users.FirstOrDefaultAsync(u => u.RestaurantId == dto.RestaurantId && u.Role == "Owner");
+        var owner = await _db.Users.FirstOrDefaultAsync(u => u.RestaurantId == restaurantId && u.Role == "Owner");
         if (owner != null)
         {
             var notification = new Notification
             {
                 UserId = owner.Id,
-                RestaurantId = dto.RestaurantId,
+                RestaurantId = restaurantId,
                 Type = "Booking",
                 Title = "Đơn đặt bàn mới",
                 Body = $"Nhận được đơn đặt bàn mới từ khách hàng cho {dto.Guests} khách vào lúc {dto.Time} ngày {dto.Date}.",
@@ -355,7 +408,7 @@ public class CraveMapController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        var threadDto = await _chatService.EnsureThreadAsync(dto.RestaurantId, dto.UserId ?? "usr_3");
+        var threadDto = await _chatService.EnsureThreadAsync(restaurantId, userId);
         var thread = await _db.ChatThreads.FindAsync(threadDto.Id);
         if (thread is not null)
         {

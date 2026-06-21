@@ -30,8 +30,14 @@ public class Review
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
-    [MaxLength(1000)]
     public string? ImageUrl { get; set; }
+
+    public string? ImageUrlsJson { get; set; }
+
+    [MaxLength(1200)]
+    public string? OwnerReply { get; set; }
+
+    public DateTimeOffset? OwnerReplyCreatedAt { get; set; }
 
     [Required]
     [MaxLength(64)]

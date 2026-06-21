@@ -41,7 +41,6 @@ public class Restaurant
     public string? TableStatuses { get; set; }
 
     [Required]
-    [MaxLength(1000)]
     public string Image { get; set; } = string.Empty;
 
     public bool IsVerified { get; set; }

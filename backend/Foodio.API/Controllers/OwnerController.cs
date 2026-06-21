@@ -66,6 +66,14 @@ public class OwnerController : ControllerBase
             return NotFound("Restaurant not found.");
         }
 
+        // Check if new coordinates overlap with another restaurant
+        var isLocationDuplicate = await _db.Restaurants
+            .AnyAsync(r => r.Id != restaurantId && r.Latitude == dto.Latitude && r.Longitude == dto.Longitude);
+        if (isLocationDuplicate)
+        {
+            return BadRequest("Tọa độ này đã được sử dụng bởi một quán ăn khác. Vui lòng chọn tọa độ khác.");
+        }
+
         var audit = new AuditLog
         {
             Actor = owner.Username,
@@ -199,6 +207,16 @@ public class OwnerController : ControllerBase
             .FirstOrDefaultAsync(r => r.OwnerId == ownerId && r.Status == "Pending");
         if (existing != null)
             return BadRequest("You already have a pending request.");
+
+        // Check if coordinates overlap with an existing restaurant or another pending request
+        var isLocationDuplicate = await _db.Restaurants
+            .AnyAsync(r => r.Latitude == dto.Latitude && r.Longitude == dto.Longitude);
+        var isLocationDuplicateInRequests = await _db.RestaurantRequests
+            .AnyAsync(r => r.Status == "Pending" && r.Latitude == dto.Latitude && r.Longitude == dto.Longitude);
+        if (isLocationDuplicate || isLocationDuplicateInRequests)
+        {
+            return BadRequest("Tọa độ này đã được đăng ký hoặc đang chờ duyệt bởi một quán ăn khác. Vui lòng chọn tọa độ khác.");
+        }
 
         var request = new RestaurantRequest
         {
@@ -417,6 +435,43 @@ public class OwnerController : ControllerBase
 
         await _db.SaveChangesAsync();
         return Ok(new { message = "Review reported successfully." });
+    }
+
+    public record ReviewReplyDto(string Reply);
+
+    [HttpPost("reviews/{reviewId}/reply")]
+    public async Task<ActionResult<FoodieReviewDto>> ReplyToReview(string reviewId, [FromBody] ReviewReplyDto dto, [FromQuery] string ownerId)
+    {
+        var review = await _db.Reviews.Include(r => r.Restaurant).FirstOrDefaultAsync(r => r.Id == reviewId);
+        if (review == null) return NotFound("Review not found.");
+
+        var owner = await GetOwnerForRestaurantAsync(ownerId, review.RestaurantId);
+        if (owner is null)
+        {
+            return OwnerForbidden();
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Reply))
+        {
+            return BadRequest("Nội dung phản hồi không được để trống.");
+        }
+
+        review.OwnerReply = dto.Reply.Trim();
+        review.OwnerReplyCreatedAt = DateTimeOffset.UtcNow;
+
+        var log = new AuditLog
+        {
+            Actor = owner.Username,
+            Action = "Phản hồi đánh giá",
+            EntityType = "Review",
+            EntityId = reviewId,
+            Timestamp = DateTimeOffset.UtcNow,
+            Details = $"Phản hồi đánh giá của '{review.Author}': \"{dto.Reply}\""
+        };
+        _db.AuditLogs.Add(log);
+
+        await _db.SaveChangesAsync();
+        return Ok(review.ToDto());
     }
 
     [HttpGet("restaurant/{restaurantId}/analytics")]

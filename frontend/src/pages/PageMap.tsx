@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type CSSProperties, type PointerEvent } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
@@ -42,6 +42,7 @@ const MAP_ZOOM = 16;
 const SW_BOUNDS: [number, number] = [10.7500, 106.6950];
 const NE_BOUNDS: [number, number] = [10.7650, 106.7150];
 const MAX_BOUNDS = L.latLngBounds(SW_BOUNDS, NE_BOUNDS);
+type SheetStage = 'peek' | 'expanded';
 
 // Custom teardrop pin shape for food stalls
 const getIconSvg = (category: string, size: number) => {
@@ -237,13 +238,21 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
   // Transition state for smooth sliding animations
   const [activeRestaurant, setActiveRestaurant] = useState<Restaurant | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [sheetStage, setSheetStage] = useState<SheetStage>('peek');
+  const [sheetDragOffset, setSheetDragOffset] = useState(0);
+  const [isSheetDragging, setIsSheetDragging] = useState(false);
+  const sheetDragStartRef = useRef<{ y: number; moved: boolean } | null>(null);
 
   useEffect(() => {
     if (selectedRestaurant) {
       setActiveRestaurant(selectedRestaurant);
       setIsOpen(true);
+      setSheetStage('peek');
+      setSheetDragOffset(0);
     } else {
       setIsOpen(false);
+      setSheetDragOffset(0);
+      setIsSheetDragging(false);
       const timer = setTimeout(() => {
         setActiveRestaurant(null);
       }, 300); // Wait for transition duration (300ms) before unmounting content
@@ -341,6 +350,55 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
     setSelectedRestaurant(restaurant);
   };
 
+  const handleSheetDragStart = (event: PointerEvent<HTMLDivElement>) => {
+    if (window.innerWidth >= 768) return;
+    sheetDragStartRef.current = { y: event.clientY, moved: false };
+    setIsSheetDragging(true);
+    setSheetDragOffset(0);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleSheetDragMove = (event: PointerEvent<HTMLDivElement>) => {
+    const dragStart = sheetDragStartRef.current;
+    if (!dragStart) return;
+
+    const deltaY = event.clientY - dragStart.y;
+    if (Math.abs(deltaY) > 4) {
+      dragStart.moved = true;
+      event.preventDefault();
+    }
+
+    setSheetDragOffset(Math.max(-180, deltaY));
+  };
+
+  const handleSheetDragEnd = (event: PointerEvent<HTMLDivElement>) => {
+    const dragStart = sheetDragStartRef.current;
+    if (!dragStart) return;
+
+    const deltaY = event.clientY - dragStart.y;
+    sheetDragStartRef.current = null;
+    setIsSheetDragging(false);
+    setSheetDragOffset(0);
+
+    if (deltaY > 120) {
+      setSelectedRestaurant(null);
+      return;
+    }
+
+    if (deltaY > 56 && sheetStage === 'expanded') {
+      setSheetStage('peek');
+      return;
+    }
+
+    if (deltaY < -56) {
+      setSheetStage('expanded');
+    }
+  };
+
+  const sheetStyle = {
+    '--sheet-drag-offset': `${sheetDragOffset}px`
+  } as CSSProperties;
+
   useEffect(() => {
     if (!searchSelection) return;
 
@@ -414,24 +472,38 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           bottom: 0;
           left: 0;
           width: 100%;
-          height: 58vh;
-          max-height: 620px;
+          height: min(58dvh, 620px);
+          max-height: 100%;
           border: 1px solid rgba(75, 54, 42, 0.12);
           border-bottom: none;
           border-radius: 28px 28px 0 0;
           box-shadow: 0 -24px 70px rgba(77, 49, 31, 0.18);
-          transform: translateY(100%);
-          transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+          transform: translateY(calc(100% + var(--sheet-drag-offset, 0px)));
+          transition:
+            height 0.32s cubic-bezier(0.32, 0.72, 0, 1),
+            transform 0.42s cubic-bezier(0.32, 0.72, 0, 1),
+            visibility 0.42s cubic-bezier(0.32, 0.72, 0, 1);
           z-index: 1005;
           visibility: hidden;
+          will-change: height, transform;
         }
         .info-panel.open {
-          transform: translateY(0);
+          transform: translateY(var(--sheet-drag-offset, 0px));
           visibility: visible;
         }
+        .info-panel.expanded {
+          height: 100%;
+          max-height: 100%;
+        }
+        .info-panel.dragging {
+          transition: none;
+        }
         .info-panel.closed {
-          transform: translateY(100%);
+          transform: translateY(calc(100% + var(--sheet-drag-offset, 0px)));
           visibility: hidden;
+        }
+        .sheet-scroll {
+          overscroll-behavior: contain;
         }
         .map-container-wrap {
           position: absolute;
@@ -459,6 +531,10 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           .info-panel.open {
             transform: translateX(0);
           }
+          .info-panel.expanded {
+            height: calc(100% - 32px);
+            max-height: calc(100% - 32px);
+          }
           .info-panel.closed {
             transform: translateX(-100%);
           }
@@ -474,17 +550,24 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
       `}</style>
 
       {/* Left/Bottom Section: Google Maps-Style Responsive Details Panel */}
-      <aside className={`info-panel ${isOpen ? 'open' : 'closed'} bg-[#fffaf4]/95 flex flex-col overflow-hidden`}>
+      <aside
+        className={`info-panel ${isOpen ? 'open' : 'closed'} ${sheetStage === 'expanded' ? 'expanded' : ''} ${isSheetDragging ? 'dragging' : ''} bg-[#fffaf4]/95 flex flex-col overflow-hidden`}
+        style={sheetStyle}
+      >
         {/* Mobile bottom sheet drag handle */}
         <div
-          onClick={() => setSelectedRestaurant(null)}
-          className="md:hidden flex justify-center py-3 shrink-0 bg-[#fdfcf9] border-b border-[#1a1a1a]/5 cursor-pointer rounded-t-[16px]"
+          onPointerDown={handleSheetDragStart}
+          onPointerMove={handleSheetDragMove}
+          onPointerUp={handleSheetDragEnd}
+          onPointerCancel={handleSheetDragEnd}
+          className="md:hidden flex justify-center py-3 shrink-0 bg-[#fdfcf9] border-b border-[#1a1a1a]/5 cursor-grab active:cursor-grabbing rounded-t-[16px] touch-none"
+          aria-label="Drag restaurant details panel"
         >
           <div className="w-12 h-1 bg-[#1a1a1a]/20 rounded-full" />
         </div>
 
         {/* Scrollable Panel Content wrapper */}
-        <div className="flex-1 overflow-y-auto hide-scrollbar">
+        <div className="sheet-scroll flex-1 overflow-y-auto hide-scrollbar">
           {activeRestaurant && (
             <div className="w-full flex flex-col">
               {/* Header Banner Image */}
@@ -504,7 +587,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
               </div>
 
               {/* Info details wrapper */}
-              <div className="p-4 flex flex-col gap-4">
+              <div className="p-4 pb-28 md:pb-4 flex flex-col gap-4">
 
                 {/* Header Title Section */}
                 <div className="flex flex-col gap-1.5 text-left">
@@ -728,32 +811,6 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
               className="w-12 h-12 bg-white text-[#1a1a1a] hover:text-[#e2533b] rounded-none shadow-xl flex items-center justify-center border-2 border-[#1a1a1a] hover:bg-[#f9f7f2] active:scale-90 transition-all pointer-events-auto cursor-pointer group"
             >
               <LocateFixed size={22} className="group-hover:scale-110 transition-transform" />
-            </button>
-          </div>
-
-          <div
-            onClick={onSelectTour}
-            className="w-full md:w-[380px] self-start md:self-end bg-white rounded-none p-3 shadow-xl border-2 border-[#1a1a1a] pointer-events-auto flex items-center gap-3 transform transition-transform hover:-translate-y-1 cursor-pointer"
-          >
-            <div
-              className="w-16 h-16 rounded-none bg-cover bg-center shrink-0 border border-[#1a1a1a]/15 grayscale"
-              style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBDjvGT6gPlZtXxuECzVxFZA8EEO6irjnnzNm5dhbe_NgWa3EeWsxrWIIABSP3XyA3AbrFQAcGEqIzhi9lKRnwGi034jy7uRSUQnjW6xBD1rrw_Uhe0CEF3qcPN_rno8GRzuVlD_sMExHBf5wQMGp5p6gBf1D5b1LmHi4frvclFfTPXEPz4UNk8BqaFVDrKmZ8uP51ERO88KQb-E2iqOYYwZy8oztX-MBx4M-EjtaSzoQaPOyZGRzc2OX8WB7ksMcxEzPKr2c09xA')" }}
-            />
-            <div className="flex-1 min-w-0 text-left">
-              <div className="flex items-center gap-1.5 mb-1 text-[9px] select-none font-semibold">
-                <span className="px-1.5 py-0.5 bg-[#e2533b] text-white rounded-none font-mono uppercase tracking-wider text-[8px]">{t('map.curated')}</span>
-                <span className="flex items-center text-[#e2533b] font-mono uppercase tracking-wider text-[8px] font-extrabold">
-                  <Flame size={11} className="mr-1 inline-block align-middle fill-current" />{t('map.hot')}
-                </span>
-              </div>
-              <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] mb-0.5 truncate">Vinh Khanh Night Tour</h3>
-              <p className="font-sans font-light text-[11px] text-[#1a1a1a]/60 truncate">5 stops • Guided local tasting</p>
-            </div>
-            <button
-              type="button"
-              className="w-8 h-8 rounded-none bg-[#1a1a1a] hover:bg-[#e2533b] text-white flex items-center justify-center shrink-0 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
-            >
-              <ArrowRight size={16} />
             </button>
           </div>
         </div>

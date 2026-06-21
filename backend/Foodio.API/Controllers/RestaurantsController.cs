@@ -3,6 +3,7 @@ using Foodio.API.DTOs;
 using Foodio.API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace Foodio.API.Controllers;
 
@@ -130,6 +131,15 @@ public class RestaurantsController : ControllerBase
             return NotFound("Restaurant not found.");
         }
 
+        var imageUrls = (dto.ImageUrls ?? [])
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .ToList();
+
+        if (imageUrls.Count == 0 && !string.IsNullOrWhiteSpace(dto.ImageUrl))
+        {
+            imageUrls.Add(dto.ImageUrl);
+        }
+
         var review = new Review
         {
             Id = string.IsNullOrWhiteSpace(dto.Id) ? $"rev_{Guid.NewGuid():N}" : dto.Id,
@@ -139,7 +149,8 @@ public class RestaurantsController : ControllerBase
             Rating = dto.Rating,
             Comment = dto.Comment,
             Avatar = string.IsNullOrWhiteSpace(dto.Avatar) ? "AN" : dto.Avatar,
-            ImageUrl = dto.ImageUrl,
+            ImageUrl = imageUrls.FirstOrDefault(),
+            ImageUrlsJson = imageUrls.Count > 0 ? JsonSerializer.Serialize(imageUrls) : null,
             CreatedAt = DateTimeOffset.UtcNow
         };
 

@@ -25,7 +25,10 @@ public record FoodieReviewDto(
     decimal Rating,
     string Comment,
     string Avatar,
-    string? ImageUrl);
+    string? ImageUrl,
+    string? OwnerReply = null,
+    DateTimeOffset? OwnerReplyCreatedAt = null,
+    IReadOnlyList<string>? ImageUrls = null);
 
 public record RestaurantDto(
     string Id,
@@ -42,6 +45,7 @@ public record RestaurantDto(
     string Image,
     bool IsVerified,
     string ReplySpeed,
+    bool IsActive,
     decimal Latitude,
     decimal Longitude,
     int CategoryId,
@@ -238,6 +242,28 @@ public record QrVerifyResponseDto(
     string RestaurantName,
     int TableNumber,
     string Token);
+
+public record PaymentIntentRequestDto(string AccessType = "Customer");
+
+public record PaymentConfirmRequestDto(string ClientToken, string? Method = null);
+
+public record PaymentValidateRequestDto(string ClientToken);
+
+public record PaymentSessionDto(
+    string Id,
+    string ClientToken,
+    string AccessType,
+    decimal Amount,
+    string Currency,
+    string Status,
+    string Provider,
+    string PaymentReference,
+    string QrPayload,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? PaidAt,
+    DateTimeOffset? ExpiresAt,
+    int RemainingSeconds,
+    bool IsActive);
 
 public record RestaurantRequestCreateDto(
     string Name,

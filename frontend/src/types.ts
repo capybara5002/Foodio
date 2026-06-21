@@ -20,6 +20,8 @@ export interface FoodieReview {
   avatar: string;
   imageUrl?: string;
   imageUrls?: string[];
+  ownerReply?: string;
+  ownerReplyCreatedAt?: string;
 }
 
 export interface User {
@@ -33,6 +35,25 @@ export interface User {
   isActive: boolean;
   createdAt?: string;
   avatar?: string;
+}
+
+export type PaymentAccessType = 'Customer' | 'Owner';
+
+export interface PaymentSession {
+  id: string;
+  clientToken: string;
+  accessType: PaymentAccessType;
+  amount: number;
+  currency: string;
+  status: 'Pending' | 'Paid' | 'Expired' | string;
+  provider: string;
+  paymentReference: string;
+  qrPayload: string;
+  createdAt: string;
+  paidAt?: string | null;
+  expiresAt?: string | null;
+  remainingSeconds: number;
+  isActive: boolean;
 }
 
 export interface Notification {
@@ -71,6 +92,7 @@ export interface Restaurant {
   tableStatuses?: string;
   image: string;
   isVerified: boolean;
+  isActive?: boolean;
   replySpeed: string;
   latitude?: number;
   longitude?: number;
