@@ -14,8 +14,45 @@ public static class MappingExtensions
     public static DishDto ToDto(this MenuItem dish) =>
         new(dish.Id, dish.Name, dish.Price, dish.Image, dish.Description);
 
-    public static FoodieReviewDto ToDto(this Review review) =>
-        new(review.Id, review.Author, review.Role, review.Rating, review.Comment, review.Avatar, review.ImageUrl, review.OwnerReply, review.OwnerReplyCreatedAt);
+    public static FoodieReviewDto ToDto(this Review review)
+    {
+        var imageUrls = DeserializeReviewImages(review.ImageUrlsJson);
+        if (imageUrls.Count == 0 && !string.IsNullOrWhiteSpace(review.ImageUrl))
+        {
+            imageUrls.Add(review.ImageUrl);
+        }
+
+        return new(
+            review.Id,
+            review.Author,
+            review.Role,
+            review.Rating,
+            review.Comment,
+            review.Avatar,
+            review.ImageUrl,
+            review.OwnerReply,
+            review.OwnerReplyCreatedAt,
+            imageUrls);
+    }
+
+    private static List<string> DeserializeReviewImages(string? imageUrlsJson)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrlsJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(imageUrlsJson)?
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .ToList() ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
 
     public static UserDto ToDto(this User user) =>
         new(user.Id, user.Username, user.Email, user.Role, user.RestaurantId, user.OwnerStatus, user.IsActive, user.CreatedAt, user.Avatar);

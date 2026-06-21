@@ -439,44 +439,29 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                   )}
                 </div>
                 
-                {newPhotoBase64s.length > 0 ? (
-                  <div className="relative aspect-video w-full max-w-[200px] border border-[#1a1a1a]/15 overflow-hidden group cursor-pointer" onClick={() => photoInputRef.current?.click()}>
-                    <img 
-                      src={newPhotoBase64s[0]} 
-                      alt="Uploaded Food" 
-                      className="w-full h-full object-cover" 
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <span className="text-white text-[9px] uppercase font-mono tracking-wider font-bold">{t('review_form.photo_change')}</span>
+                <div className="grid grid-cols-3 gap-2 pt-1 sm:grid-cols-5">
+                  {newPhotoBase64s.map((photo, index) => (
+                    <div key={`${photo}-${index}`} className="relative aspect-square overflow-hidden rounded-xl border border-[#1a1a1a]/10 bg-[#f9f7f2]">
+                      <img src={photo} alt={`Review upload ${index + 1}`} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setNewPhotoBase64s((photos) => photos.filter((_, currentIndex) => currentIndex !== index))}
+                        className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-[#2c211b]/80 text-white hover:bg-[#e2533b]"
+                        aria-label="Remove review photo"
+                      >
+                        <X size={11} strokeWidth={3} />
+                      </button>
                     </div>
-                  </div>
-                ) : (
+                  ))}
                   <button
                     type="button"
                     onClick={() => photoInputRef.current?.click()}
-                    className="flex items-center justify-center gap-1.5 border border-dashed border-[#1a1a1a]/25 py-3 text-[#1a1a1a]/60 hover:text-[#e2533b] hover:border-[#e2533b] transition-all cursor-pointer font-mono text-[10px] uppercase tracking-wider font-bold max-w-[200px] self-start"
+                    className="flex aspect-square items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#1a1a1a]/25 px-2 text-[#1a1a1a]/60 hover:text-[#e2533b] hover:border-[#e2533b] transition-all cursor-pointer font-mono text-[9px] uppercase tracking-wider font-bold"
                   >
                     <Camera size={14} />
-                    <span>Tải ảnh từ thiết bị</span>
+                    <span>{newPhotoBase64s.length > 0 ? t('review_form.photo_add_more') : t('review_form.photo_upload')}</span>
                   </button>
-                )}
-                {newPhotoBase64s.length > 1 && (
-                  <div className="grid grid-cols-4 gap-2 pt-1 sm:grid-cols-6">
-                    {newPhotoBase64s.map((photo, index) => (
-                      <div key={`${photo}-${index}`} className="relative aspect-square overflow-hidden rounded-xl border border-[#1a1a1a]/10 bg-[#f9f7f2]">
-                        <img src={photo} alt={`Review upload ${index + 1}`} className="h-full w-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setNewPhotoBase64s((photos) => photos.filter((_, currentIndex) => currentIndex !== index))}
-                          className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-[#2c211b]/80 text-white hover:bg-[#e2533b]"
-                          aria-label="Remove review photo"
-                        >
-                          <X size={11} strokeWidth={3} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                </div>
                 <input
                   ref={photoInputRef}
                   type="file"
@@ -599,7 +584,6 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
                       images={getReviewImages(rev)}
                       alt={`${rev.author} review photos`}
                       className="h-40"
-                      imageClassName="grayscale hover:grayscale-0"
                     />
                   </div>
                 )}

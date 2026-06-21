@@ -32,6 +32,8 @@ public class Review
 
     public string? ImageUrl { get; set; }
 
+    public string? ImageUrlsJson { get; set; }
+
     [MaxLength(1200)]
     public string? OwnerReply { get; set; }
 

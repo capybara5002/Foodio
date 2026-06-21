@@ -264,6 +264,8 @@
     "photo_attachment": "Photo Attachment",
     "photo_delete": "Delete Photo",
     "photo_change": "Change Photo",
+    "photo_upload": "Upload photos",
+    "photo_add_more": "Add more",
     "photo_preset": "Attach Preset Photo",
     "cancel": "Cancel",
     "submit": "Submit Review",

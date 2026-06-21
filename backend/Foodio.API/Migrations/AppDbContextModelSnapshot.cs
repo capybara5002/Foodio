@@ -753,6 +753,9 @@ namespace Foodio.API.Migrations
                     b.Property<string>("ImageUrl")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ImageUrlsJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("OwnerReply")
                         .HasMaxLength(1200)
                         .HasColumnType("nvarchar(1200)");

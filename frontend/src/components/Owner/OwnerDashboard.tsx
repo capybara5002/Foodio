@@ -7,6 +7,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaf
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiBase } from '../../api/apiConfig';
+import ImageGallery from '../Common/ImageGallery';
 
 // Leaflet standard icon fixes
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -1944,8 +1945,12 @@ export default function OwnerDashboard({ onRestaurantUpdated }: OwnerDashboardPr
                         </div>
                       </div>
                       <p className="text-xs text-[#1a1a1a]/80 mt-1 leading-relaxed italic">"{rev.comment}"</p>
-                      {rev.imageUrl && (
-                        <img src={rev.imageUrl} alt="Attachment" className="mt-2 w-32 h-20 object-cover border border-[#1a1a1a]/20" />
+                      {(rev.imageUrls?.length > 0 || rev.imageUrl) && (
+                        <ImageGallery
+                          images={rev.imageUrls?.length > 0 ? rev.imageUrls : [rev.imageUrl]}
+                          alt={`${rev.author} review photos`}
+                          className="mt-2 h-32 w-full max-w-xs border border-[#1a1a1a]/20"
+                        />
                       )}
                       <span className="text-[10px] font-mono text-slate-400 mt-2 block">
                         {rev.createdAt ? new Date(rev.createdAt).toLocaleString() : ''}
