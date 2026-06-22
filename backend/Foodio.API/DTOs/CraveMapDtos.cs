@@ -198,6 +198,8 @@ public record UserDto(
 
 public record UserLoginRequestDto(string Email, string Password);
 
+public record GoogleLoginRequestDto(string Credential);
+
 public record UserRegisterRequestDto(string Username, string Email, string Password);
 
 public record UpdatePasswordRequestDto(string Email, string CurrentPassword, string NewPassword);

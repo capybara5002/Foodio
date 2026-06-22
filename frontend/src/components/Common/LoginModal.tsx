@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Eye, EyeOff, X, User, Store, Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { GoogleLogin } from '@react-oauth/google';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ interface LoginModalProps {
 
 export default function LoginModal({ isOpen, onClose, onSuccess, message }: LoginModalProps) {
   const { t } = useTranslation();
-  const { login, register } = useAuth();
+  const { login, googleLogin, register } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -39,6 +40,26 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
       if (onSuccess) onSuccess();
     } catch (err: any) {
       setError(err.message || t('login.error_general'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async (credential?: string) => {
+    if (!credential) {
+      setError('Google không trả về thông tin đăng nhập. Vui lòng thử lại.');
+      return;
+    }
+
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      await googleLogin(credential);
+      onClose();
+      onSuccess?.();
+    } catch (err: any) {
+      setError(err.message || 'Đăng nhập Google thất bại.');
     } finally {
       setIsLoading(false);
     }
@@ -141,6 +162,23 @@ export default function LoginModal({ isOpen, onClose, onSuccess, message }: Logi
             {isLoading ? 'Processing...' : isRegister ? t('login.register_button') : t('login.login_button')}
           </button>
         </form>
+
+        <div className="my-5 flex items-center gap-3">
+          <span className="h-px flex-1 bg-[#4b362a]/15" />
+          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#6f655b]">hoặc</span>
+          <span className="h-px flex-1 bg-[#4b362a]/15" />
+        </div>
+
+        <div className={`flex justify-center ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
+          <GoogleLogin
+            onSuccess={(response) => handleGoogleLogin(response.credential)}
+            onError={() => setError('Không thể mở đăng nhập Google. Vui lòng thử lại.')}
+            text="continue_with"
+            shape="pill"
+            size="large"
+            width="380"
+          />
+        </div>
 
         <div className="mt-4 text-center">
           <button
