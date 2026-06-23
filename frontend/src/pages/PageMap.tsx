@@ -15,6 +15,8 @@ import { X, BadgeCheck, Star, Bookmark, MapPin, Map, Clock, LocateFixed, Flame, 
 import { startLocationTracking, stopLocationTracking, LocationMode } from '../services/locationService';
 import { checkGeofences } from '../services/geofenceEngine';
 import { playNarration, stopNarration, onNarrationStart, onNarrationEnd, getMuted, setMuted } from '../services/narrationEngine';
+import MultiLanguageAudioGuide from '../components/MultiLanguageAudioGuide';
+import ImageGallery from '../components/Common/ImageGallery';
 
 // Standard Leaflet asset fixes for Vite builds to prevent broken image references
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -232,7 +234,7 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
 }
 
 export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, onContactRestaurant, savedRestaurantIds, onToggleSavedRestaurant, searchSelection }: PageMapProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [locateTrigger, setLocateTrigger] = useState(false);
   const [gpsNotification, setGpsNotification] = useState(false);
@@ -411,6 +413,12 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
   }, [restaurants, searchSelection]);
 
   const selectedCoords = selectedRestaurant ? getCoordinates(selectedRestaurant) : null;
+  const getReviewImages = (review: { imageUrl?: string; imageUrls?: string[] }) =>
+    review.imageUrls && review.imageUrls.length > 0
+      ? review.imageUrls
+      : review.imageUrl
+        ? [review.imageUrl]
+        : [];
 
   return (
     <div className="foodio-map-shell fixed inset-x-0 top-[72px] bottom-0 flex bg-[#f7efe4] overflow-hidden text-[#2c211b] z-40 transition-all duration-300">
@@ -656,6 +664,15 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                   {t('map.contact_restaurant')}
                 </button>
 
+                {/* Keep the restaurant audio guide available directly in the map details panel. */}
+                <MultiLanguageAudioGuide
+                  key={activeRestaurant.id}
+                  title={`${activeRestaurant.name} audio guide`}
+                  sourceText={activeRestaurant.description || `${activeRestaurant.name}. ${activeRestaurant.category} restaurant located at ${activeRestaurant.address}, ${activeRestaurant.area}. Recommended dishes include ${activeRestaurant.dishes.map((dish) => dish.name).slice(0, 3).join(', ') || 'local specialties'}.`}
+                  defaultLang={i18n.language?.split('-')[0] || 'en'}
+                  className="!rounded-none !p-3 !shadow-none"
+                />
+
                 {/* Address Card details */}
                 <div className="flex flex-col gap-2.5 p-3 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-[11px] text-[#1a1a1a] text-left">
                   <div className="flex items-start gap-2.5">
@@ -696,27 +713,75 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                   </div>
                 </div>
 
-                {/* Reviews Preview list */}
+                {/* Full review details, matching the restaurant detail page. */}
                 <div className="flex flex-col gap-2 text-left pb-6">
-                  <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] border-b border-[#1a1a1a]/10 pb-1">Reviews</h3>
-                  <div className="flex flex-col gap-2">
-                    {activeRestaurant.reviews.slice(0, 2).map((rev) => (
+                  <h3 className="font-serif italic font-bold text-sm text-[#1a1a1a] border-b border-[#1a1a1a]/10 pb-1">
+                    {t('detail.foodie_reviews')}
+                  </h3>
+                  <div className="flex flex-col gap-3">
+                    {activeRestaurant.reviews.length === 0 && (
+                      <div className="w-full py-5 text-center font-mono text-[9px] font-bold uppercase text-[#1a1a1a]/40">
+                        {t('detail.no_reviews')}
+                      </div>
+                    )}
+                    {activeRestaurant.reviews.map((rev) => (
                       <div
                         key={rev.id}
-                        className="bg-white p-2.5 rounded-none border border-[#1a1a1a]/10 relative text-left"
+                        className="relative flex flex-col gap-2.5 overflow-hidden rounded-none border border-[#4b362a]/10 bg-[#fffdf8] p-3.5 text-left shadow-[0_8px_24px_rgba(77,49,31,0.07)]"
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center font-mono font-bold text-[10px] select-none">
+                        <span className="pointer-events-none absolute right-2 top-2 select-none font-serif text-5xl font-black italic leading-none text-[#1a1a1a]/5">“</span>
+
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-[#1a1a1a] font-mono text-[10px] font-bold text-white">
                             {rev.avatar}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-[10px] text-[#1a1a1a] truncate">{rev.author}</p>
+                            <p className="truncate text-[10px] font-bold text-[#1a1a1a]">{rev.author}</p>
                             <p className="font-mono text-[8px] uppercase tracking-wider text-[#1a1a1a]/40">{rev.role}</p>
                           </div>
+                          <div className="flex shrink-0 text-[#e2533b]">
+                            {Array.from({ length: 5 }).map((_, starIndex) => (
+                              <Star
+                                key={starIndex}
+                                size={10}
+                                className={starIndex < Math.floor(rev.rating) ? 'fill-[#e2533b] text-[#e2533b]' : 'text-slate-300'}
+                              />
+                            ))}
+                          </div>
                         </div>
-                        <p className="font-serif italic text-[10px] text-[#1a1a1a]/70 leading-relaxed font-light mt-1.5">
+
+                        <p className="font-serif text-[11px] font-light italic leading-relaxed text-[#1a1a1a]/70">
                           "{rev.comment}"
                         </p>
+
+                        {getReviewImages(rev).length > 0 && (
+                          <div className="w-full overflow-hidden border border-[#1a1a1a]/10 bg-[#f9f7f2]">
+                            <ImageGallery
+                              images={getReviewImages(rev)}
+                              alt={`${rev.author} review photos`}
+                              className="h-32"
+                            />
+                          </div>
+                        )}
+
+                        {rev.ownerReply && (
+                          <div className="mt-0.5 flex flex-col gap-1.5 border-l-2 border-[#b76548] bg-[#fffcf8] p-3 text-xs shadow-[0_2px_8px_rgba(77,49,31,0.04)]">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="flex items-center gap-1 font-mono text-[8px] font-bold uppercase tracking-wider text-[#b76548]">
+                                <BadgeCheck size={10} className="fill-[#b76548] text-white" />
+                                {t('review_form.owner_reply')}
+                              </span>
+                              {rev.ownerReplyCreatedAt && (
+                                <span className="shrink-0 font-mono text-[7px] uppercase tracking-widest text-[#1a1a1a]/45">
+                                  {new Date(rev.ownerReplyCreatedAt).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-sans text-[10px] font-light italic leading-relaxed text-[#4c4038]">
+                              "{rev.ownerReply}"
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
