@@ -352,10 +352,12 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
         </div>
       ) : (
         /* ==================== SCREEN 5: COMMUNITY FOOD FEED ==================== */
-        <div className="max-w-md mx-auto px-4 py-8 flex flex-col gap-6 foodio-reveal">
+        <div className="max-w-md lg:max-w-6xl mx-auto px-4 lg:px-6 py-8 flex flex-col gap-6 foodio-reveal">
+
+          <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(280px,0.75fr)_minmax(0,1.25fr)] lg:items-stretch">
 
           {/* Feed Local Secondary Toggle Links */}
-          <div className="flex p-1 bg-[#fffaf4]/88 rounded-full border border-white/70 shadow-[0_18px_46px_rgba(77,49,31,0.1)]">
+          <div className="flex p-1 bg-[#fffaf4]/88 rounded-full border border-white/70 shadow-[0_18px_46px_rgba(77,49,31,0.1)] lg:self-center">
             <button
               type="button"
               onClick={() => setFeedFilter('forYou')}
@@ -408,6 +410,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
               </div>
             </button>
           )}
+          </div>
 
           {loading && posts.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-[#1a1a1a]/60">
@@ -441,6 +444,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
           )}
 
           {/* Social Posts lists */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start">
           {visiblePosts.map((post) => (
             <article
               key={post.id}
@@ -584,6 +588,7 @@ export default function PageDiscover({ tours, onPlayTour, searchText, sessionCom
 
             </article>
           ))}
+          </div>
 
         </div>
       )}
