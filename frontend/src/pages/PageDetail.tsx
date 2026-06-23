@@ -12,6 +12,23 @@ import { createReview, replyToReview } from '../api/cravemapApi';
 import MultiLanguageAudioGuide from '../components/MultiLanguageAudioGuide';
 import ImageGallery from '../components/Common/ImageGallery';
 
+// Haversine formula — returns distance in meters between two lat/lng points
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return `${(meters / 1000).toFixed(1)}km`;
+}
+
 interface PageDetailProps {
   restaurant: Restaurant;
   onBack: () => void;
@@ -22,9 +39,10 @@ interface PageDetailProps {
   isSaved: boolean;
   onToggleSaved: () => Promise<void>;
   onContactUser?: (reviewerUsername: string) => void;
+  userLocation?: [number, number];
 }
 
-export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToChat, requireAuth, onRestaurantUpdated, isSaved, onToggleSaved, onContactUser }: PageDetailProps) {
+export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToChat, requireAuth, onRestaurantUpdated, isSaved, onToggleSaved, onContactUser, userLocation }: PageDetailProps) {
   const { t, i18n } = useTranslation();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSavingPlace, setIsSavingPlace] = useState(false);
@@ -270,7 +288,9 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
             <span className="bg-[#f5eadf] border border-[#4b362a]/10 px-3 py-1 rounded-full font-bold text-[#2c211b]">Vietnamese</span>
             <span className="flex items-center gap-1 text-[#e2533b] font-bold ml-1">
               <MapPin size={14} className="text-[#e2533b]" />
-              {restaurant.distance}
+              {userLocation && restaurant.latitude && restaurant.longitude
+                ? formatDistance(haversineDistance(userLocation[0], userLocation[1], restaurant.latitude, restaurant.longitude))
+                : restaurant.distance}
             </span>
           </div>
         </section>

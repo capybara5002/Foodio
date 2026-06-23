@@ -66,6 +66,18 @@ function AppContent() {
   const [sessionCommunityPosts, setSessionCommunityPosts] = useState<CommunityPost[]>([]);
   const [savedRestaurantIds, setSavedRestaurantIds] = useState<string[]>([]);
 
+  // User location for real distance calculations (default: Vinh Khanh center)
+  const [userLocation, setUserLocation] = useState<[number, number]>([10.7580, 106.7020]);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
+      () => {/* keep default */},
+      { enableHighAccuracy: false, timeout: 5000 }
+    );
+  }, []);
+
   const [activeThreadId, setActiveThreadId] = useState<string>('');
 
   // Authentication interception states
@@ -616,6 +628,7 @@ function AppContent() {
             isSaved={savedRestaurantIds.includes(selectedRestaurant.id)}
             onToggleSaved={() => handleToggleSavedPlace(selectedRestaurant.id)}
             onContactUser={handleContactUser}
+            userLocation={userLocation}
           />
         ) : hasLoadedRestaurantData ? <Navigate to="/map" replace /> : <LoadingSpinner />}
       />

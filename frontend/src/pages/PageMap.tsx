@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef, type CSSProperties, type PointerEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, type CSSProperties, type PointerEvent } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
@@ -11,7 +11,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 
 import { Restaurant } from '../types';
-import { X, BadgeCheck, Star, Bookmark, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, MessageSquare, Volume2, VolumeX, Compass, Keyboard } from 'lucide-react';
+import { X, BadgeCheck, Star, Bookmark, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, MessageSquare, Volume2, VolumeX, Compass, Keyboard, ListOrdered, Navigation, ChevronRight } from 'lucide-react';
 import { startLocationTracking, stopLocationTracking, LocationMode } from '../services/locationService';
 import { checkGeofences } from '../services/geofenceEngine';
 import { playNarration, stopNarration, onNarrationStart, onNarrationEnd, getMuted, setMuted } from '../services/narrationEngine';
@@ -233,6 +233,23 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
   return null;
 }
 
+// Haversine formula — returns distance in meters between two lat/lng points
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000; // Earth radius in meters
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return `${(meters / 1000).toFixed(1)}km`;
+}
+
 export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, onContactRestaurant, savedRestaurantIds, onToggleSavedRestaurant, searchSelection }: PageMapProps) {
   const { t, i18n } = useTranslation();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
@@ -246,6 +263,9 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
   const [sheetDragOffset, setSheetDragOffset] = useState(0);
   const [isSheetDragging, setIsSheetDragging] = useState(false);
   const sheetDragStartRef = useRef<{ y: number; moved: boolean } | null>(null);
+
+  // Nearby restaurants panel state
+  const [isNearbyOpen, setIsNearbyOpen] = useState(false);
 
   useEffect(() => {
     if (selectedRestaurant) {
@@ -420,6 +440,17 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
         ? [review.imageUrl]
         : [];
 
+  // Sort restaurants by distance from user's current location
+  const nearbyRestaurants = useMemo(() => {
+    return restaurants
+      .map((r) => {
+        const coords = getCoordinates(r);
+        const dist = haversineDistance(userLocation[0], userLocation[1], coords[0], coords[1]);
+        return { restaurant: r, distanceMeters: dist };
+      })
+      .sort((a, b) => a.distanceMeters - b.distanceMeters);
+  }, [restaurants, userLocation]);
+
   return (
     <div className="foodio-map-shell fixed inset-x-0 top-[72px] bottom-0 flex bg-[#f7efe4] overflow-hidden text-[#2c211b] z-40 transition-all duration-300">
 
@@ -457,7 +488,6 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           </div>
         </div>
       )}
-
       <style>{`
         .leaflet-container {
           background-color: #f7efe4 !important;
@@ -557,7 +587,173 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
             width: 70%;
           }
         }
+
+        /* ===== Nearby Restaurants Panel ===== */
+        .nearby-panel {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 55dvh;
+          max-height: 100%;
+          border: 1px solid rgba(75, 54, 42, 0.12);
+          border-bottom: none;
+          border-radius: 28px 28px 0 0;
+          box-shadow: 0 -24px 70px rgba(77, 49, 31, 0.18);
+          transform: translateY(100%);
+          transition:
+            transform 0.42s cubic-bezier(0.32, 0.72, 0, 1),
+            visibility 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+          z-index: 1004;
+          visibility: hidden;
+          will-change: transform;
+          bottom: 0;
+          top: auto;
+        }
+        .nearby-panel.nearby-open {
+          transform: translateY(0);
+          visibility: visible;
+        }
+        @media (min-width: 768px) {
+          .nearby-panel {
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 340px;
+            height: calc(100% - 32px);
+            max-height: calc(100% - 32px);
+            border: 1px solid rgba(75, 54, 42, 0.12);
+            border-radius: 28px;
+            margin: 16px 0 16px 16px;
+            box-shadow: 0 24px 70px rgba(77, 49, 31, 0.18);
+            transform: translateX(calc(-100% - 16px));
+          }
+          .nearby-panel.nearby-open {
+            transform: translateX(0);
+          }
+        }
+        .nearby-card {
+          transition: all 0.2s ease;
+        }
+        .nearby-card:hover {
+          background-color: #f9f3ea;
+          transform: translateX(4px);
+        }
+        .nearby-card:active {
+          transform: scale(0.98);
+        }
+        @keyframes nearbyPulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
+        }
+        .nearby-rank-badge {
+          animation: nearbyPulse 2s ease-in-out infinite;
+        }
       `}</style>
+
+      {/* ===== Nearby Restaurants Panel ===== */}
+      <aside
+        className={`nearby-panel ${isNearbyOpen && !isOpen ? 'nearby-open' : ''} bg-[#fffaf4]/97 backdrop-blur-xl flex flex-col overflow-hidden`}
+      >
+        {/* Panel Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-[#1a1a1a]/8 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-[#e2533b] flex items-center justify-center shadow-md">
+              <Navigation size={14} className="text-white" />
+            </div>
+            <div>
+              <h2 className="font-serif italic font-bold text-sm text-[#1a1a1a] leading-tight">
+                {t('map.nearby_title', 'Quán gần bạn')}
+              </h2>
+              <p className="font-mono text-[8px] uppercase tracking-[0.2em] text-[#1a1a1a]/45 font-bold mt-0.5">
+                {nearbyRestaurants.length} {t('map.nearby_count_suffix', 'quán được tìm thấy')}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsNearbyOpen(false)}
+            className="w-8 h-8 flex items-center justify-center bg-white border border-[#1a1a1a]/15 text-[#1a1a1a] hover:bg-[#f9f7f2] hover:border-[#e2533b] hover:text-[#e2533b] active:scale-90 transition-all cursor-pointer shadow-sm"
+          >
+            <X size={14} strokeWidth={3} />
+          </button>
+        </div>
+
+        {/* Scrollable Restaurant List */}
+        <div className="flex-1 overflow-y-auto hide-scrollbar px-3 py-3 flex flex-col gap-2">
+          {nearbyRestaurants.map(({ restaurant: r, distanceMeters }, index) => {
+            const isActive = selectedRestaurant?.id === r.id;
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => {
+                  handleRestaurantSelection(r);
+                  if (window.innerWidth < 768) setIsNearbyOpen(false);
+                }}
+                className={`nearby-card w-full flex items-center gap-3 p-2.5 rounded-2xl border text-left cursor-pointer ${
+                  isActive
+                    ? 'border-[#e2533b]/40 bg-[#e2533b]/5 shadow-md'
+                    : 'border-[#1a1a1a]/6 bg-white/60 shadow-sm hover:shadow-md'
+                }`}
+              >
+                {/* Rank Badge */}
+                <div className="relative shrink-0">
+                  <div
+                    className="w-14 h-14 rounded-xl bg-cover bg-center border border-[#1a1a1a]/10 shadow-inner"
+                    style={{ backgroundImage: `url('${r.image}')` }}
+                  />
+                  <span className={`absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full flex items-center justify-center font-mono text-[9px] font-black shadow-md border border-white ${
+                    index === 0
+                      ? 'bg-[#e2533b] text-white nearby-rank-badge'
+                      : index < 3
+                        ? 'bg-[#b76548] text-white'
+                        : 'bg-[#2c211b] text-white'
+                  }`}>
+                    {index + 1}
+                  </span>
+                </div>
+
+                {/* Restaurant Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1">
+                    <h3 className="font-serif italic font-bold text-xs text-[#1a1a1a] truncate leading-tight">
+                      {r.name}
+                    </h3>
+                    {r.isVerified && (
+                      <BadgeCheck size={12} className="shrink-0 fill-[#e2533b] text-white" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-[#1a1a1a]/50 bg-[#f9f7f2] border border-[#1a1a1a]/8 px-1.5 py-0.5">
+                      {r.category}
+                    </span>
+                    <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-[#1a1a1a]/50 bg-[#f9f7f2] border border-[#1a1a1a]/8 px-1.5 py-0.5">
+                      {r.priceRange}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="flex items-center gap-0.5">
+                      <Star size={9} className="fill-[#e2533b] text-[#e2533b]" />
+                      <span className="font-mono text-[9px] font-bold text-[#1a1a1a]">{r.rating}</span>
+                    </span>
+                    <span className="text-[#1a1a1a]/15">|</span>
+                    <span className="flex items-center gap-0.5 text-[#e2533b]">
+                      <MapPin size={9} />
+                      <span className="font-mono text-[9px] font-bold">{formatDistance(distanceMeters)}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Arrow */}
+                <ChevronRight size={16} className={`shrink-0 transition-colors ${
+                  isActive ? 'text-[#e2533b]' : 'text-[#1a1a1a]/20'
+                }`} />
+              </button>
+            );
+          })}
+        </div>
+      </aside>
 
       {/* Left/Bottom Section: Google Maps-Style Responsive Details Panel */}
       <aside
@@ -641,7 +837,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                     <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2 py-0.5 font-bold text-[#1a1a1a]">{activeRestaurant.category}</span>
                     <span className="flex items-center gap-0.5 text-[#e2533b] font-bold">
                       <MapPin size={10} className="text-[#e2533b]" />
-                      {activeRestaurant.distance}
+                      {formatDistance(haversineDistance(userLocation[0], userLocation[1], getCoordinates(activeRestaurant)[0], getCoordinates(activeRestaurant)[1]))}
                     </span>
                   </div>
                 </div>
@@ -879,6 +1075,16 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
               className={`w-12 h-12 ${isAudioMuted ? 'bg-[#e2533b] text-white border-[#e2533b] hover:bg-[#e2533b]/90' : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2]'} rounded-none shadow-xl flex items-center justify-center border-2 active:scale-90 transition-all pointer-events-auto cursor-pointer`}
             >
               {isAudioMuted ? <VolumeX size={22} /> : <Volume2 size={22} />}
+            </button>
+
+            {/* Nearby Restaurants Panel Toggle */}
+            <button
+              type="button"
+              onClick={() => { setIsNearbyOpen((prev) => !prev); if (isOpen) setSelectedRestaurant(null); }}
+              title={t('map.nearby_toggle', 'Quán gần đây')}
+              className={`w-12 h-12 ${isNearbyOpen ? 'bg-[#e2533b] text-white border-[#e2533b] hover:bg-[#c9412f]' : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2]'} rounded-none shadow-xl flex items-center justify-center border-2 active:scale-90 transition-all pointer-events-auto cursor-pointer`}
+            >
+              <ListOrdered size={22} />
             </button>
 
             {/* Tracking Mode Switcher */}
