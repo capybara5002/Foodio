@@ -7,7 +7,10 @@ import {
   ensureChatThread,
   getAudioTours,
   getChatThreads,
-  getRestaurants
+  getRestaurants,
+  getSavedPlaces,
+  removeSavedPlace,
+  savePlace
 } from './api/cravemapApi';
 
 import NavBar from './components/NavBar';
@@ -61,6 +64,7 @@ function AppContent() {
   const [chatThreads, setChatThreads] = useState<ChatThread[]>(initialChatThreads);
   const [audioTours, setAudioTours] = useState<AudioTour[]>(initialAudioTours);
   const [sessionCommunityPosts, setSessionCommunityPosts] = useState<CommunityPost[]>([]);
+  const [savedRestaurantIds, setSavedRestaurantIds] = useState<string[]>([]);
 
   const [activeThreadId, setActiveThreadId] = useState<string>('');
 
@@ -183,6 +187,32 @@ function AppContent() {
       cancelled = true;
     };
   }, [activeChatRestaurantId, activeChatUserId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isSignedInUser || !user) {
+      setSavedRestaurantIds([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    getSavedPlaces(user.id)
+      .then((savedPlaces) => {
+        if (!cancelled) {
+          setSavedRestaurantIds(savedPlaces.map((savedPlace) => savedPlace.restaurantId));
+        }
+      })
+      .catch((error) => {
+        console.warn('Failed to load saved places:', error);
+        if (!cancelled) setSavedRestaurantIds([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedInUser, user]);
 
   // Detect QR Token inside URL on load
   useEffect(() => {
@@ -409,6 +439,43 @@ function AppContent() {
     });
   };
 
+  const handleToggleSavedPlace = async (restaurantId: string) => {
+    let savingUser = user;
+    if (!savingUser) {
+      try {
+        savingUser = JSON.parse(localStorage.getItem('foodio_user') || 'null');
+      } catch {
+        savingUser = null;
+      }
+    }
+
+    if (!savingUser || savingUser.role === 'Guest') {
+      throw new Error(t('auth.require_login_save', 'Bạn cần đăng nhập để lưu quán.'));
+    }
+
+    const wasSaved = savedRestaurantIds.includes(restaurantId);
+    setSavedRestaurantIds((current) => (
+      wasSaved
+        ? current.filter((id) => id !== restaurantId)
+        : [restaurantId, ...current.filter((id) => id !== restaurantId)]
+    ));
+
+    try {
+      if (wasSaved) {
+        await removeSavedPlace(savingUser.id, restaurantId);
+      } else {
+        await savePlace(savingUser.id, restaurantId);
+      }
+    } catch (error) {
+      setSavedRestaurantIds((current) => (
+        wasSaved
+          ? [restaurantId, ...current.filter((id) => id !== restaurantId)]
+          : current.filter((id) => id !== restaurantId)
+      ));
+      throw error;
+    }
+  };
+
   const handleRefreshRestaurants = useCallback(async () => {
     try {
       const remoteRestaurants = await getRestaurants();
@@ -424,6 +491,9 @@ function AppContent() {
   const unreadInboxCount = isSignedInUser ? chatThreads.reduce((total, t) => total + t.unreadCount, 0) : 0;
 
   const activeRestaurants = restaurants.filter((restaurant) => restaurant.isActive !== false);
+  const savedRestaurants = savedRestaurantIds
+    .map((id) => activeRestaurants.find((restaurant) => restaurant.id === id))
+    .filter((restaurant): restaurant is Restaurant => Boolean(restaurant));
   const selectedRestaurant = selectedRestaurantId
     ? restaurants.find((restaurant) => restaurant.id === selectedRestaurantId)
     : undefined;
@@ -434,6 +504,14 @@ function AppContent() {
       onSelectRestaurant={handleSelectRestaurant}
       onSelectTour={handleSelectTour}
       onContactRestaurant={handleContactRestaurant}
+      savedRestaurantIds={savedRestaurantIds}
+      onToggleSavedRestaurant={(restaurantId) => {
+        requireAuth(t('auth.require_login_save'), () => {
+          void handleToggleSavedPlace(restaurantId).catch((error) => {
+            console.error('Failed to update saved place:', error);
+          });
+        });
+      }}
       searchSelection={mapSearchSelection}
     />
   );
@@ -447,6 +525,8 @@ function AppContent() {
         setIsLoginOpen(true);
       }}
       sessionCommunityPosts={sessionCommunityPosts}
+      savedRestaurants={savedRestaurants}
+      onSelectSavedRestaurant={handleSelectRestaurant}
       onRestaurantUpdated={handleRestaurantUpdated}
       onRefreshRestaurants={handleRefreshRestaurants}
     />
@@ -533,6 +613,8 @@ function AppContent() {
             onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
             requireAuth={requireAuth}
             onRestaurantUpdated={handleRestaurantUpdated}
+            isSaved={savedRestaurantIds.includes(selectedRestaurant.id)}
+            onToggleSaved={() => handleToggleSavedPlace(selectedRestaurant.id)}
             onContactUser={handleContactUser}
           />
         ) : hasLoadedRestaurantData ? <Navigate to="/map" replace /> : <LoadingSpinner />}

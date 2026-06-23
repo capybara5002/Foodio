@@ -104,6 +104,11 @@ export interface Restaurant {
   updatedAt?: string;
 }
 
+export interface SavedPlace {
+  restaurantId: string;
+  createdAt: string;
+}
+
 export interface CommunityPost {
   id: string;
   author: string;

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/Admin/AdminDashboard';
 import OwnerDashboard from '../components/Owner/OwnerDashboard';
 import { CommunityPost, Restaurant } from '../types';
-import { UserCircle, BadgeCheck, FileText, Star, Globe, LogOut, User, Shield, Store, Edit2, Key, ChevronRight, ChevronDown, Eye, EyeOff, LockKeyhole, WalletCards } from 'lucide-react';
+import { UserCircle, BadgeCheck, FileText, Star, Bookmark, MapPin, Globe, LogOut, User, Shield, Store, Edit2, Key, ChevronRight, ChevronDown, Eye, EyeOff, LockKeyhole, WalletCards } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
 import { apiBase } from '../api/apiConfig';
@@ -13,6 +13,8 @@ interface PageProfileProps {
   userEmail: string;
   onLoginTrigger: () => void;
   sessionCommunityPosts?: CommunityPost[];
+  savedRestaurants?: Restaurant[];
+  onSelectSavedRestaurant?: (restaurantId: string) => void;
   onRestaurantUpdated?: (updated: Restaurant) => void;
   onRefreshRestaurants?: () => void;
 }
@@ -26,13 +28,14 @@ const AVATAR_PRESETS = [
   "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=150&auto=format&fit=crop&q=60"  // Seafood/Snails
 ];
 
-export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = [], onRestaurantUpdated, onRefreshRestaurants }: PageProfileProps) {
-  const { user, logout, updateAvatar, updatePassword } = useAuth();
+export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = [], savedRestaurants = [], onSelectSavedRestaurant, onRestaurantUpdated, onRefreshRestaurants }: PageProfileProps) {
+  const { user, logout, updateAvatar, updateUsername, updatePassword } = useAuth();
   const { paymentSession, clearPayment } = usePayment();
   const { t } = useTranslation();
   const { language, changeLanguage } = useLanguage();
   const [showStatus, setShowStatus] = useState<string | null>(null);
   const [remotePostIds, setRemotePostIds] = useState<Set<string>>(new Set());
+  const [showSavedPlaces, setShowSavedPlaces] = useState(false);
   
   // Tab control: profile, admin (if admin), owner (if owner)
   const [activeConsole, setActiveConsole] = useState<'profile' | 'admin' | 'owner'>('profile');
@@ -72,9 +75,15 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
+  // Display name update states
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [usernameValue, setUsernameValue] = useState('');
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
+
   useEffect(() => {
     if (user) {
       setSelectedAvatarUrl(user.avatar || '');
+      setUsernameValue(user.username || '');
     }
   }, [user]);
 
@@ -154,6 +163,29 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
       setShowStatus(t('profile.update_password_error'));
     } finally {
       setIsSavingPassword(false);
+      setTimeout(() => setShowStatus(null), 2500);
+    }
+  };
+
+  const handleUpdateUsername = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const username = usernameValue.trim();
+    if (username.length < 2) {
+      setShowStatus(t('profile.username_length_error'));
+      setTimeout(() => setShowStatus(null), 2500);
+      return;
+    }
+
+    setIsSavingUsername(true);
+    try {
+      await updateUsername(username);
+      setShowStatus(t('profile.update_username_success'));
+      setIsEditingUsername(false);
+    } catch (err: any) {
+      console.error(err);
+      setShowStatus(err.message || t('profile.update_username_error'));
+    } finally {
+      setIsSavingUsername(false);
       setTimeout(() => setShowStatus(null), 2500);
     }
   };
@@ -408,12 +440,72 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
                   <span className="font-mono text-[9px] text-[#1a1a1a]/50 uppercase tracking-wider font-extrabold">{t('profile.posts_count')}</span>
                 </div>
 
-                <div className="bg-[#fffaf4] p-5 rounded-[1.5rem] border border-white/70 flex flex-col gap-1 items-center shadow-[0_18px_46px_rgba(77,49,31,0.1)]">
-                  <Star size={20} className="fill-[#e2533b] text-[#e2533b]" />
-                  <span className="font-serif italic font-bold text-2xl text-[#1a1a1a]">5</span>
+                <button
+                  type="button"
+                  onClick={() => setShowSavedPlaces((current) => !current)}
+                  aria-expanded={showSavedPlaces}
+                  className="bg-[#fffaf4] p-5 rounded-[1.5rem] border border-white/70 flex flex-col gap-1 items-center shadow-[0_18px_46px_rgba(77,49,31,0.1)] cursor-pointer transition-all hover:-translate-y-0.5 hover:bg-white"
+                >
+                  <Bookmark size={20} className={savedRestaurants.length > 0 ? 'fill-[#e2533b] text-[#e2533b]' : 'text-[#e2533b]'} />
+                  <span className="font-serif italic font-bold text-2xl text-[#1a1a1a]">{savedRestaurants.length}</span>
                   <span className="font-mono text-[9px] text-[#1a1a1a]/50 uppercase tracking-wider font-extrabold">{t('profile.saved_places')}</span>
-                </div>
+                </button>
               </div>
+
+              {showSavedPlaces && (
+                <div className="overflow-hidden rounded-[1.5rem] border border-white/70 bg-[#fffaf4] shadow-[0_18px_46px_rgba(77,49,31,0.1)] foodio-reveal">
+                  <div className="flex items-center justify-between border-b border-[#4b362a]/10 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Bookmark size={15} className="text-[#e2533b]" />
+                      <h3 className="font-mono text-[10px] font-black uppercase tracking-wider text-[#2c211b]">
+                        {t('profile.saved_places')}
+                      </h3>
+                    </div>
+                    <span className="rounded-full bg-[#2c211b] px-2 py-0.5 font-mono text-[9px] font-bold text-white">
+                      {savedRestaurants.length}
+                    </span>
+                  </div>
+
+                  {savedRestaurants.length === 0 ? (
+                    <div className="px-5 py-8 text-center">
+                      <Bookmark size={24} className="mx-auto mb-2 text-[#b76548]/60" />
+                      <p className="font-sans text-xs leading-relaxed text-[#6f655b]">
+                        {t('profile.no_saved_places', 'Bạn chưa lưu quán nào. Hãy mở một quán và bấm biểu tượng bookmark.')}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex max-h-[360px] flex-col overflow-y-auto p-2">
+                      {savedRestaurants.map((restaurant) => (
+                        <button
+                          key={restaurant.id}
+                          type="button"
+                          onClick={() => onSelectSavedRestaurant?.(restaurant.id)}
+                          className="group flex w-full items-center gap-3 rounded-[1rem] p-2 text-left transition-colors hover:bg-[#f5eadf] cursor-pointer"
+                        >
+                          <img
+                            src={restaurant.image}
+                            alt={restaurant.name}
+                            className="h-14 w-14 shrink-0 rounded-xl object-cover"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-serif text-base font-bold tracking-[-0.03em] text-[#2c211b]">
+                              {restaurant.name}
+                            </p>
+                            <p className="mt-0.5 flex items-center gap-1 truncate font-sans text-[10px] text-[#6f655b]">
+                              <MapPin size={11} className="shrink-0 text-[#b76548]" />
+                              {restaurant.address || restaurant.area}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1 rounded-full bg-[#2c211b] px-2 py-1 text-white">
+                            <Star size={10} className="fill-current" />
+                            <span className="font-mono text-[9px] font-bold">{restaurant.rating}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
             </div>
 
@@ -556,6 +648,82 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
                         className="px-5 py-2.5 bg-[#1a1a1a] text-white hover:bg-[#e2533b] border-2 border-[#1a1a1a] cursor-pointer transition-colors flex-[2] shadow active:translate-y-0.5"
                       >
                         {isSavingPassword ? t('profile.saving') : t('profile.change_password_btn')}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Change display name card */}
+              {!isEditingUsername ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingUsername(true)}
+                  className="bg-[#fffaf4] border border-white/70 p-5 cursor-pointer hover:bg-white transition-colors shadow-[0_18px_46px_rgba(77,49,31,0.1)] flex items-center justify-between rounded-[1.5rem]"
+                >
+                  <span className="flex items-center gap-3">
+                    <Edit2 size={18} className="text-[#1a1a1a]" />
+                    <span className="font-mono text-xs text-[#1a1a1a] font-bold uppercase tracking-wider">
+                      {t('profile.update_username')}
+                    </span>
+                  </span>
+                  <ChevronRight size={16} />
+                </button>
+              ) : (
+                <div className="bg-[#fffaf4] border border-white/70 p-6 shadow-[0_18px_46px_rgba(77,49,31,0.1)] flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200 rounded-[1.5rem]">
+                  <div className="flex items-center justify-between border-b border-[#1a1a1a]/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Edit2 size={18} className="text-[#e2533b]" />
+                      <h3 className="font-serif italic font-bold text-lg text-[#1a1a1a] uppercase">
+                        {t('profile.update_username')}
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUsernameValue(user?.username || '');
+                        setIsEditingUsername(false);
+                      }}
+                      className="text-[#1a1a1a]/50 hover:text-[#1a1a1a] p-1 cursor-pointer transition-colors"
+                    >
+                      <ChevronDown size={18} />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleUpdateUsername} className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="font-mono text-[9px] text-[#1a1a1a]/60 uppercase tracking-wider font-extrabold">
+                        {t('profile.new_username')}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        minLength={2}
+                        maxLength={100}
+                        value={usernameValue}
+                        onChange={(event) => setUsernameValue(event.target.value)}
+                        className="w-full px-3 py-2.5 border-2 border-[#1a1a1a] font-mono text-xs focus:outline-none focus:border-[#e2533b] bg-white rounded-none"
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="flex gap-2 font-mono text-[9px] uppercase font-extrabold tracking-wider mt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUsernameValue(user?.username || '');
+                          setIsEditingUsername(false);
+                        }}
+                        className="px-4 py-2 border-2 border-[#1a1a1a] hover:bg-[#f9f7f2] cursor-pointer bg-white transition-colors flex-1"
+                      >
+                        {t('profile.cancel')}
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSavingUsername || usernameValue.trim() === user?.username}
+                        className="px-5 py-2.5 bg-[#1a1a1a] text-white hover:bg-[#e2533b] disabled:bg-[#1a1a1a]/40 border-2 border-[#1a1a1a] cursor-pointer disabled:cursor-not-allowed transition-colors flex-[2] shadow active:translate-y-0.5"
+                      >
+                        {isSavingUsername ? t('profile.saving') : t('profile.save_username')}
                       </button>
                     </div>
                   </form>

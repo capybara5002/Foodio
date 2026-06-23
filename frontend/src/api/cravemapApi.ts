@@ -1,4 +1,4 @@
-import { AudioTour, ChatMessage, ChatThread, CommunityPost, FoodieReview, PostComment, Restaurant } from '../types';
+import { AudioTour, ChatMessage, ChatThread, CommunityPost, FoodieReview, PostComment, Restaurant, SavedPlace } from '../types';
 import { apiBase } from './apiConfig';
 
 async function getJson<T>(path: string): Promise<T> {
@@ -42,6 +42,19 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function deleteRequest(path: string): Promise<void> {
+  const response = await fetch(`${apiBase}${path}`, {
+    method: 'DELETE',
+    headers: {
+      'Accept-Language': localStorage.getItem('app_lang') || 'vi'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+}
+
 export function getRestaurants() {
   const lang = localStorage.getItem('app_lang') || 'vi';
   return getJson<Restaurant[]>(`/api/public/pois?lang=${encodeURIComponent(lang)}`);
@@ -66,6 +79,18 @@ export function getChatThreads(params?: { userId?: string; restaurantId?: string
 
 export function getAudioTours() {
   return getJson<AudioTour[]>('/api/cravemap/audio-tours');
+}
+
+export function getSavedPlaces(userId: string) {
+  return getJson<SavedPlace[]>(`/api/cravemap/users/${encodeURIComponent(userId)}/saved-places`);
+}
+
+export function savePlace(userId: string, restaurantId: string) {
+  return postJson<SavedPlace>(`/api/cravemap/users/${encodeURIComponent(userId)}/saved-places`, { restaurantId });
+}
+
+export function removeSavedPlace(userId: string, restaurantId: string) {
+  return deleteRequest(`/api/cravemap/users/${encodeURIComponent(userId)}/saved-places/${encodeURIComponent(restaurantId)}`);
 }
 
 export function createCommunityPost(post: CommunityPost) {

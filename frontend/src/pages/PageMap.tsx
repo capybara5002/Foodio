@@ -11,7 +11,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 
 import { Restaurant } from '../types';
-import { X, BadgeCheck, Star, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, MessageSquare, Volume2, VolumeX, Compass, Keyboard } from 'lucide-react';
+import { X, BadgeCheck, Star, Bookmark, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, MessageSquare, Volume2, VolumeX, Compass, Keyboard } from 'lucide-react';
 import { startLocationTracking, stopLocationTracking, LocationMode } from '../services/locationService';
 import { checkGeofences } from '../services/geofenceEngine';
 import { playNarration, stopNarration, onNarrationStart, onNarrationEnd, getMuted, setMuted } from '../services/narrationEngine';
@@ -33,6 +33,8 @@ interface PageMapProps {
   onSelectRestaurant: (id: string) => void;
   onSelectTour: () => void;
   onContactRestaurant: (restaurantId: string) => void;
+  savedRestaurantIds: string[];
+  onToggleSavedRestaurant: (restaurantId: string) => void;
   searchSelection: { restaurantId: string; requestId: number } | null;
 }
 
@@ -229,7 +231,7 @@ function MapController({ userLocation, selectedRestaurant, locateTrigger, getCoo
   return null;
 }
 
-export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, onContactRestaurant, searchSelection }: PageMapProps) {
+export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, onContactRestaurant, savedRestaurantIds, onToggleSavedRestaurant, searchSelection }: PageMapProps) {
   const { t } = useTranslation();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [locateTrigger, setLocateTrigger] = useState(false);
@@ -599,9 +601,30 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                         <BadgeCheck size={15} className="ml-1 inline-block fill-[#e2533b] text-white select-none align-middle" />
                       )}
                     </h2>
-                    <div className="flex items-center gap-0.5 bg-[#e2533b] text-white px-2 py-0.5 shrink-0 select-none">
-                      <Star size={10} className="fill-white text-white" />
-                      <span className="font-mono text-[10px] font-bold">{activeRestaurant.rating}</span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <div className="flex items-center gap-0.5 bg-[#e2533b] text-white px-2 py-1 select-none">
+                        <Star size={10} className="fill-white text-white" />
+                        <span className="font-mono text-[10px] font-bold">{activeRestaurant.rating}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onToggleSavedRestaurant(activeRestaurant.id)}
+                        aria-label={savedRestaurantIds.includes(activeRestaurant.id)
+                          ? t('detail.unsave_place', 'Bỏ lưu quán')
+                          : t('detail.save_place', 'Lưu quán')}
+                        title={savedRestaurantIds.includes(activeRestaurant.id)
+                          ? t('detail.unsave_place', 'Bỏ lưu quán')
+                          : t('detail.save_place', 'Lưu quán')}
+                        className={`grid h-7 w-7 place-items-center border transition-all active:scale-90 cursor-pointer ${savedRestaurantIds.includes(activeRestaurant.id)
+                          ? 'border-[#2c211b] bg-[#2c211b] text-white'
+                          : 'border-[#4b362a]/20 bg-white text-[#2c211b] hover:border-[#e2533b] hover:text-[#e2533b]'
+                          }`}
+                      >
+                        <Bookmark
+                          size={13}
+                          className={savedRestaurantIds.includes(activeRestaurant.id) ? 'fill-current' : ''}
+                        />
+                      </button>
                     </div>
                   </div>
 

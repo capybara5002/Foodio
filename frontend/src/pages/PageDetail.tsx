@@ -5,7 +5,7 @@
 
 import { useState, useRef } from 'react';
 import { Restaurant } from '../types';
-import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X, Send } from 'lucide-react';
+import { ArrowLeft, Share2, Bookmark, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { createReview, replyToReview } from '../api/cravemapApi';
@@ -19,13 +19,15 @@ interface PageDetailProps {
   onGoToChat: () => void;
   requireAuth: (message: string, action: () => void) => void;
   onRestaurantUpdated: (updated: Restaurant) => void;
+  isSaved: boolean;
+  onToggleSaved: () => Promise<void>;
   onContactUser?: (reviewerUsername: string) => void;
 }
 
-export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToChat, requireAuth, onRestaurantUpdated, onContactUser }: PageDetailProps) {
+export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToChat, requireAuth, onRestaurantUpdated, isSaved, onToggleSaved, onContactUser }: PageDetailProps) {
   const { t, i18n } = useTranslation();
-  const [isFavorite, setIsFavorite] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSavingPlace, setIsSavingPlace] = useState(false);
   const [showAllDishes, setShowAllDishes] = useState(false);
   const [showAudioGuide, setShowAudioGuide] = useState(false);
 
@@ -171,6 +173,27 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
     setTimeout(() => setToastMessage(null), 2500);
   };
 
+  const handleToggleSavedPlace = () => {
+    requireAuth(t('auth.require_login_save', 'Bạn cần đăng nhập để lưu quán.'), () => {
+      void (async () => {
+        setIsSavingPlace(true);
+        try {
+          await onToggleSaved();
+          setToastMessage(isSaved
+            ? t('detail.place_removed', 'Đã bỏ quán khỏi danh sách lưu')
+            : t('detail.place_saved', 'Đã lưu quán vào Saved Places'));
+        } catch (error) {
+          setToastMessage(error instanceof Error
+            ? error.message
+            : t('detail.save_place_error', 'Không thể lưu quán lúc này'));
+        } finally {
+          setIsSavingPlace(false);
+          setTimeout(() => setToastMessage(null), 2500);
+        }
+      })();
+    });
+  };
+
   const handleAddDish = (dishName: string) => {
     setToastMessage(t('detail.added_dish', { name: dishName }));
     setTimeout(() => setToastMessage(null), 2500);
@@ -204,14 +227,13 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
             </button>
             <button 
               type="button"
-              onClick={() => setIsFavorite(!isFavorite)}
-                className="w-11 h-11 flex items-center justify-center rounded-full bg-[#fffaf4]/90 border border-white/60 shadow-[0_18px_46px_rgba(77,49,31,0.18)] hover:bg-white active:scale-95 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer backdrop-blur-xl"
+              onClick={handleToggleSavedPlace}
+              disabled={isSavingPlace}
+              aria-label={isSaved ? t('detail.unsave_place', 'Bỏ lưu quán') : t('detail.save_place', 'Lưu quán')}
+              title={isSaved ? t('detail.unsave_place', 'Bỏ lưu quán') : t('detail.save_place', 'Lưu quán')}
+                className={`w-11 h-11 flex items-center justify-center rounded-full border shadow-[0_18px_46px_rgba(77,49,31,0.18)] active:scale-95 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer backdrop-blur-xl disabled:cursor-wait disabled:opacity-60 ${isSaved ? 'bg-[#2c211b] border-[#2c211b] text-white hover:bg-[#3b2d25]' : 'bg-[#fffaf4]/90 border-white/60 text-on-surface hover:bg-white'}`}
             >
-              {isFavorite ? (
-                <Heart size={20} className="fill-[#e2533b] text-[#e2533b]" />
-              ) : (
-                <Heart size={20} className="text-on-surface" />
-              )}
+              <Bookmark size={20} className={isSaved ? 'fill-current' : ''} />
             </button>
           </div>
         </div>

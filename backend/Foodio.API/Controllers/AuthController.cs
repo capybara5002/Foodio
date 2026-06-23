@@ -286,6 +286,36 @@ public class AuthController : ControllerBase
         return Ok(user.ToDto());
     }
 
+    [HttpPost("update-username")]
+    public async Task<ActionResult<UserDto>> UpdateUsername([FromBody] UpdateUsernameRequestDto request)
+    {
+        var username = request.Username.Trim();
+        if (username.Length < 2 || username.Length > 100)
+        {
+            return BadRequest("Username must be between 2 and 100 characters.");
+        }
+
+        var user = await _db.Users
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
+
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        var isTaken = await _db.Users.AnyAsync(u =>
+            u.Id != user.Id && u.Username.ToLower() == username.ToLower());
+        if (isTaken)
+        {
+            return Conflict("This username is already in use.");
+        }
+
+        user.Username = username;
+        await _db.SaveChangesAsync();
+
+        return Ok(user.ToDto());
+    }
+
     private class QrPayload
     {
         public string RestaurantId { get; set; } = string.Empty;

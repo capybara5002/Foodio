@@ -13,6 +13,7 @@ interface AuthContextType {
   clearQrSession: () => void;
   updateUserRestaurantId: (restaurantId: string) => void;
   updateAvatar: (avatarUrl: string) => Promise<User>;
+  updateUsername: (username: string) => Promise<User>;
   updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   syncUser: (updatedData: Partial<User>) => void;
 }
@@ -199,8 +200,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUsername = async (username: string): Promise<User> => {
+    if (!user) throw new Error('Not logged in');
+    const response = await fetch(`${apiBase}/api/auth/update-username`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email: user.email, username }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText || 'Failed to update username.');
+    }
+
+    const updatedUser = await response.json();
+    setUser(updatedUser);
+    localStorage.setItem('foodio_user', JSON.stringify(updatedUser));
+    return updatedUser;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, googleLogin, register, qrLogin, logout, clearQrSession, updateUserRestaurantId, updateAvatar, updatePassword, syncUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, googleLogin, register, qrLogin, logout, clearQrSession, updateUserRestaurantId, updateAvatar, updateUsername, updatePassword, syncUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -25,6 +25,7 @@ public class AppDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<PaymentSession> PaymentSessions => Set<PaymentSession>();
+    public DbSet<SavedPlace> SavedPlaces => Set<SavedPlace>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -92,5 +93,21 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<PaymentSession>()
             .HasIndex(session => session.ExpiresAt);
+
+        modelBuilder.Entity<SavedPlace>()
+            .HasIndex(savedPlace => new { savedPlace.UserId, savedPlace.RestaurantId })
+            .IsUnique();
+
+        modelBuilder.Entity<SavedPlace>()
+            .HasOne(savedPlace => savedPlace.User)
+            .WithMany()
+            .HasForeignKey(savedPlace => savedPlace.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SavedPlace>()
+            .HasOne(savedPlace => savedPlace.Restaurant)
+            .WithMany()
+            .HasForeignKey(savedPlace => savedPlace.RestaurantId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
