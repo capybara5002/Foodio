@@ -20,6 +20,7 @@ import LoginModal from './components/Common/LoginModal';
 import PaymentGate from './components/Common/PaymentGate';
 import PaymentStatusPill from './components/Common/PaymentStatusPill';
 import LoadingSpinner from './components/Common/LoadingSpinner';
+import PresenceReporter from './components/Common/PresenceReporter';
 import PageMap from './pages/PageMap';
 import PageDiscover from './pages/PageDiscover';
 import PageDetail from './pages/PageDetail';
@@ -712,11 +713,12 @@ function AppContent() {
 export default function App() {
   return (
     <PaymentProvider>
-      <PaymentGate>
-        <AuthProvider>
+      <AuthProvider>
+        <PresenceReporter />
+        <PaymentGate>
           <AppContent />
-        </AuthProvider>
-      </PaymentGate>
+        </PaymentGate>
+      </AuthProvider>
     </PaymentProvider>
   );
 }

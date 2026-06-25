@@ -1,6 +1,7 @@
 using Foodio.API.Data;
 using Foodio.API.DTOs;
 using Foodio.API.Models;
+using Foodio.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BC = BCrypt.Net.BCrypt;
@@ -12,10 +13,12 @@ namespace Foodio.API.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly PresenceTracker _presenceTracker;
 
-    public AdminController(AppDbContext db)
+    public AdminController(AppDbContext db, PresenceTracker presenceTracker)
     {
         _db = db;
+        _presenceTracker = presenceTracker;
     }
 
     [HttpGet("users")]
@@ -26,6 +29,12 @@ public class AdminController : ControllerBase
             .ToListAsync();
 
         return Ok(users.Select(u => u.ToDto()).ToList());
+    }
+
+    [HttpGet("stats")]
+    public ActionResult<AdminDashboardStatsDto> GetDashboardStats()
+    {
+        return Ok(new AdminDashboardStatsDto(_presenceTracker.GetCurrentParticipantCount()));
     }
 
     [HttpPost("users")]
@@ -520,3 +529,5 @@ public class AdminController : ControllerBase
         return $"{safe}_{Guid.NewGuid():N}"[..Math.Min(safe.Length + 33, 64)];
     }
 }
+
+public record AdminDashboardStatsDto(int CurrentParticipants);

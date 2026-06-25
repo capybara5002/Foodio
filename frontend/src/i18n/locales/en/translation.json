@@ -72,6 +72,16 @@
     "gps_toast": "🎯 Recycled tracking on Vinh Khanh street...",
     "curated": "Curated",
     "hot": "HOT",
+    "distance_tool": "Measure between restaurants",
+    "distance_title": "Restaurant distance",
+    "distance_instruction": "Choose 2 restaurants to compare",
+    "distance_select_1": "Choose the first restaurant",
+    "distance_select_2": "Choose the second restaurant",
+    "distance_result": "Road distance",
+    "distance_calculating": "Calculating...",
+    "distance_error": "Route unavailable",
+    "distance_clear": "Reset",
+    "distance_close": "Close distance panel",
     "view_full_info": "View Full Info & Book // 🔗"
   },
   "discover": {
@@ -180,6 +190,8 @@
       "admin": "Admin",
       "owner": "Owner",
       "customer": "Customer",
+      "current_participants": "Current participants",
+      "current_participants_hint": "Guest devices currently using Foodio, updated automatically",
       "suspended": "Suspended"
     },
     "accounts": {

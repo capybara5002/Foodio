@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef, useMemo, type CSSProperties, type PointerEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
@@ -11,7 +11,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 
 import { Restaurant } from '../types';
-import { X, BadgeCheck, Star, Bookmark, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, MessageSquare, Volume2, VolumeX, Compass, Keyboard, ListOrdered, Navigation, ChevronRight } from 'lucide-react';
+import { X, BadgeCheck, Star, Bookmark, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, MessageSquare, Volume2, VolumeX, Compass, Keyboard, ListOrdered, Navigation, ChevronRight, Ruler, Check, RotateCcw } from 'lucide-react';
 import { startLocationTracking, stopLocationTracking, LocationMode } from '../services/locationService';
 import { checkGeofences } from '../services/geofenceEngine';
 import { playNarration, stopNarration, onNarrationStart, onNarrationEnd, getMuted, setMuted } from '../services/narrationEngine';
@@ -90,17 +90,37 @@ const userIcon = L.divIcon({
 });
 
 // Helper component to add and remove leaflet-routing-machine controls dynamically
+type RouteDistanceResult = {
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  distanceMeters: number | null;
+};
+
 interface RoutingControlProps {
   userLocation: [number, number];
   destination: [number, number] | null;
+  onResult: (result: RouteDistanceResult) => void;
 }
 
-function RoutingControl({ userLocation, destination }: RoutingControlProps) {
+function RoutingControl({ userLocation, destination, onResult }: RoutingControlProps) {
   const map = useMap();
   const routingControlRef = useRef<any>(null);
+  const userLat = userLocation[0];
+  const userLng = userLocation[1];
+  const destinationLat = destination?.[0] ?? null;
+  const destinationLng = destination?.[1] ?? null;
 
   useEffect(() => {
     if (!map) return;
+
+    let settled = false;
+    let timeoutId: number | undefined;
+
+    const finish = (result: RouteDistanceResult) => {
+      if (settled) return;
+      settled = true;
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      onResult(result);
+    };
 
     if (routingControlRef.current) {
       try {
@@ -110,13 +130,18 @@ function RoutingControl({ userLocation, destination }: RoutingControlProps) {
       routingControlRef.current = null;
     }
 
-    if (!destination) return;
+    if (destinationLat === null || destinationLng === null) {
+      onResult({ status: 'idle', distanceMeters: null });
+      return;
+    }
+
+    onResult({ status: 'loading', distanceMeters: null });
 
     try {
       const routingControl = (L as any).Routing.control({
         waypoints: [
-          L.latLng(userLocation[0], userLocation[1]),
-          L.latLng(destination[0], destination[1])
+          L.latLng(userLat, userLng),
+          L.latLng(destinationLat, destinationLng)
         ],
         router: (L as any).Routing.osrmv1({
           serviceUrl: 'https://router.project-osrm.org/route/v1'
@@ -129,7 +154,20 @@ function RoutingControl({ userLocation, destination }: RoutingControlProps) {
         lineOptions: {
           styles: [{ color: '#b76548', weight: 6, opacity: 0.85 }]
         }
-      }).addTo(map);
+      });
+
+      routingControl.on('routesfound', (event: any) => {
+        const distanceMeters = event.routes?.[0]?.summary?.totalDistance;
+        finish(typeof distanceMeters === 'number'
+          ? { status: 'ready', distanceMeters }
+          : { status: 'error', distanceMeters: null });
+      });
+
+      routingControl.on('routingerror', () => {
+        finish({ status: 'error', distanceMeters: null });
+      });
+
+      routingControl.addTo(map);
 
       const container = routingControl.getContainer();
       if (container) {
@@ -137,11 +175,17 @@ function RoutingControl({ userLocation, destination }: RoutingControlProps) {
       }
 
       routingControlRef.current = routingControl;
+      timeoutId = window.setTimeout(() => {
+        finish({ status: 'error', distanceMeters: null });
+      }, 10000);
     } catch (err) {
       console.error("Leaflet routing control initialization failed:", err);
+      finish({ status: 'error', distanceMeters: null });
     }
 
     return () => {
+      settled = true;
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
       if (map && routingControlRef.current) {
         try {
           routingControlRef.current.setWaypoints([]);
@@ -150,7 +194,7 @@ function RoutingControl({ userLocation, destination }: RoutingControlProps) {
         routingControlRef.current = null;
       }
     };
-  }, [map, userLocation, destination]);
+  }, [map, userLat, userLng, destinationLat, destinationLng, onResult]);
 
   return null;
 }
@@ -245,6 +289,99 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+interface DistanceRoutingControlProps {
+  positions: [number, number][];
+  onResult: (result: RouteDistanceResult) => void;
+}
+
+function DistanceRoutingControl({ positions, onResult }: DistanceRoutingControlProps) {
+  const map = useMap();
+  const routingControlRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (routingControlRef.current) {
+      try {
+        routingControlRef.current.setWaypoints([]);
+        map.removeControl(routingControlRef.current);
+      } catch (error) {}
+      routingControlRef.current = null;
+    }
+
+    if (positions.length !== 2) {
+      onResult({ status: 'idle', distanceMeters: null });
+      return;
+    }
+
+    onResult({ status: 'loading', distanceMeters: null });
+
+    try {
+      const routingControl = (L as any).Routing.control({
+        waypoints: positions.map(([lat, lng]) => L.latLng(lat, lng)),
+        router: (L as any).Routing.osrmv1({
+          serviceUrl: 'https://router.project-osrm.org/route/v1'
+        }),
+        routeWhileDragging: false,
+        addWaypoints: false,
+        draggableWaypoints: false,
+        fitSelectedRoutes: false,
+        showAlternatives: false,
+        createMarker: () => null,
+        lineOptions: {
+          styles: [
+            { color: '#fffaf4', weight: 9, opacity: 0.9 },
+            { color: '#e2533b', weight: 6, opacity: 0.95 }
+          ]
+        }
+      });
+
+      routingControl.on('routesfound', (event: any) => {
+        const route = event.routes?.[0];
+        const distanceMeters = route?.summary?.totalDistance;
+
+        if (typeof distanceMeters !== 'number') {
+          onResult({ status: 'error', distanceMeters: null });
+          return;
+        }
+
+        onResult({ status: 'ready', distanceMeters });
+
+        if (route.coordinates?.length) {
+          map.fitBounds(L.latLngBounds(route.coordinates), {
+            animate: true,
+            duration: 0.6,
+            maxZoom: 17,
+            paddingTopLeft: [48, 48],
+            paddingBottomRight: [window.innerWidth >= 768 ? 440 : 80, 96]
+          });
+        }
+      });
+
+      routingControl.on('routingerror', () => {
+        onResult({ status: 'error', distanceMeters: null });
+      });
+
+      routingControl.addTo(map);
+      const container = routingControl.getContainer();
+      if (container) container.style.display = 'none';
+      routingControlRef.current = routingControl;
+    } catch (error) {
+      onResult({ status: 'error', distanceMeters: null });
+    }
+
+    return () => {
+      if (routingControlRef.current) {
+        try {
+          routingControlRef.current.setWaypoints([]);
+          map.removeControl(routingControlRef.current);
+        } catch (error) {}
+        routingControlRef.current = null;
+      }
+    };
+  }, [map, onResult, positions]);
+
+  return null;
+}
+
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)}m`;
   return `${(meters / 1000).toFixed(1)}km`;
@@ -253,6 +390,10 @@ function formatDistance(meters: number): string {
 export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, onContactRestaurant, savedRestaurantIds, onToggleSavedRestaurant, searchSelection }: PageMapProps) {
   const { t, i18n } = useTranslation();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [selectedRouteResult, setSelectedRouteResult] = useState<RouteDistanceResult>({
+    status: 'idle',
+    distanceMeters: null
+  });
   const [locateTrigger, setLocateTrigger] = useState(false);
   const [gpsNotification, setGpsNotification] = useState(false);
 
@@ -266,6 +407,14 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
 
   // Nearby restaurants panel state
   const [isNearbyOpen, setIsNearbyOpen] = useState(false);
+
+  // Restaurant-to-restaurant distance measurement state
+  const [isDistancePanelOpen, setIsDistancePanelOpen] = useState(false);
+  const [distanceRestaurantIds, setDistanceRestaurantIds] = useState<string[]>([]);
+  const [distanceRouteResult, setDistanceRouteResult] = useState<RouteDistanceResult>({
+    status: 'idle',
+    distanceMeters: null
+  });
 
   useEffect(() => {
     if (selectedRestaurant) {
@@ -370,7 +519,23 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
     setTimeout(() => setGpsNotification(false), 2000);
   };
 
+  const toggleDistanceRestaurant = (restaurantId: string) => {
+    setDistanceRestaurantIds((current) => {
+      if (current.includes(restaurantId)) {
+        return current.filter((id) => id !== restaurantId);
+      }
+      if (current.length < 2) {
+        return [...current, restaurantId];
+      }
+      return [current[1], restaurantId];
+    });
+  };
+
   const handleRestaurantSelection = (restaurant: Restaurant) => {
+    if (isDistancePanelOpen) {
+      toggleDistanceRestaurant(restaurant.id);
+      return;
+    }
     setSelectedRestaurant(restaurant);
   };
 
@@ -450,6 +615,25 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
       })
       .sort((a, b) => a.distanceMeters - b.distanceMeters);
   }, [restaurants, userLocation]);
+
+  const distanceRestaurants = useMemo(
+    () => restaurants
+      .filter((restaurant) => restaurant.isActive !== false)
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [restaurants]
+  );
+
+  const selectedDistanceRestaurants = useMemo(
+    () => distanceRestaurantIds
+      .map((id) => restaurants.find((restaurant) => restaurant.id === id))
+      .filter((restaurant): restaurant is Restaurant => Boolean(restaurant)),
+    [distanceRestaurantIds, restaurants]
+  );
+
+  const distancePositions = useMemo<[number, number][]>(
+    () => selectedDistanceRestaurants.map((restaurant) => getCoordinates(restaurant)),
+    [selectedDistanceRestaurants]
+  );
 
   return (
     <div className="foodio-map-shell fixed inset-x-0 top-[72px] bottom-0 flex bg-[#f7efe4] overflow-hidden text-[#2c211b] z-40 transition-all duration-300">
@@ -837,7 +1021,11 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                     <span className="bg-[#f9f7f2] border border-[#1a1a1a]/10 px-2 py-0.5 font-bold text-[#1a1a1a]">{activeRestaurant.category}</span>
                     <span className="flex items-center gap-0.5 text-[#e2533b] font-bold">
                       <MapPin size={10} className="text-[#e2533b]" />
-                      {formatDistance(haversineDistance(userLocation[0], userLocation[1], getCoordinates(activeRestaurant)[0], getCoordinates(activeRestaurant)[1]))}
+                      {selectedRouteResult.status === 'loading'
+                        ? t('map.distance_calculating')
+                        : selectedRouteResult.status === 'ready' && selectedRouteResult.distanceMeters !== null
+                          ? formatDistance(selectedRouteResult.distanceMeters)
+                          : '—'}
                     </span>
                   </div>
                 </div>
@@ -1022,7 +1210,9 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           {/* Render every backend restaurant marker regardless of active search text. */}
           {restaurants.map((restaurant) => {
             const coords = getCoordinates(restaurant);
-            const isSelected = selectedRestaurant?.id === restaurant.id || currentNarration?.restaurant.id === restaurant.id;
+            const isSelected = selectedRestaurant?.id === restaurant.id ||
+              currentNarration?.restaurant.id === restaurant.id ||
+              (isDistancePanelOpen && distanceRestaurantIds.includes(restaurant.id));
 
             return (
               <Marker
@@ -1046,7 +1236,11 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           })}
 
           {/* Leaflet Routing Controller wrapper */}
-          <RoutingControl userLocation={userLocation} destination={selectedCoords} />
+          <RoutingControl
+            userLocation={userLocation}
+            destination={selectedCoords}
+            onResult={setSelectedRouteResult}
+          />
 
           {/* View Recenter handler */}
           <MapController
@@ -1055,7 +1249,114 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
             locateTrigger={locateTrigger}
             getCoordinates={getCoordinates}
           />
+
+          {isDistancePanelOpen && (
+            <DistanceRoutingControl positions={distancePositions} onResult={setDistanceRouteResult} />
+          )}
         </MapContainer>
+
+        {/* Restaurant distance measurement panel */}
+        {isDistancePanelOpen && (
+          <section className="absolute bottom-24 left-4 right-20 z-[1002] flex max-h-[58dvh] flex-col overflow-hidden border-2 border-[#1a1a1a] bg-[#fffaf4]/97 shadow-[6px_6px_0px_0px_#1a1a1a] backdrop-blur-xl md:bottom-6 md:left-auto md:right-20 md:w-[370px] md:max-h-[calc(100%-3rem)]">
+            <header className="flex shrink-0 items-center justify-between border-b-2 border-[#1a1a1a] bg-[#1a1a1a] px-4 py-3 text-white">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <div className="grid h-8 w-8 shrink-0 place-items-center bg-[#e2533b]">
+                  <Ruler size={16} />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="truncate font-serif text-sm font-bold italic">{t('map.distance_title')}</h2>
+                  <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-white/55">
+                    {t('map.distance_instruction')}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDistancePanelOpen(false)}
+                aria-label={t('map.distance_close')}
+                className="grid h-8 w-8 shrink-0 place-items-center border border-white/25 text-white transition-colors hover:border-[#e2533b] hover:bg-[#e2533b]"
+              >
+                <X size={15} strokeWidth={3} />
+              </button>
+            </header>
+
+            <div className="shrink-0 border-b border-[#1a1a1a]/15 bg-[#f4eadf] p-3">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2">
+                {[0, 1].map((slot) => {
+                  const restaurant = selectedDistanceRestaurants[slot];
+                  return (
+                    <div key={slot} className="flex min-h-16 min-w-0 items-center gap-2 border border-[#1a1a1a]/15 bg-white px-2.5 py-2">
+                      <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full font-mono text-[10px] font-black ${restaurant ? 'bg-[#e2533b] text-white' : 'bg-[#1a1a1a]/10 text-[#1a1a1a]/40'}`}>
+                        {slot + 1}
+                      </span>
+                      <span className={`line-clamp-2 text-[10px] font-bold leading-tight ${restaurant ? 'text-[#1a1a1a]' : 'text-[#1a1a1a]/35'}`}>
+                        {restaurant?.name ?? t(`map.distance_select_${slot + 1}`)}
+                      </span>
+                    </div>
+                  );
+                }).reduce<ReactNode[]>((items, slot, index) => {
+                  if (index > 0) items.push(<ArrowRight key={`arrow-${index}`} size={15} className="self-center text-[#e2533b]" />);
+                  items.push(slot);
+                  return items;
+                }, [])}
+              </div>
+
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-[#1a1a1a]/45">
+                    {t('map.distance_result')}
+                  </p>
+                  <p className={`font-serif text-2xl font-black italic leading-none ${distanceRouteResult.status === 'ready' ? 'text-[#e2533b]' : 'text-[#1a1a1a]/25'}`}>
+                    {distanceRouteResult.status === 'loading'
+                      ? t('map.distance_calculating')
+                      : distanceRouteResult.status === 'error'
+                        ? t('map.distance_error')
+                        : distanceRouteResult.distanceMeters === null
+                          ? '—'
+                          : formatDistance(distanceRouteResult.distanceMeters)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDistanceRestaurantIds([])}
+                  disabled={distanceRestaurantIds.length === 0}
+                  className="flex items-center gap-1.5 border border-[#1a1a1a]/20 bg-white px-2.5 py-2 font-mono text-[8px] font-bold uppercase tracking-wider transition-colors hover:border-[#e2533b] hover:text-[#e2533b] disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <RotateCcw size={11} /> {t('map.distance_clear')}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2.5 hide-scrollbar">
+              <div className="flex flex-col gap-2">
+                {distanceRestaurants.map((restaurant) => {
+                  const selectedIndex = distanceRestaurantIds.indexOf(restaurant.id);
+                  const isSelectedForDistance = selectedIndex >= 0;
+                  return (
+                    <button
+                      key={restaurant.id}
+                      type="button"
+                      onClick={() => toggleDistanceRestaurant(restaurant.id)}
+                      className={`flex w-full items-center gap-3 border p-2 text-left transition-all active:scale-[0.99] ${isSelectedForDistance ? 'border-[#e2533b] bg-[#fff1ec] shadow-sm' : 'border-[#1a1a1a]/10 bg-white hover:border-[#1a1a1a]/35'}`}
+                    >
+                      <div
+                        className="h-11 w-11 shrink-0 border border-[#1a1a1a]/10 bg-cover bg-center"
+                        style={{ backgroundImage: `url('${restaurant.image}')` }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-serif text-xs font-bold italic text-[#1a1a1a]">{restaurant.name}</p>
+                        <p className="mt-0.5 truncate text-[9px] text-[#1a1a1a]/50">{restaurant.address}</p>
+                      </div>
+                      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border font-mono text-[10px] font-black ${isSelectedForDistance ? 'border-[#e2533b] bg-[#e2533b] text-white' : 'border-[#1a1a1a]/20 text-[#1a1a1a]/25'}`}>
+                        {isSelectedForDistance ? selectedIndex + 1 : <Check size={12} />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Live GPS Tracker Notification Popup */}
         {gpsNotification && (
@@ -1080,7 +1381,14 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
             {/* Nearby Restaurants Panel Toggle */}
             <button
               type="button"
-              onClick={() => { setIsNearbyOpen((prev) => !prev); if (isOpen) setSelectedRestaurant(null); }}
+              onClick={() => {
+                setIsNearbyOpen((current) => {
+                  const willOpen = !current;
+                  if (willOpen) setIsDistancePanelOpen(false);
+                  return willOpen;
+                });
+                if (isOpen) setSelectedRestaurant(null);
+              }}
               title={t('map.nearby_toggle', 'Quán gần đây')}
               className={`w-12 h-12 ${isNearbyOpen ? 'bg-[#e2533b] text-white border-[#e2533b] hover:bg-[#c9412f]' : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f9f7f2]'} rounded-none shadow-xl flex items-center justify-center border-2 active:scale-90 transition-all pointer-events-auto cursor-pointer`}
             >
@@ -1105,6 +1413,26 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
               className="w-12 h-12 bg-white text-[#1a1a1a] hover:text-[#e2533b] rounded-none shadow-xl flex items-center justify-center border-2 border-[#1a1a1a] hover:bg-[#f9f7f2] active:scale-90 transition-all pointer-events-auto cursor-pointer group"
             >
               <LocateFixed size={22} className="group-hover:scale-110 transition-transform" />
+            </button>
+
+            {/* Restaurant distance measurement */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsDistancePanelOpen((current) => {
+                  const willOpen = !current;
+                  if (willOpen) {
+                    setIsNearbyOpen(false);
+                    setSelectedRestaurant(null);
+                  }
+                  return willOpen;
+                });
+              }}
+              title={t('map.distance_tool')}
+              aria-label={t('map.distance_tool')}
+              className={`h-12 w-12 border-2 shadow-xl flex items-center justify-center transition-all active:scale-90 pointer-events-auto cursor-pointer ${isDistancePanelOpen ? 'border-[#e2533b] bg-[#e2533b] text-white hover:bg-[#c9412f]' : 'border-[#1a1a1a] bg-white text-[#1a1a1a] hover:bg-[#f9f7f2] hover:text-[#e2533b]'}`}
+            >
+              <Ruler size={22} />
             </button>
           </div>
         </div>

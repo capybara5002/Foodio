@@ -72,6 +72,16 @@
     "gps_toast": "🎯 Đang cập nhật định vị trên đường Vĩnh Khánh...",
     "curated": "Gợi ý",
     "hot": "HOT",
+    "distance_tool": "Đo khoảng cách giữa hai quán",
+    "distance_title": "Khoảng cách giữa hai quán",
+    "distance_instruction": "Chọn 2 quán để so sánh",
+    "distance_select_1": "Chọn quán thứ nhất",
+    "distance_select_2": "Chọn quán thứ hai",
+    "distance_result": "Khoảng cách theo đường đi",
+    "distance_calculating": "Đang tính...",
+    "distance_error": "Không tìm thấy tuyến",
+    "distance_clear": "Chọn lại",
+    "distance_close": "Đóng bảng đo khoảng cách",
     "view_full_info": "Xem chi tiết & Đặt bàn // 🔗"
   },
   "discover": {
@@ -180,6 +190,8 @@
       "admin": "Admin",
       "owner": "Chủ quán",
       "customer": "Thực khách",
+      "current_participants": "Khách đang tham gia",
+      "current_participants_hint": "Số thiết bị khách đang mở Foodio, tự động cập nhật theo thời gian thực",
       "suspended": "Đang khóa"
     },
     "accounts": {
