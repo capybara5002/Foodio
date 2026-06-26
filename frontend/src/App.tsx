@@ -59,6 +59,7 @@ function AppContent() {
   const [activeAudioTour, setActiveAudioTour] = useState<AudioTour | null>(null);
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [mapSearchSelection, setMapSearchSelection] = useState<{ restaurantId: string; requestId: number } | null>(null);
+  const [isMapPanelOpen, setIsMapPanelOpen] = useState(false);
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>(initialRestaurants);
   const [hasLoadedRestaurantData, setHasLoadedRestaurantData] = useState(false);
@@ -78,6 +79,12 @@ function AppContent() {
       { enableHighAccuracy: false, timeout: 5000 }
     );
   }, []);
+
+  useEffect(() => {
+    if (currentTab !== 'map') {
+      setIsMapPanelOpen(false);
+    }
+  }, [currentTab]);
 
   const [activeThreadId, setActiveThreadId] = useState<string>('');
 
@@ -526,6 +533,7 @@ function AppContent() {
         });
       }}
       searchSelection={mapSearchSelection}
+      onPanelOpenChange={setIsMapPanelOpen}
     />
   );
 
@@ -652,6 +660,7 @@ function AppContent() {
         searchQuery={mapSearchQuery}
         onSearchQueryChange={setMapSearchQuery}
         onSearchRestaurantSelect={handleMapSearchSelect}
+        isMapPanelOpen={currentTab === 'map' && isMapPanelOpen}
         paymentStatus={(
           <>
             <PaymentStatusPill placement="header" />

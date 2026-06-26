@@ -38,6 +38,7 @@ interface PageMapProps {
   savedRestaurantIds: string[];
   onToggleSavedRestaurant: (restaurantId: string) => void;
   searchSelection: { restaurantId: string; requestId: number } | null;
+  onPanelOpenChange?: (isOpen: boolean) => void;
 }
 
 // Coordinate constraints for Vinh Khanh Food Street
@@ -387,7 +388,7 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)}km`;
 }
 
-export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, onContactRestaurant, savedRestaurantIds, onToggleSavedRestaurant, searchSelection }: PageMapProps) {
+export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour, onContactRestaurant, savedRestaurantIds, onToggleSavedRestaurant, searchSelection, onPanelOpenChange }: PageMapProps) {
   const { t, i18n } = useTranslation();
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [selectedRouteResult, setSelectedRouteResult] = useState<RouteDistanceResult>({
@@ -432,6 +433,16 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
       return () => clearTimeout(timer);
     }
   }, [selectedRestaurant]);
+
+  useEffect(() => {
+    onPanelOpenChange?.(Boolean(selectedRestaurant) || isNearbyOpen);
+  }, [isNearbyOpen, onPanelOpenChange, selectedRestaurant]);
+
+  useEffect(() => {
+    return () => {
+      onPanelOpenChange?.(false);
+    };
+  }, [onPanelOpenChange]);
 
   // Location and narration guide states
   const [userLocation, setUserLocation] = useState<[number, number]>(VINH_KHANH_CENTER);
@@ -636,7 +647,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
   );
 
   return (
-    <div className="foodio-map-shell fixed inset-x-0 top-0 bottom-0 flex bg-[#f7efe4] overflow-hidden text-[#2c211b] z-40 transition-all duration-300">
+    <div className="foodio-map-shell fixed inset-x-0 top-0 bottom-0 flex bg-[#f7efe4] overflow-hidden text-[#2c211b] transition-all duration-300">
 
       {/* Live Audio Narration Guide Overlay (Glassmorphism + mini player styling) */}
       {currentNarration && (

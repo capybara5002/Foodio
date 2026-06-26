@@ -17,6 +17,7 @@ interface NavBarProps {
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   onSearchRestaurantSelect: (restaurantId: string) => void;
+  isMapPanelOpen?: boolean;
   paymentStatus?: ReactNode;
 }
 
@@ -42,12 +43,14 @@ export default function NavBar({
   searchQuery,
   onSearchQueryChange,
   onSearchRestaurantSelect,
+  isMapPanelOpen = false,
   paymentStatus
 }: NavBarProps) {
   const { t } = useTranslation();
   const { language, changeLanguage } = useLanguage();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const isMapTab = currentTab === 'map';
+  const shouldAvoidMapPanel = isMapTab && isMapPanelOpen;
 
   const normalizedSearchQuery = normalizeString(searchQuery.trim());
   const searchSuggestions = normalizedSearchQuery
@@ -70,8 +73,14 @@ export default function NavBar({
 
   return (
     <>
-      <header className={`${isMapTab ? 'fixed inset-x-0 top-0 z-[80] px-3 pt-3 pointer-events-none md:px-6' : 'fixed inset-x-0 top-0 z-[80] h-[72px] px-3 pt-3 pointer-events-none md:px-6'}`}>
-        <div className={`${isMapTab ? 'mx-auto flex h-14 max-w-7xl items-center gap-2 pointer-events-auto md:gap-3' : 'mx-auto flex h-14 max-w-7xl items-center gap-3 rounded-[1.75rem] border border-white/70 bg-[#fffaf4]/84 px-2.5 shadow-[0_18px_46px_rgba(77,49,31,0.16)] backdrop-blur-2xl pointer-events-auto'}`}>
+      <header className={`${isMapTab
+          ? `fixed left-0 right-0 top-0 z-[80] px-3 pt-3 pointer-events-none transition-[left,right] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] md:px-6 ${shouldAvoidMapPanel ? 'md:left-[calc(30%+2rem)] md:right-6 md:px-0' : ''}`
+          : 'fixed inset-x-0 top-0 z-[80] h-[72px] px-3 pt-3 pointer-events-none md:px-6'
+        }`}>
+        <div className={`${isMapTab
+            ? 'mx-auto flex h-14 max-w-7xl items-center gap-2 pointer-events-auto md:gap-3'
+            : 'mx-auto flex h-14 max-w-7xl items-center gap-3 rounded-[1.75rem] border border-white/70 bg-[#fffaf4]/84 px-2.5 shadow-[0_18px_46px_rgba(77,49,31,0.16)] backdrop-blur-2xl pointer-events-auto'
+          }`}>
           <button
             type="button"
             onClick={() => onChangeTab('map')}
