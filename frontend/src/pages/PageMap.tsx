@@ -411,6 +411,10 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
 
   // Restaurant-to-restaurant distance measurement state
   const [isDistancePanelOpen, setIsDistancePanelOpen] = useState(false);
+  const [distanceSheetStage, setDistanceSheetStage] = useState<SheetStage>('peek');
+  const [distanceSheetDragOffset, setDistanceSheetDragOffset] = useState(0);
+  const [isDistanceSheetDragging, setIsDistanceSheetDragging] = useState(false);
+  const distanceSheetDragStartRef = useRef<{ y: number; moved: boolean } | null>(null);
   const [distanceRestaurantIds, setDistanceRestaurantIds] = useState<string[]>([]);
   const [distanceRouteResult, setDistanceRouteResult] = useState<RouteDistanceResult>({
     status: 'idle',
@@ -600,6 +604,71 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
   } as CSSProperties;
 
   useEffect(() => {
+    if (isDistancePanelOpen) {
+      setDistanceSheetStage('peek');
+      setDistanceSheetDragOffset(0);
+      setIsDistanceSheetDragging(false);
+    } else {
+      setDistanceRestaurantIds([]);
+      setDistanceSheetDragOffset(0);
+      setIsDistanceSheetDragging(false);
+    }
+  }, [isDistancePanelOpen]);
+
+  const handleDistanceSheetDragStart = (event: PointerEvent<HTMLDivElement>) => {
+    if (window.innerWidth >= 768) return;
+    distanceSheetDragStartRef.current = { y: event.clientY, moved: false };
+    setIsDistanceSheetDragging(true);
+    setDistanceSheetDragOffset(0);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleDistanceSheetDragMove = (event: PointerEvent<HTMLDivElement>) => {
+    const dragStart = distanceSheetDragStartRef.current;
+    if (!dragStart) return;
+
+    const deltaY = event.clientY - dragStart.y;
+    if (Math.abs(deltaY) > 4) {
+      dragStart.moved = true;
+      event.preventDefault();
+    }
+
+    setDistanceSheetDragOffset(Math.max(-220, deltaY));
+  };
+
+  const handleDistanceSheetDragEnd = (event: PointerEvent<HTMLDivElement>) => {
+    const dragStart = distanceSheetDragStartRef.current;
+    if (!dragStart) return;
+
+    const deltaY = event.clientY - dragStart.y;
+    distanceSheetDragStartRef.current = null;
+    setIsDistanceSheetDragging(false);
+    setDistanceSheetDragOffset(0);
+
+    if (deltaY > 120) {
+      if (distanceSheetStage === 'expanded') {
+        setDistanceSheetStage('peek');
+      } else {
+        setIsDistancePanelOpen(false);
+      }
+      return;
+    }
+
+    if (deltaY > 56 && distanceSheetStage === 'expanded') {
+      setDistanceSheetStage('peek');
+      return;
+    }
+
+    if (deltaY < -56) {
+      setDistanceSheetStage('expanded');
+    }
+  };
+
+  const distanceSheetStyle = {
+    '--distance-sheet-drag-offset': `${distanceSheetDragOffset}px`
+  } as CSSProperties;
+
+  useEffect(() => {
     if (!searchSelection) return;
 
     const restaurant = restaurants.find((r) => r.id === searchSelection.restaurantId);
@@ -740,6 +809,30 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
         .sheet-scroll {
           overscroll-behavior: contain;
         }
+        .distance-panel {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: min(42dvh, 420px);
+          max-height: 100%;
+          border: 1px solid rgba(75, 54, 42, 0.12);
+          border-bottom: none;
+          border-radius: 28px 28px 0 0;
+          box-shadow: 0 -24px 70px rgba(77, 49, 31, 0.18);
+          transform: translateY(var(--distance-sheet-drag-offset, 0px));
+          transition:
+            height 0.32s cubic-bezier(0.32, 0.72, 0, 1),
+            transform 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+          z-index: 1005;
+          will-change: height, transform;
+        }
+        .distance-panel.expanded {
+          height: calc(100dvh - 5.25rem);
+        }
+        .distance-panel.dragging {
+          transition: none;
+        }
         .map-container-wrap {
           position: absolute;
           top: 0;
@@ -772,6 +865,22 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
           }
           .info-panel.closed {
             transform: translateX(-100%);
+          }
+          .distance-panel {
+            bottom: 1.5rem;
+            left: auto;
+            right: 5rem;
+            width: 370px;
+            height: auto;
+            max-height: calc(100% - 3rem);
+            border: 1px solid rgba(75, 54, 42, 0.12);
+            border-radius: 16px;
+            box-shadow: 0 24px 70px rgba(77, 49, 31, 0.18);
+            transform: none;
+          }
+          .distance-panel.expanded {
+            height: auto;
+            max-height: calc(100% - 3rem);
           }
           .map-container-wrap {
             right: 0;
@@ -875,7 +984,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
         </div>
 
         {/* Scrollable Restaurant List */}
-        <div className="flex-1 overflow-y-auto hide-scrollbar px-3 py-3 flex flex-col gap-2">
+        <div className="flex-1 overflow-y-auto hide-scrollbar px-3 pt-3 pb-28 md:pb-3 flex flex-col gap-2">
           {nearbyRestaurants.map(({ restaurant: r, distanceMeters }, index) => {
             const isActive = selectedRestaurant?.id === r.id;
             return (
@@ -1268,7 +1377,21 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
 
         {/* Restaurant distance measurement panel */}
         {isDistancePanelOpen && (
-          <section className="absolute bottom-24 left-4 right-20 z-[1002] flex max-h-[58dvh] flex-col overflow-hidden border-2 border-[#1a1a1a] bg-[#fffaf4]/97 shadow-[6px_6px_0px_0px_#1a1a1a] backdrop-blur-xl md:bottom-6 md:left-auto md:right-20 md:w-[370px] md:max-h-[calc(100%-3rem)]">
+          <section
+            className={`distance-panel ${distanceSheetStage === 'expanded' ? 'expanded' : ''} ${isDistanceSheetDragging ? 'dragging' : ''} flex flex-col overflow-hidden bg-[#fffaf4]/97 backdrop-blur-xl`}
+            style={distanceSheetStyle}
+          >
+            <div
+              onPointerDown={handleDistanceSheetDragStart}
+              onPointerMove={handleDistanceSheetDragMove}
+              onPointerUp={handleDistanceSheetDragEnd}
+              onPointerCancel={handleDistanceSheetDragEnd}
+              className="md:hidden flex justify-center py-3 shrink-0 bg-[#fffaf4] border-b border-[#1a1a1a]/5 cursor-grab active:cursor-grabbing touch-none"
+              aria-label={t('map.distance_title')}
+            >
+              <div className="w-12 h-1 bg-[#1a1a1a]/20 rounded-full" />
+            </div>
+
             <header className="flex shrink-0 items-center justify-between border-b-2 border-[#1a1a1a] bg-[#1a1a1a] px-4 py-3 text-white">
               <div className="flex min-w-0 items-center gap-2.5">
                 <div className="grid h-8 w-8 shrink-0 place-items-center bg-[#e2533b]">
