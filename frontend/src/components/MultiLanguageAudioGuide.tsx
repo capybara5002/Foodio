@@ -93,6 +93,45 @@ const FALLBACK_LANGUAGE_FAMILIES: Record<string, string[]> = {
   ar: ['fa', 'ur', 'en']
 };
 
+const getLanguageCode = (value?: string | null) => {
+  const normalizedValue = value?.trim().toLowerCase();
+  if (!normalizedValue) return '';
+
+  const exactMatch = LANGUAGE_OPTIONS.find((language) =>
+    language.code.toLowerCase() === normalizedValue ||
+    language.speechLangs.some((speechLang) => speechLang.toLowerCase() === normalizedValue)
+  );
+
+  if (exactMatch) return exactMatch.code;
+
+  const baseCode = normalizedValue.split(/[-_]/)[0];
+  const baseMatch = LANGUAGE_OPTIONS.find((language) =>
+    language.code.toLowerCase() === baseCode ||
+    language.speechLangs.some((speechLang) => speechLang.toLowerCase().split(/[-_]/)[0] === baseCode)
+  );
+
+  return baseMatch?.code ?? '';
+};
+
+const getBrowserAudioLanguage = () => {
+  if (typeof navigator === 'undefined') return '';
+
+  const browserLanguages = [
+    ...(Array.isArray(navigator.languages) ? navigator.languages : []),
+    navigator.language
+  ];
+
+  for (const browserLanguage of browserLanguages) {
+    const languageCode = getLanguageCode(browserLanguage);
+    if (languageCode) return languageCode;
+  }
+
+  return '';
+};
+
+const resolveInitialAudioLanguage = (fallbackLang: string) =>
+  getBrowserAudioLanguage() || getLanguageCode(fallbackLang) || 'en';
+
 interface MultiLanguageAudioGuideProps {
   sourceText: string;
   title: string;
@@ -108,7 +147,7 @@ export default function MultiLanguageAudioGuide({
   defaultLang = 'en',
   className = ''
 }: MultiLanguageAudioGuideProps) {
-  const [targetLang, setTargetLang] = useState(defaultLang);
+  const [targetLang, setTargetLang] = useState(() => resolveInitialAudioLanguage(defaultLang));
   const [translatedText, setTranslatedText] = useState(sourceText);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);

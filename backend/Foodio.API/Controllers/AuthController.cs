@@ -4,6 +4,8 @@ using Foodio.API.Models;
 using Foodio.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Google.Apis.Auth;
+using System.Security.Cryptography;
 using System.Text.Json;
 using BC = BCrypt.Net.BCrypt;
 
@@ -14,10 +16,84 @@ namespace Foodio.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IConfiguration _configuration;
 
-    public AuthController(AppDbContext db)
+    public AuthController(AppDbContext db, IConfiguration configuration)
     {
         _db = db;
+        _configuration = configuration;
+    }
+
+    [HttpPost("google")]
+    public async Task<ActionResult<UserDto>> GoogleLogin(GoogleLoginRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Credential))
+        {
+            return BadRequest("Google credential is required.");
+        }
+
+        var clientId = _configuration["GoogleAuth:ClientId"];
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "Google login is not configured.");
+        }
+
+        GoogleJsonWebSignature.Payload payload;
+        try
+        {
+            payload = await GoogleJsonWebSignature.ValidateAsync(
+                request.Credential,
+                new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { clientId }
+                });
+        }
+        catch (InvalidJwtException)
+        {
+            return Unauthorized("Google credential is invalid or expired.");
+        }
+
+        if (!payload.EmailVerified || string.IsNullOrWhiteSpace(payload.Email))
+        {
+            return Unauthorized("Google email has not been verified.");
+        }
+
+        var email = payload.Email.Trim().ToLowerInvariant();
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email);
+
+        if (user != null && !user.IsActive)
+        {
+            return BadRequest("This account has been suspended by an Admin.");
+        }
+
+        if (user == null)
+        {
+            var username = string.IsNullOrWhiteSpace(payload.Name)
+                ? email.Split('@')[0]
+                : payload.Name.Trim();
+
+            user = new User
+            {
+                Id = $"usr_{Guid.NewGuid():N}",
+                Username = username[..Math.Min(username.Length, 100)],
+                Email = email,
+                PasswordHash = BC.HashPassword(Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))),
+                Role = "User",
+                IsActive = true,
+                CreatedAt = DateTimeOffset.UtcNow,
+                Avatar = payload.Picture
+            };
+
+            _db.Users.Add(user);
+            await _db.SaveChangesAsync();
+        }
+        else if (string.IsNullOrWhiteSpace(user.Avatar) && !string.IsNullOrWhiteSpace(payload.Picture))
+        {
+            user.Avatar = payload.Picture;
+            await _db.SaveChangesAsync();
+        }
+
+        return Ok(user.ToDto());
     }
 
     [HttpPost("login")]
@@ -205,6 +281,36 @@ public class AuthController : ControllerBase
         }
 
         user.Avatar = request.Avatar;
+        await _db.SaveChangesAsync();
+
+        return Ok(user.ToDto());
+    }
+
+    [HttpPost("update-username")]
+    public async Task<ActionResult<UserDto>> UpdateUsername([FromBody] UpdateUsernameRequestDto request)
+    {
+        var username = request.Username.Trim();
+        if (username.Length < 2 || username.Length > 100)
+        {
+            return BadRequest("Username must be between 2 and 100 characters.");
+        }
+
+        var user = await _db.Users
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
+
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        var isTaken = await _db.Users.AnyAsync(u =>
+            u.Id != user.Id && u.Username.ToLower() == username.ToLower());
+        if (isTaken)
+        {
+            return Conflict("This username is already in use.");
+        }
+
+        user.Username = username;
         await _db.SaveChangesAsync();
 
         return Ok(user.ToDto());

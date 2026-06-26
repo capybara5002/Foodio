@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { User, Restaurant, Category, AudioTour, RestaurantRequest, CommunityPost, AuditLog } from '../../types';
-import { Plus, Pencil, Trash2, X, Shield, Store, User as UserIcon, Ban, Users, Unlock, MapPin, Calendar, MessageSquare, AlertTriangle, FileText, Check, Navigation, CheckCircle2, XCircle, UploadCloud, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Shield, Store, User as UserIcon, Ban, Users, UserCheck, Unlock, MapPin, Calendar, MessageSquare, AlertTriangle, FileText, Check, Navigation, CheckCircle2, XCircle, UploadCloud, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -99,6 +99,10 @@ interface AdminReviewDto {
   createdAt: string;
 }
 
+interface AdminDashboardStats {
+  currentParticipants: number;
+}
+
 // Predefined Vĩnh Khánh location list
 const LOCATION_OPTIONS = [
   'Vĩnh Khánh, Quận 4, TP.HCM',
@@ -126,6 +130,7 @@ export default function AdminDashboard({ onRestaurantUpdated, onRefreshRestauran
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [reviews, setReviews] = useState<AdminReviewDto[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats>({ currentParticipants: 0 });
 
   // Sub Tab for Moderation
   const [modSubTab, setModSubTab] = useState<'posts' | 'reviews'>('posts');
@@ -218,13 +223,15 @@ export default function AdminDashboard({ onRestaurantUpdated, onRefreshRestauran
     setError(null);
     try {
       if (activeTab === 'accounts') {
-        const [usersRes, restRes] = await Promise.all([
+        const [usersRes, restRes, statsRes] = await Promise.all([
           fetch(`${baseUrl}/api/admin/users`),
-          fetch(`${baseUrl}/api/cravemap/restaurants?includeInactive=true`)
+          fetch(`${baseUrl}/api/cravemap/restaurants?includeInactive=true`),
+          fetch(`${baseUrl}/api/admin/stats`)
         ]);
-        if (!usersRes.ok || !restRes.ok) throw new Error('Failed to fetch account data.');
+        if (!usersRes.ok || !restRes.ok || !statsRes.ok) throw new Error('Failed to fetch account data.');
         setUsers(await usersRes.json());
         setRestaurants(await restRes.json());
+        setDashboardStats(await statsRes.json());
       } else if (activeTab === 'requests') {
         const [reqsRes, restsRes] = await Promise.all([
           fetch(`${baseUrl}/api/admin/restaurant-requests`),
@@ -264,6 +271,22 @@ export default function AdminDashboard({ onRestaurantUpdated, onRefreshRestauran
   useEffect(() => {
     void fetchTabContent();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'accounts') return;
+
+    const refreshStats = async () => {
+      try {
+        const response = await fetch(`${baseUrl}/api/admin/stats`);
+        if (response.ok) setDashboardStats(await response.json());
+      } catch {
+        // Keep the last known value while the API reconnects.
+      }
+    };
+
+    const intervalId = window.setInterval(() => void refreshStats(), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [activeTab, baseUrl]);
 
   // --- File to Base64 helper ---
   const fileToBase64 = (file: File): Promise<string> =>
@@ -749,7 +772,7 @@ export default function AdminDashboard({ onRestaurantUpdated, onRefreshRestauran
           {activeTab === 'accounts' && (
             <div className="flex flex-col gap-6">
               {/* Bento Grid Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
                 <div className="bg-white p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between">
                   <span className="font-mono text-[9px] uppercase tracking-wider text-[#1a1a1a]/55 font-bold flex items-center gap-1">
                     <Users size={12} /> {t('admin.stats.total_accounts')}
@@ -773,6 +796,15 @@ export default function AdminDashboard({ onRestaurantUpdated, onRefreshRestauran
                     <UserIcon size={12} /> {t('admin.stats.customer')}
                   </span>
                   <span className="font-serif italic font-bold text-3xl text-[#1a1a1a] mt-1">{customerCount}</span>
+                </div>
+                <div
+                  className="bg-[#eef8f0] p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between"
+                  title={t('admin.stats.current_participants_hint')}
+                >
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-[#287a45] font-bold flex items-center gap-1">
+                    <UserCheck size={12} /> {t('admin.stats.current_participants')}
+                  </span>
+                  <span className="font-serif italic font-bold text-3xl text-[#287a45] mt-1">{dashboardStats.currentParticipants}</span>
                 </div>
                 <div className="bg-[#fff0f0] p-4 border-2 border-[#1a1a1a] shadow-[3px_3px_0px_0px_#1a1a1a] flex flex-col justify-between col-span-2 md:col-span-1">
                   <span className="font-mono text-[9px] uppercase tracking-wider text-[#e2533b] font-bold flex items-center gap-1">

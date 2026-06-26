@@ -70,6 +70,72 @@ public class CraveMapController : ControllerBase
         return Ok(restaurants.Select(restaurant => restaurant.ToDto()).ToList());
     }
 
+    [HttpGet("users/{userId}/saved-places")]
+    public async Task<ActionResult<IReadOnlyList<SavedPlaceDto>>> GetSavedPlaces(string userId)
+    {
+        var savedPlaces = await _db.SavedPlaces
+            .AsNoTracking()
+            .Where(savedPlace => savedPlace.UserId == userId)
+            .OrderByDescending(savedPlace => savedPlace.CreatedAt)
+            .Select(savedPlace => new SavedPlaceDto(savedPlace.RestaurantId, savedPlace.CreatedAt))
+            .ToListAsync();
+
+        return Ok(savedPlaces);
+    }
+
+    [HttpPost("users/{userId}/saved-places")]
+    public async Task<ActionResult<SavedPlaceDto>> SavePlace(string userId, SavePlaceRequestDto dto)
+    {
+        if (!await _db.Users.AnyAsync(user => user.Id == userId))
+        {
+            return NotFound("User not found.");
+        }
+
+        if (!await _db.Restaurants.AnyAsync(restaurant => restaurant.Id == dto.RestaurantId && restaurant.IsActive))
+        {
+            return NotFound("Restaurant not found.");
+        }
+
+        var existing = await _db.SavedPlaces
+            .AsNoTracking()
+            .FirstOrDefaultAsync(savedPlace =>
+                savedPlace.UserId == userId && savedPlace.RestaurantId == dto.RestaurantId);
+
+        if (existing is not null)
+        {
+            return Ok(new SavedPlaceDto(existing.RestaurantId, existing.CreatedAt));
+        }
+
+        var savedPlace = new SavedPlace
+        {
+            Id = $"saved_{Guid.NewGuid():N}",
+            UserId = userId,
+            RestaurantId = dto.RestaurantId,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _db.SavedPlaces.Add(savedPlace);
+        await _db.SaveChangesAsync();
+
+        return Ok(new SavedPlaceDto(savedPlace.RestaurantId, savedPlace.CreatedAt));
+    }
+
+    [HttpDelete("users/{userId}/saved-places/{restaurantId}")]
+    public async Task<IActionResult> RemoveSavedPlace(string userId, string restaurantId)
+    {
+        var savedPlace = await _db.SavedPlaces.FirstOrDefaultAsync(item =>
+            item.UserId == userId && item.RestaurantId == restaurantId);
+
+        if (savedPlace is null)
+        {
+            return NoContent();
+        }
+
+        _db.SavedPlaces.Remove(savedPlace);
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
     [HttpGet("categories")]
     public async Task<ActionResult<IReadOnlyList<CategoryDto>>> GetCategories()
     {

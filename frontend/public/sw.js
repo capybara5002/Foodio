@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cravemap-shell-v2';
+const CACHE_NAME = 'cravemap-shell-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -31,6 +31,12 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
+  // Let live routing requests go directly to OSRM. Intercepting these requests
+  // adds no offline value and makes aborted route requests harder to recover.
+  if (url.origin === 'https://router.project-osrm.org') {
+    return;
+  }
+
   // Ignore API requests or SignalR websocket connections
   if (url.pathname.startsWith('/api') || url.pathname.includes('/hubs/')) {
     return;
@@ -38,6 +44,21 @@ self.addEventListener('fetch', (event) => {
 
   // Ignore non-GET requests
   if (req.method !== 'GET') {
+    return;
+  }
+
+  // Navigations should prefer the latest app so QR visitors do not remain on
+  // an old cached bundle. The cached shell is only used when offline.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req).then((networkResponse) => {
+        if (networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('/', responseClone));
+        }
+        return networkResponse;
+      }).catch(() => caches.match('/') || caches.match('/index.html'))
+    );
     return;
   }
 
@@ -68,12 +89,6 @@ self.addEventListener('fetch', (event) => {
         }
 
         return networkResponse;
-      }).catch((err) => {
-        // Offline fallback for page navigations (serve App Shell)
-        if (req.mode === 'navigate') {
-          return caches.match('/');
-        }
-        throw err;
       });
     })
   );

@@ -3,14 +3,32 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useRef } from 'react';
+import { lazy, Suspense, useState, useRef } from 'react';
 import { Restaurant } from '../types';
-import { ArrowLeft, Share2, Heart, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X, Send } from 'lucide-react';
+import { ArrowLeft, Share2, Bookmark, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { createReview, replyToReview } from '../api/cravemapApi';
-import MultiLanguageAudioGuide from '../components/MultiLanguageAudioGuide';
 import ImageGallery from '../components/Common/ImageGallery';
+
+const MultiLanguageAudioGuide = lazy(() => import('../components/MultiLanguageAudioGuide'));
+
+// Haversine formula — returns distance in meters between two lat/lng points
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return `${(meters / 1000).toFixed(1)}km`;
+}
 
 interface PageDetailProps {
   restaurant: Restaurant;
@@ -19,13 +37,16 @@ interface PageDetailProps {
   onGoToChat: () => void;
   requireAuth: (message: string, action: () => void) => void;
   onRestaurantUpdated: (updated: Restaurant) => void;
+  isSaved: boolean;
+  onToggleSaved: () => Promise<void>;
   onContactUser?: (reviewerUsername: string) => void;
+  userLocation?: [number, number];
 }
 
-export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToChat, requireAuth, onRestaurantUpdated, onContactUser }: PageDetailProps) {
+export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToChat, requireAuth, onRestaurantUpdated, isSaved, onToggleSaved, onContactUser, userLocation }: PageDetailProps) {
   const { t, i18n } = useTranslation();
-  const [isFavorite, setIsFavorite] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSavingPlace, setIsSavingPlace] = useState(false);
   const [showAllDishes, setShowAllDishes] = useState(false);
   const [showAudioGuide, setShowAudioGuide] = useState(false);
 
@@ -171,6 +192,27 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
     setTimeout(() => setToastMessage(null), 2500);
   };
 
+  const handleToggleSavedPlace = () => {
+    requireAuth(t('auth.require_login_save', 'Bạn cần đăng nhập để lưu quán.'), () => {
+      void (async () => {
+        setIsSavingPlace(true);
+        try {
+          await onToggleSaved();
+          setToastMessage(isSaved
+            ? t('detail.place_removed', 'Đã bỏ quán khỏi danh sách lưu')
+            : t('detail.place_saved', 'Đã lưu quán vào Saved Places'));
+        } catch (error) {
+          setToastMessage(error instanceof Error
+            ? error.message
+            : t('detail.save_place_error', 'Không thể lưu quán lúc này'));
+        } finally {
+          setIsSavingPlace(false);
+          setTimeout(() => setToastMessage(null), 2500);
+        }
+      })();
+    });
+  };
+
   const handleAddDish = (dishName: string) => {
     setToastMessage(t('detail.added_dish', { name: dishName }));
     setTimeout(() => setToastMessage(null), 2500);
@@ -204,14 +246,13 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
             </button>
             <button 
               type="button"
-              onClick={() => setIsFavorite(!isFavorite)}
-                className="w-11 h-11 flex items-center justify-center rounded-full bg-[#fffaf4]/90 border border-white/60 shadow-[0_18px_46px_rgba(77,49,31,0.18)] hover:bg-white active:scale-95 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer backdrop-blur-xl"
+              onClick={handleToggleSavedPlace}
+              disabled={isSavingPlace}
+              aria-label={isSaved ? t('detail.unsave_place', 'Bỏ lưu quán') : t('detail.save_place', 'Lưu quán')}
+              title={isSaved ? t('detail.unsave_place', 'Bỏ lưu quán') : t('detail.save_place', 'Lưu quán')}
+                className={`w-11 h-11 flex items-center justify-center rounded-full border shadow-[0_18px_46px_rgba(77,49,31,0.18)] active:scale-95 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer backdrop-blur-xl disabled:cursor-wait disabled:opacity-60 ${isSaved ? 'bg-[#2c211b] border-[#2c211b] text-white hover:bg-[#3b2d25]' : 'bg-[#fffaf4]/90 border-white/60 text-on-surface hover:bg-white'}`}
             >
-              {isFavorite ? (
-                <Heart size={20} className="fill-[#e2533b] text-[#e2533b]" />
-              ) : (
-                <Heart size={20} className="text-on-surface" />
-              )}
+              <Bookmark size={20} className={isSaved ? 'fill-current' : ''} />
             </button>
           </div>
         </div>
@@ -248,7 +289,9 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
             <span className="bg-[#f5eadf] border border-[#4b362a]/10 px-3 py-1 rounded-full font-bold text-[#2c211b]">Vietnamese</span>
             <span className="flex items-center gap-1 text-[#e2533b] font-bold ml-1">
               <MapPin size={14} className="text-[#e2533b]" />
-              {restaurant.distance}
+              {userLocation && restaurant.latitude && restaurant.longitude
+                ? formatDistance(haversineDistance(userLocation[0], userLocation[1], restaurant.latitude, restaurant.longitude))
+                : restaurant.distance}
             </span>
           </div>
         </section>
@@ -276,11 +319,13 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
         </section>
 
         {showAudioGuide && (
-          <MultiLanguageAudioGuide
-            title={`${restaurant.name} audio guide`}
-            sourceText={restaurant.description || `${restaurant.name}. ${restaurant.category} restaurant located at ${restaurant.address}, ${restaurant.area}. Recommended dishes include ${restaurant.dishes.map((dish) => dish.name).slice(0, 3).join(', ') || 'local specialties'}.`}
-            defaultLang={i18n.language?.split('-')[0] || 'en'}
-          />
+          <Suspense fallback={null}>
+            <MultiLanguageAudioGuide
+              title={`${restaurant.name} audio guide`}
+              sourceText={restaurant.description || `${restaurant.name}. ${restaurant.category} restaurant located at ${restaurant.address}, ${restaurant.area}. Recommended dishes include ${restaurant.dishes.map((dish) => dish.name).slice(0, 3).join(', ') || 'local specialties'}.`}
+              defaultLang={i18n.language?.split('-')[0] || 'en'}
+            />
+          </Suspense>
         )}
 
         {restaurant.description && (

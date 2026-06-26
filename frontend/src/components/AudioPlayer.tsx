@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { AudioTour } from '../types';
 import { X, RotateCcw, RotateCw, Play, Pause } from 'lucide-react';
-import MultiLanguageAudioGuide from './MultiLanguageAudioGuide';
+
+const MultiLanguageAudioGuide = lazy(() => import('./MultiLanguageAudioGuide'));
 
 interface AudioPlayerProps {
   tour: AudioTour | null;
@@ -273,11 +274,13 @@ export default function AudioPlayer({ tour, onClose }: AudioPlayerProps) {
           </div>
         </div>
 
-        <MultiLanguageAudioGuide
-          title={tour.title}
-          sourceText={tour.description}
-          defaultLang={localStorage.getItem('app_lang')?.split('-')[0] || 'en'}
-        />
+        <Suspense fallback={null}>
+          <MultiLanguageAudioGuide
+            title={tour.title}
+            sourceText={tour.description}
+            defaultLang={localStorage.getItem('app_lang')?.split('-')[0] || 'en'}
+          />
+        </Suspense>
 
         {/* Animated Audio Soundwave Visualizer for uploaded tour audio files */}
         {tour.audioData && <div className="h-8 flex items-end justify-center gap-[3px] py-1 select-none">

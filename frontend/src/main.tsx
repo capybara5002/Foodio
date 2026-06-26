@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import './i18n/i18n';
 import { BrowserRouter } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -12,9 +13,11 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </GoogleOAuthProvider>
   </StrictMode>
 );
 
@@ -22,9 +25,13 @@ createRoot(rootElement).render(
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((registration) => {
-      console.log('ServiceWorker registration successful: ', registration.scope);
+      if (import.meta.env.DEV) {
+        console.info('ServiceWorker registration successful: ', registration.scope);
+      }
     }).catch((err) => {
-      console.log('ServiceWorker registration failed: ', err);
+      if (import.meta.env.DEV) {
+        console.warn('ServiceWorker registration failed: ', err);
+      }
     });
   });
 }

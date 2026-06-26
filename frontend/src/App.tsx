@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { initialRestaurants, initialChatThreads, initialAudioTours } from './data';
 import { Restaurant, ChatThread, AudioTour, CommunityPost } from './types';
 import {
@@ -7,7 +7,10 @@ import {
   ensureChatThread,
   getAudioTours,
   getChatThreads,
-  getRestaurants
+  getRestaurants,
+  getSavedPlaces,
+  removeSavedPlace,
+  savePlace
 } from './api/cravemapApi';
 
 import NavBar from './components/NavBar';
@@ -17,13 +20,7 @@ import LoginModal from './components/Common/LoginModal';
 import PaymentGate from './components/Common/PaymentGate';
 import PaymentStatusPill from './components/Common/PaymentStatusPill';
 import LoadingSpinner from './components/Common/LoadingSpinner';
-import PageMap from './pages/PageMap';
-import PageDiscover from './pages/PageDiscover';
-import PageDetail from './pages/PageDetail';
-import PageCreate from './pages/PageCreate';
-import PageInbox from './pages/PageInbox';
-import PageProfile from './pages/PageProfile';
-
+import PresenceReporter from './components/Common/PresenceReporter';
 import OfflineBanner from './components/Common/OfflineBanner';
 import { getCachedRestaurants, saveRestaurants, getCachedAudioTours, saveAudioTours, saveLastSyncInfo } from './services/offlineStore';
 
@@ -34,6 +31,13 @@ import { stopNarration } from './services/narrationEngine';
 import { matchPath, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 type AppTab = 'map' | 'discover' | 'create' | 'inbox' | 'profile';
+
+const PageMap = lazy(() => import('./pages/PageMap'));
+const PageDiscover = lazy(() => import('./pages/PageDiscover'));
+const PageDetail = lazy(() => import('./pages/PageDetail'));
+const PageCreate = lazy(() => import('./pages/PageCreate'));
+const PageInbox = lazy(() => import('./pages/PageInbox'));
+const PageProfile = lazy(() => import('./pages/PageProfile'));
 
 const getTabFromPath = (pathname: string): AppTab => {
   if (pathname === '/discover') return 'discover';
@@ -55,12 +59,32 @@ function AppContent() {
   const [activeAudioTour, setActiveAudioTour] = useState<AudioTour | null>(null);
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [mapSearchSelection, setMapSearchSelection] = useState<{ restaurantId: string; requestId: number } | null>(null);
+  const [isMapPanelOpen, setIsMapPanelOpen] = useState(false);
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>(initialRestaurants);
   const [hasLoadedRestaurantData, setHasLoadedRestaurantData] = useState(false);
   const [chatThreads, setChatThreads] = useState<ChatThread[]>(initialChatThreads);
   const [audioTours, setAudioTours] = useState<AudioTour[]>(initialAudioTours);
   const [sessionCommunityPosts, setSessionCommunityPosts] = useState<CommunityPost[]>([]);
+  const [savedRestaurantIds, setSavedRestaurantIds] = useState<string[]>([]);
+
+  // User location for real distance calculations (default: Vinh Khanh center)
+  const [userLocation, setUserLocation] = useState<[number, number]>([10.7580, 106.7020]);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
+      () => {/* keep default */},
+      { enableHighAccuracy: false, timeout: 5000 }
+    );
+  }, []);
+
+  useEffect(() => {
+    if (currentTab !== 'map') {
+      setIsMapPanelOpen(false);
+    }
+  }, [currentTab]);
 
   const [activeThreadId, setActiveThreadId] = useState<string>('');
 
@@ -183,6 +207,32 @@ function AppContent() {
       cancelled = true;
     };
   }, [activeChatRestaurantId, activeChatUserId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isSignedInUser || !user) {
+      setSavedRestaurantIds([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    getSavedPlaces(user.id)
+      .then((savedPlaces) => {
+        if (!cancelled) {
+          setSavedRestaurantIds(savedPlaces.map((savedPlace) => savedPlace.restaurantId));
+        }
+      })
+      .catch((error) => {
+        console.warn('Failed to load saved places:', error);
+        if (!cancelled) setSavedRestaurantIds([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedInUser, user]);
 
   // Detect QR Token inside URL on load
   useEffect(() => {
@@ -409,6 +459,43 @@ function AppContent() {
     });
   };
 
+  const handleToggleSavedPlace = async (restaurantId: string) => {
+    let savingUser = user;
+    if (!savingUser) {
+      try {
+        savingUser = JSON.parse(localStorage.getItem('foodio_user') || 'null');
+      } catch {
+        savingUser = null;
+      }
+    }
+
+    if (!savingUser || savingUser.role === 'Guest') {
+      throw new Error(t('auth.require_login_save', 'Bạn cần đăng nhập để lưu quán.'));
+    }
+
+    const wasSaved = savedRestaurantIds.includes(restaurantId);
+    setSavedRestaurantIds((current) => (
+      wasSaved
+        ? current.filter((id) => id !== restaurantId)
+        : [restaurantId, ...current.filter((id) => id !== restaurantId)]
+    ));
+
+    try {
+      if (wasSaved) {
+        await removeSavedPlace(savingUser.id, restaurantId);
+      } else {
+        await savePlace(savingUser.id, restaurantId);
+      }
+    } catch (error) {
+      setSavedRestaurantIds((current) => (
+        wasSaved
+          ? [restaurantId, ...current.filter((id) => id !== restaurantId)]
+          : current.filter((id) => id !== restaurantId)
+      ));
+      throw error;
+    }
+  };
+
   const handleRefreshRestaurants = useCallback(async () => {
     try {
       const remoteRestaurants = await getRestaurants();
@@ -424,6 +511,9 @@ function AppContent() {
   const unreadInboxCount = isSignedInUser ? chatThreads.reduce((total, t) => total + t.unreadCount, 0) : 0;
 
   const activeRestaurants = restaurants.filter((restaurant) => restaurant.isActive !== false);
+  const savedRestaurants = savedRestaurantIds
+    .map((id) => activeRestaurants.find((restaurant) => restaurant.id === id))
+    .filter((restaurant): restaurant is Restaurant => Boolean(restaurant));
   const selectedRestaurant = selectedRestaurantId
     ? restaurants.find((restaurant) => restaurant.id === selectedRestaurantId)
     : undefined;
@@ -434,7 +524,16 @@ function AppContent() {
       onSelectRestaurant={handleSelectRestaurant}
       onSelectTour={handleSelectTour}
       onContactRestaurant={handleContactRestaurant}
+      savedRestaurantIds={savedRestaurantIds}
+      onToggleSavedRestaurant={(restaurantId) => {
+        requireAuth(t('auth.require_login_save'), () => {
+          void handleToggleSavedPlace(restaurantId).catch((error) => {
+            console.error('Failed to update saved place:', error);
+          });
+        });
+      }}
       searchSelection={mapSearchSelection}
+      onPanelOpenChange={setIsMapPanelOpen}
     />
   );
 
@@ -447,98 +546,105 @@ function AppContent() {
         setIsLoginOpen(true);
       }}
       sessionCommunityPosts={sessionCommunityPosts}
+      savedRestaurants={savedRestaurants}
+      onSelectSavedRestaurant={handleSelectRestaurant}
       onRestaurantUpdated={handleRestaurantUpdated}
       onRefreshRestaurants={handleRefreshRestaurants}
     />
   );
 
   const renderMainContent = () => (
-    <Routes>
-      <Route path="/" element={<Navigate to="/map" replace />} />
-      <Route path="/map" element={renderMap()} />
-      <Route
-        path="/discover"
-        element={(
-          <PageDiscover
-            tours={audioTours}
-            onPlayTour={(tour) => setActiveAudioTour(tour)}
-            searchText=""
-            sessionCommunityPosts={sessionCommunityPosts}
-            onCreatePost={handleOpenCreatePost}
-          />
-        )}
-      />
-      <Route
-        path="/posts/new"
-        element={isAuthLoading ? <LoadingSpinner /> : isSignedInUser ? (
-          <PageCreate
-            restaurants={activeRestaurants}
-            onAddPost={handleAddPost}
-            onCancel={() => navigate('/discover')}
-          />
-        ) : <Navigate to="/map" replace />}
-      />
-      <Route
-        path="/inbox"
-        element={isAuthLoading ? <LoadingSpinner /> : isSignedInUser ? (
-          <PageInbox
-            threads={chatThreads}
-            activeThreadId={activeThreadId}
-            userId={activeChatUserId}
-            restaurantId={activeChatRestaurantId}
-            restaurants={restaurants}
-            currentUserRole={user?.role ?? 'Guest'}
-            onSelectThread={(tid) => {
-              setActiveThreadId(tid);
-              setChatThreads((prev) => sortThreads(prev.map((thread) => (
-                thread.id === tid ? { ...thread, unreadCount: 0 } : thread
-              ))));
-            }}
-            onStartThread={user && user.role !== 'Guest' ? openRestaurantChat : undefined}
-            onThreadUpdated={upsertThread}
-          />
-        ) : <Navigate to="/map" replace />}
-      />
-      <Route path="/profile" element={renderProfile()} />
-      <Route
-        path="/admin"
-        element={isAuthLoading
-          ? <LoadingSpinner />
-          : user?.role === 'Admin' ? renderProfile() : <Navigate to="/profile" replace />}
-      />
-      <Route
-        path="/owner"
-        element={isAuthLoading
-          ? <LoadingSpinner />
-          : user?.role === 'Owner' ? renderProfile() : <Navigate to="/profile" replace />}
-      />
-      <Route
-        path="/restaurants/:restaurantId"
-        element={selectedRestaurant ? (
-          <PageDetail
-            restaurant={selectedRestaurant}
-            onBack={() => {
-              const historyIndex = window.history.state?.idx;
-              if (typeof historyIndex === 'number' && historyIndex > 0) {
-                navigate(-1);
-              } else {
-                navigate('/map', { replace: true });
-              }
-            }}
-            onOpenBooking={() => {
-              requireAuth(t('auth.require_login_booking'), () => {
-                setIsBookingOpen(true);
-              });
-            }}
-            onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
-            requireAuth={requireAuth}
-            onRestaurantUpdated={handleRestaurantUpdated}
-            onContactUser={handleContactUser}
-          />
-        ) : hasLoadedRestaurantData ? <Navigate to="/map" replace /> : <LoadingSpinner />}
-      />
-      <Route path="*" element={<Navigate to="/map" replace />} />
-    </Routes>
+    <Suspense fallback={<LoadingSpinner />}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/map" replace />} />
+        <Route path="/map" element={renderMap()} />
+        <Route
+          path="/discover"
+          element={(
+            <PageDiscover
+              tours={audioTours}
+              onPlayTour={(tour) => setActiveAudioTour(tour)}
+              searchText=""
+              sessionCommunityPosts={sessionCommunityPosts}
+              onCreatePost={handleOpenCreatePost}
+            />
+          )}
+        />
+        <Route
+          path="/posts/new"
+          element={isAuthLoading ? <LoadingSpinner /> : isSignedInUser ? (
+            <PageCreate
+              restaurants={activeRestaurants}
+              onAddPost={handleAddPost}
+              onCancel={() => navigate('/discover')}
+            />
+          ) : <Navigate to="/map" replace />}
+        />
+        <Route
+          path="/inbox"
+          element={isAuthLoading ? <LoadingSpinner /> : isSignedInUser ? (
+            <PageInbox
+              threads={chatThreads}
+              activeThreadId={activeThreadId}
+              userId={activeChatUserId}
+              restaurantId={activeChatRestaurantId}
+              restaurants={restaurants}
+              currentUserRole={user?.role ?? 'Guest'}
+              onSelectThread={(tid) => {
+                setActiveThreadId(tid);
+                setChatThreads((prev) => sortThreads(prev.map((thread) => (
+                  thread.id === tid ? { ...thread, unreadCount: 0 } : thread
+                ))));
+              }}
+              onStartThread={user && user.role !== 'Guest' ? openRestaurantChat : undefined}
+              onThreadUpdated={upsertThread}
+            />
+          ) : <Navigate to="/map" replace />}
+        />
+        <Route path="/profile" element={renderProfile()} />
+        <Route
+          path="/admin"
+          element={isAuthLoading
+            ? <LoadingSpinner />
+            : user?.role === 'Admin' ? renderProfile() : <Navigate to="/profile" replace />}
+        />
+        <Route
+          path="/owner"
+          element={isAuthLoading
+            ? <LoadingSpinner />
+            : user?.role === 'Owner' ? renderProfile() : <Navigate to="/profile" replace />}
+        />
+        <Route
+          path="/restaurants/:restaurantId"
+          element={selectedRestaurant ? (
+            <PageDetail
+              restaurant={selectedRestaurant}
+              onBack={() => {
+                const historyIndex = window.history.state?.idx;
+                if (typeof historyIndex === 'number' && historyIndex > 0) {
+                  navigate(-1);
+                } else {
+                  navigate('/map', { replace: true });
+                }
+              }}
+              onOpenBooking={() => {
+                requireAuth(t('auth.require_login_booking'), () => {
+                  setIsBookingOpen(true);
+                });
+              }}
+              onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
+              requireAuth={requireAuth}
+              onRestaurantUpdated={handleRestaurantUpdated}
+              isSaved={savedRestaurantIds.includes(selectedRestaurant.id)}
+              onToggleSaved={() => handleToggleSavedPlace(selectedRestaurant.id)}
+              onContactUser={handleContactUser}
+              userLocation={userLocation}
+            />
+          ) : hasLoadedRestaurantData ? <Navigate to="/map" replace /> : <LoadingSpinner />}
+        />
+        <Route path="*" element={<Navigate to="/map" replace />} />
+      </Routes>
+    </Suspense>
   );
 
   const selectedRestaurantForBooking = selectedRestaurantId
@@ -547,7 +653,7 @@ function AppContent() {
   const showMobileHeaderPaymentStatus = currentTab !== 'map';
 
   return (
-    <div className="foodio-shell min-h-screen pb-24 md:pb-0 pt-[72px] flex flex-col font-sans text-on-surface">
+    <div className={`foodio-shell min-h-screen pb-24 md:pb-0 ${currentTab === 'map' ? 'pt-0' : 'pt-[72px]'} flex flex-col font-sans text-on-surface`}>
       <NavBar
         currentTab={currentTab}
         onChangeTab={handleChangeTab}
@@ -556,6 +662,7 @@ function AppContent() {
         searchQuery={mapSearchQuery}
         onSearchQueryChange={setMapSearchQuery}
         onSearchRestaurantSelect={handleMapSearchSelect}
+        isMapPanelOpen={currentTab === 'map' && isMapPanelOpen}
         paymentStatus={(
           <>
             <PaymentStatusPill placement="header" />
@@ -617,11 +724,12 @@ function AppContent() {
 export default function App() {
   return (
     <PaymentProvider>
-      <PaymentGate>
-        <AuthProvider>
+      <AuthProvider>
+        <PresenceReporter />
+        <PaymentGate>
           <AppContent />
-        </AuthProvider>
-      </PaymentGate>
+        </PaymentGate>
+      </AuthProvider>
     </PaymentProvider>
   );
 }

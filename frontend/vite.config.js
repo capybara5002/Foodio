@@ -31,5 +31,29 @@ export default defineConfig(({ mode }) => {
 				},
 			},
 		},
+		build: {
+			chunkSizeWarningLimit: 650,
+			rollupOptions: {
+				output: {
+					manualChunks(id) {
+						if (!id.includes('node_modules')) {
+							return;
+						}
+
+						if (id.includes('leaflet-routing-machine')) {
+							return 'leaflet-routing';
+						}
+
+						if (id.includes('leaflet') || id.includes('react-leaflet')) {
+							return 'leaflet-vendor';
+						}
+
+						if (id.includes('@microsoft/signalr')) {
+							return 'signalr-vendor';
+						}
+					},
+				},
+			},
+		},
 	};
 });

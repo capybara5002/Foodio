@@ -185,6 +185,12 @@ public record BookingDto(
     string Status,
     string? TableNumber = null);
 
+public record SavePlaceRequestDto(string RestaurantId);
+
+public record SavedPlaceDto(
+    string RestaurantId,
+    DateTimeOffset CreatedAt);
+
 public record UserDto(
     string Id,
     string Username,
@@ -198,11 +204,15 @@ public record UserDto(
 
 public record UserLoginRequestDto(string Email, string Password);
 
+public record GoogleLoginRequestDto(string Credential);
+
 public record UserRegisterRequestDto(string Username, string Email, string Password);
 
 public record UpdatePasswordRequestDto(string Email, string CurrentPassword, string NewPassword);
 
 public record UpdateAvatarRequestDto(string Email, string Avatar);
+
+public record UpdateUsernameRequestDto(string Email, string Username);
 
 public record UserCreateUpdateDto(
     string Username,
