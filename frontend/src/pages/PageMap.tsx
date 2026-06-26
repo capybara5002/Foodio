@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef, useMemo, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef, useMemo, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
@@ -15,13 +15,14 @@ import { X, BadgeCheck, Star, Bookmark, MapPin, Map, Clock, LocateFixed, Flame, 
 import { startLocationTracking, stopLocationTracking, LocationMode } from '../services/locationService';
 import { checkGeofences } from '../services/geofenceEngine';
 import { playNarration, stopNarration, onNarrationStart, onNarrationEnd, getMuted, setMuted } from '../services/narrationEngine';
-import MultiLanguageAudioGuide from '../components/MultiLanguageAudioGuide';
 import ImageGallery from '../components/Common/ImageGallery';
 
 // Standard Leaflet asset fixes for Vite builds to prevent broken image references
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+const MultiLanguageAudioGuide = lazy(() => import('../components/MultiLanguageAudioGuide'));
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -1169,13 +1170,15 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
                 </button>
 
                 {/* Keep the restaurant audio guide available directly in the map details panel. */}
-                <MultiLanguageAudioGuide
-                  key={activeRestaurant.id}
-                  title={`${activeRestaurant.name} audio guide`}
-                  sourceText={activeRestaurant.description || `${activeRestaurant.name}. ${activeRestaurant.category} restaurant located at ${activeRestaurant.address}, ${activeRestaurant.area}. Recommended dishes include ${activeRestaurant.dishes.map((dish) => dish.name).slice(0, 3).join(', ') || 'local specialties'}.`}
-                  defaultLang={i18n.language?.split('-')[0] || 'en'}
-                  className="!rounded-none !p-3 !shadow-none"
-                />
+                <Suspense fallback={null}>
+                  <MultiLanguageAudioGuide
+                    key={activeRestaurant.id}
+                    title={`${activeRestaurant.name} audio guide`}
+                    sourceText={activeRestaurant.description || `${activeRestaurant.name}. ${activeRestaurant.category} restaurant located at ${activeRestaurant.address}, ${activeRestaurant.area}. Recommended dishes include ${activeRestaurant.dishes.map((dish) => dish.name).slice(0, 3).join(', ') || 'local specialties'}.`}
+                    defaultLang={i18n.language?.split('-')[0] || 'en'}
+                    className="!rounded-none !p-3 !shadow-none"
+                  />
+                </Suspense>
 
                 {/* Address Card details */}
                 <div className="flex flex-col gap-2.5 p-3 bg-[#f9f7f2] border border-[#1a1a1a]/15 text-[11px] text-[#1a1a1a] text-left">

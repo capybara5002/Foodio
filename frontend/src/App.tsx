@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { initialRestaurants, initialChatThreads, initialAudioTours } from './data';
 import { Restaurant, ChatThread, AudioTour, CommunityPost } from './types';
 import {
@@ -21,13 +21,6 @@ import PaymentGate from './components/Common/PaymentGate';
 import PaymentStatusPill from './components/Common/PaymentStatusPill';
 import LoadingSpinner from './components/Common/LoadingSpinner';
 import PresenceReporter from './components/Common/PresenceReporter';
-import PageMap from './pages/PageMap';
-import PageDiscover from './pages/PageDiscover';
-import PageDetail from './pages/PageDetail';
-import PageCreate from './pages/PageCreate';
-import PageInbox from './pages/PageInbox';
-import PageProfile from './pages/PageProfile';
-
 import OfflineBanner from './components/Common/OfflineBanner';
 import { getCachedRestaurants, saveRestaurants, getCachedAudioTours, saveAudioTours, saveLastSyncInfo } from './services/offlineStore';
 
@@ -38,6 +31,13 @@ import { stopNarration } from './services/narrationEngine';
 import { matchPath, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 type AppTab = 'map' | 'discover' | 'create' | 'inbox' | 'profile';
+
+const PageMap = lazy(() => import('./pages/PageMap'));
+const PageDiscover = lazy(() => import('./pages/PageDiscover'));
+const PageDetail = lazy(() => import('./pages/PageDetail'));
+const PageCreate = lazy(() => import('./pages/PageCreate'));
+const PageInbox = lazy(() => import('./pages/PageInbox'));
+const PageProfile = lazy(() => import('./pages/PageProfile'));
 
 const getTabFromPath = (pathname: string): AppTab => {
   if (pathname === '/discover') return 'discover';
@@ -554,95 +554,97 @@ function AppContent() {
   );
 
   const renderMainContent = () => (
-    <Routes>
-      <Route path="/" element={<Navigate to="/map" replace />} />
-      <Route path="/map" element={renderMap()} />
-      <Route
-        path="/discover"
-        element={(
-          <PageDiscover
-            tours={audioTours}
-            onPlayTour={(tour) => setActiveAudioTour(tour)}
-            searchText=""
-            sessionCommunityPosts={sessionCommunityPosts}
-            onCreatePost={handleOpenCreatePost}
-          />
-        )}
-      />
-      <Route
-        path="/posts/new"
-        element={isAuthLoading ? <LoadingSpinner /> : isSignedInUser ? (
-          <PageCreate
-            restaurants={activeRestaurants}
-            onAddPost={handleAddPost}
-            onCancel={() => navigate('/discover')}
-          />
-        ) : <Navigate to="/map" replace />}
-      />
-      <Route
-        path="/inbox"
-        element={isAuthLoading ? <LoadingSpinner /> : isSignedInUser ? (
-          <PageInbox
-            threads={chatThreads}
-            activeThreadId={activeThreadId}
-            userId={activeChatUserId}
-            restaurantId={activeChatRestaurantId}
-            restaurants={restaurants}
-            currentUserRole={user?.role ?? 'Guest'}
-            onSelectThread={(tid) => {
-              setActiveThreadId(tid);
-              setChatThreads((prev) => sortThreads(prev.map((thread) => (
-                thread.id === tid ? { ...thread, unreadCount: 0 } : thread
-              ))));
-            }}
-            onStartThread={user && user.role !== 'Guest' ? openRestaurantChat : undefined}
-            onThreadUpdated={upsertThread}
-          />
-        ) : <Navigate to="/map" replace />}
-      />
-      <Route path="/profile" element={renderProfile()} />
-      <Route
-        path="/admin"
-        element={isAuthLoading
-          ? <LoadingSpinner />
-          : user?.role === 'Admin' ? renderProfile() : <Navigate to="/profile" replace />}
-      />
-      <Route
-        path="/owner"
-        element={isAuthLoading
-          ? <LoadingSpinner />
-          : user?.role === 'Owner' ? renderProfile() : <Navigate to="/profile" replace />}
-      />
-      <Route
-        path="/restaurants/:restaurantId"
-        element={selectedRestaurant ? (
-          <PageDetail
-            restaurant={selectedRestaurant}
-            onBack={() => {
-              const historyIndex = window.history.state?.idx;
-              if (typeof historyIndex === 'number' && historyIndex > 0) {
-                navigate(-1);
-              } else {
-                navigate('/map', { replace: true });
-              }
-            }}
-            onOpenBooking={() => {
-              requireAuth(t('auth.require_login_booking'), () => {
-                setIsBookingOpen(true);
-              });
-            }}
-            onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
-            requireAuth={requireAuth}
-            onRestaurantUpdated={handleRestaurantUpdated}
-            isSaved={savedRestaurantIds.includes(selectedRestaurant.id)}
-            onToggleSaved={() => handleToggleSavedPlace(selectedRestaurant.id)}
-            onContactUser={handleContactUser}
-            userLocation={userLocation}
-          />
-        ) : hasLoadedRestaurantData ? <Navigate to="/map" replace /> : <LoadingSpinner />}
-      />
-      <Route path="*" element={<Navigate to="/map" replace />} />
-    </Routes>
+    <Suspense fallback={<LoadingSpinner />}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/map" replace />} />
+        <Route path="/map" element={renderMap()} />
+        <Route
+          path="/discover"
+          element={(
+            <PageDiscover
+              tours={audioTours}
+              onPlayTour={(tour) => setActiveAudioTour(tour)}
+              searchText=""
+              sessionCommunityPosts={sessionCommunityPosts}
+              onCreatePost={handleOpenCreatePost}
+            />
+          )}
+        />
+        <Route
+          path="/posts/new"
+          element={isAuthLoading ? <LoadingSpinner /> : isSignedInUser ? (
+            <PageCreate
+              restaurants={activeRestaurants}
+              onAddPost={handleAddPost}
+              onCancel={() => navigate('/discover')}
+            />
+          ) : <Navigate to="/map" replace />}
+        />
+        <Route
+          path="/inbox"
+          element={isAuthLoading ? <LoadingSpinner /> : isSignedInUser ? (
+            <PageInbox
+              threads={chatThreads}
+              activeThreadId={activeThreadId}
+              userId={activeChatUserId}
+              restaurantId={activeChatRestaurantId}
+              restaurants={restaurants}
+              currentUserRole={user?.role ?? 'Guest'}
+              onSelectThread={(tid) => {
+                setActiveThreadId(tid);
+                setChatThreads((prev) => sortThreads(prev.map((thread) => (
+                  thread.id === tid ? { ...thread, unreadCount: 0 } : thread
+                ))));
+              }}
+              onStartThread={user && user.role !== 'Guest' ? openRestaurantChat : undefined}
+              onThreadUpdated={upsertThread}
+            />
+          ) : <Navigate to="/map" replace />}
+        />
+        <Route path="/profile" element={renderProfile()} />
+        <Route
+          path="/admin"
+          element={isAuthLoading
+            ? <LoadingSpinner />
+            : user?.role === 'Admin' ? renderProfile() : <Navigate to="/profile" replace />}
+        />
+        <Route
+          path="/owner"
+          element={isAuthLoading
+            ? <LoadingSpinner />
+            : user?.role === 'Owner' ? renderProfile() : <Navigate to="/profile" replace />}
+        />
+        <Route
+          path="/restaurants/:restaurantId"
+          element={selectedRestaurant ? (
+            <PageDetail
+              restaurant={selectedRestaurant}
+              onBack={() => {
+                const historyIndex = window.history.state?.idx;
+                if (typeof historyIndex === 'number' && historyIndex > 0) {
+                  navigate(-1);
+                } else {
+                  navigate('/map', { replace: true });
+                }
+              }}
+              onOpenBooking={() => {
+                requireAuth(t('auth.require_login_booking'), () => {
+                  setIsBookingOpen(true);
+                });
+              }}
+              onGoToChat={() => void handleContactRestaurant(selectedRestaurant.id)}
+              requireAuth={requireAuth}
+              onRestaurantUpdated={handleRestaurantUpdated}
+              isSaved={savedRestaurantIds.includes(selectedRestaurant.id)}
+              onToggleSaved={() => handleToggleSavedPlace(selectedRestaurant.id)}
+              onContactUser={handleContactUser}
+              userLocation={userLocation}
+            />
+          ) : hasLoadedRestaurantData ? <Navigate to="/map" replace /> : <LoadingSpinner />}
+        />
+        <Route path="*" element={<Navigate to="/map" replace />} />
+      </Routes>
+    </Suspense>
   );
 
   const selectedRestaurantForBooking = selectedRestaurantId

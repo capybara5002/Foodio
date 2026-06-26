@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useRef } from 'react';
+import { lazy, Suspense, useState, useRef } from 'react';
 import { Restaurant } from '../types';
 import { ArrowLeft, Share2, Bookmark, BadgeCheck, Star, MapPin, MessageSquare, Map, Clock, Plus, Volume2, Camera, X, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { createReview, replyToReview } from '../api/cravemapApi';
-import MultiLanguageAudioGuide from '../components/MultiLanguageAudioGuide';
 import ImageGallery from '../components/Common/ImageGallery';
+
+const MultiLanguageAudioGuide = lazy(() => import('../components/MultiLanguageAudioGuide'));
 
 // Haversine formula — returns distance in meters between two lat/lng points
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -318,11 +319,13 @@ export default function PageDetail({ restaurant, onBack, onOpenBooking, onGoToCh
         </section>
 
         {showAudioGuide && (
-          <MultiLanguageAudioGuide
-            title={`${restaurant.name} audio guide`}
-            sourceText={restaurant.description || `${restaurant.name}. ${restaurant.category} restaurant located at ${restaurant.address}, ${restaurant.area}. Recommended dishes include ${restaurant.dishes.map((dish) => dish.name).slice(0, 3).join(', ') || 'local specialties'}.`}
-            defaultLang={i18n.language?.split('-')[0] || 'en'}
-          />
+          <Suspense fallback={null}>
+            <MultiLanguageAudioGuide
+              title={`${restaurant.name} audio guide`}
+              sourceText={restaurant.description || `${restaurant.name}. ${restaurant.category} restaurant located at ${restaurant.address}, ${restaurant.area}. Recommended dishes include ${restaurant.dishes.map((dish) => dish.name).slice(0, 3).join(', ') || 'local specialties'}.`}
+              defaultLang={i18n.language?.split('-')[0] || 'en'}
+            />
+          </Suspense>
         )}
 
         {restaurant.description && (

@@ -1,13 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import AdminDashboard from '../components/Admin/AdminDashboard';
-import OwnerDashboard from '../components/Owner/OwnerDashboard';
 import { CommunityPost, Restaurant } from '../types';
 import { UserCircle, BadgeCheck, FileText, Star, Bookmark, MapPin, Globe, LogOut, User, Shield, Store, Edit2, Key, ChevronRight, ChevronDown, Eye, EyeOff, LockKeyhole, WalletCards } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
 import { apiBase } from '../api/apiConfig';
 import { usePayment } from '../context/PaymentContext';
+import LoadingSpinner from '../components/Common/LoadingSpinner';
 
 interface PageProfileProps {
   userEmail: string;
@@ -27,6 +26,9 @@ const AVATAR_PRESETS = [
   "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=150&auto=format&fit=crop&q=60", // Ramen
   "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=150&auto=format&fit=crop&q=60"  // Seafood/Snails
 ];
+
+const AdminDashboard = lazy(() => import('../components/Admin/AdminDashboard'));
+const OwnerDashboard = lazy(() => import('../components/Owner/OwnerDashboard'));
 
 export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = [], savedRestaurants = [], onSelectSavedRestaurant, onRestaurantUpdated, onRefreshRestaurants }: PageProfileProps) {
   const { user, logout, updateAvatar, updateUsername, updatePassword } = useAuth();
@@ -748,7 +750,9 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
         {activeConsole === 'admin' && isAdmin && (
           hasDashboardPass ? (
             <div className="animate-in fade-in duration-300">
-            <AdminDashboard onRestaurantUpdated={onRestaurantUpdated} onRefreshRestaurants={onRefreshRestaurants} />
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminDashboard onRestaurantUpdated={onRestaurantUpdated} onRefreshRestaurants={onRefreshRestaurants} />
+              </Suspense>
             </div>
           ) : renderDashboardLock(t('profile.admin_console'))
         )}
@@ -757,7 +761,9 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
         {activeConsole === 'owner' && isOwner && (
           hasDashboardPass ? (
             <div className="animate-in fade-in duration-300">
-            <OwnerDashboard onRestaurantUpdated={onRestaurantUpdated} />
+              <Suspense fallback={<LoadingSpinner />}>
+                <OwnerDashboard onRestaurantUpdated={onRestaurantUpdated} />
+              </Suspense>
             </div>
           ) : renderDashboardLock(t('profile.owner_console'))
         )}

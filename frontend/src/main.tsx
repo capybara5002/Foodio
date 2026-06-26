@@ -25,9 +25,13 @@ createRoot(rootElement).render(
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((registration) => {
-      console.log('ServiceWorker registration successful: ', registration.scope);
+      if (import.meta.env.DEV) {
+        console.info('ServiceWorker registration successful: ', registration.scope);
+      }
     }).catch((err) => {
-      console.log('ServiceWorker registration failed: ', err);
+      if (import.meta.env.DEV) {
+        console.warn('ServiceWorker registration failed: ', err);
+      }
     });
   });
 }
