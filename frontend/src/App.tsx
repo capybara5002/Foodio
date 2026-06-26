@@ -643,7 +643,7 @@ function AppContent() {
   const showMobileHeaderPaymentStatus = currentTab !== 'map';
 
   return (
-    <div className="foodio-shell min-h-screen pb-24 md:pb-0 pt-[72px] flex flex-col font-sans text-on-surface">
+    <div className={`foodio-shell min-h-screen pb-24 md:pb-0 ${currentTab === 'map' ? 'pt-0' : 'pt-[72px]'} flex flex-col font-sans text-on-surface`}>
       <NavBar
         currentTab={currentTab}
         onChangeTab={handleChangeTab}

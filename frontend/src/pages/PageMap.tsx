@@ -636,7 +636,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
   );
 
   return (
-    <div className="foodio-map-shell fixed inset-x-0 top-[72px] bottom-0 flex bg-[#f7efe4] overflow-hidden text-[#2c211b] z-40 transition-all duration-300">
+    <div className="foodio-map-shell fixed inset-x-0 top-0 bottom-0 flex bg-[#f7efe4] overflow-hidden text-[#2c211b] z-40 transition-all duration-300">
 
       {/* Live Audio Narration Guide Overlay (Glassmorphism + mini player styling) */}
       {currentNarration && (

@@ -47,6 +47,7 @@ export default function NavBar({
   const { t } = useTranslation();
   const { language, changeLanguage } = useLanguage();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const isMapTab = currentTab === 'map';
 
   const normalizedSearchQuery = normalizeString(searchQuery.trim());
   const searchSuggestions = normalizedSearchQuery
@@ -69,12 +70,15 @@ export default function NavBar({
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-[80] h-[72px] px-3 pt-3 pointer-events-none md:px-6">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 rounded-[1.75rem] border border-white/70 bg-[#fffaf4]/84 px-2.5 shadow-[0_18px_46px_rgba(77,49,31,0.16)] backdrop-blur-2xl pointer-events-auto">
+      <header className={`${isMapTab ? 'fixed inset-x-0 top-0 z-[80] px-3 pt-3 pointer-events-none md:px-6' : 'fixed inset-x-0 top-0 z-[80] h-[72px] px-3 pt-3 pointer-events-none md:px-6'}`}>
+        <div className={`${isMapTab ? 'mx-auto flex h-14 max-w-7xl items-center gap-2 pointer-events-auto md:gap-3' : 'mx-auto flex h-14 max-w-7xl items-center gap-3 rounded-[1.75rem] border border-white/70 bg-[#fffaf4]/84 px-2.5 shadow-[0_18px_46px_rgba(77,49,31,0.16)] backdrop-blur-2xl pointer-events-auto'}`}>
           <button
             type="button"
             onClick={() => onChangeTab('map')}
-            className="foodio-logo-container rounded-[1.4rem] px-1.5 py-1 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+            className={`foodio-logo-container rounded-[1.4rem] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] ${isMapTab
+                ? 'border border-white/70 bg-[#fffaf4]/82 px-2 py-1 shadow-[0_14px_34px_rgba(77,49,31,0.14)] backdrop-blur-2xl'
+                : 'px-1.5 py-1'
+              }`}
             aria-label="Open Foodio map"
           >
             <div className="foodio-logo-box">
@@ -91,7 +95,10 @@ export default function NavBar({
 
           {currentTab === 'map' && (
             <div className="relative z-[90] min-w-0 flex-1 md:max-w-[440px]">
-              <div className="flex h-11 items-center gap-3 rounded-full border border-[#4b362a]/10 bg-white/86 px-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] focus-within:border-[#b76548]/45 focus-within:bg-white focus-within:shadow-[0_12px_30px_rgba(77,49,31,0.12)]">
+              <div className={`flex h-11 items-center gap-3 rounded-full border px-4 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] focus-within:border-[#b76548]/45 focus-within:bg-white focus-within:shadow-[0_12px_30px_rgba(77,49,31,0.12)] ${isMapTab
+                  ? 'border-white/70 bg-[#fffaf4]/88 shadow-[0_14px_34px_rgba(77,49,31,0.14)] backdrop-blur-2xl'
+                  : 'border-[#4b362a]/10 bg-white/86 shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)]'
+                }`}>
                 <Search size={18} className="shrink-0 text-[#6f655b]" />
                 <input
                   type="text"
