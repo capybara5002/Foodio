@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, type ReactNode } from 'react';
-import { Search, X, MapPin, Star, Map as MapIcon, Compass, Mail, User, Globe, Volume2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Search, X, MapPin, Star, Map as MapIcon, Compass, Mail, User, Globe, Volume2, ChevronDown, Check } from 'lucide-react';
 import { Restaurant } from '../types';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
@@ -47,8 +47,11 @@ export default function NavBar({
   paymentStatus
 }: NavBarProps) {
   const { t } = useTranslation();
-  const { language, changeLanguage } = useLanguage();
+  const { language, languages, changeLanguage, isLoadingLanguage } = useLanguage();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
+  const [languageQuery, setLanguageQuery] = useState('');
+  const languageMenuRef = useRef<HTMLDivElement | null>(null);
   const isMapTab = currentTab === 'map';
   const shouldAvoidMapPanel = isMapTab && isMapPanelOpen;
 
@@ -65,10 +68,39 @@ export default function NavBar({
     : [];
 
   const showSearchSuggestions = currentTab === 'map' && isSearchFocused && normalizedSearchQuery.length > 0;
+  const filteredLanguages = useMemo(() => {
+    const query = normalizeString(languageQuery.trim());
+    if (!query) return languages;
+
+    return languages.filter((item) => {
+      const searchText = normalizeString(`${item.code} ${item.label} ${item.nativeLabel}`);
+      return searchText.includes(query);
+    });
+  }, [languageQuery, languages]);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!languageMenuRef.current?.contains(event.target as Node)) {
+        setIsLanguageMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, []);
+
   const selectSearchSuggestion = (restaurant: Restaurant) => {
     onSearchQueryChange(restaurant.name);
     onSearchRestaurantSelect(restaurant.id);
     setIsSearchFocused(false);
+  };
+
+  const selectLanguage = async (nextLanguage: string) => {
+    const changed = await changeLanguage(nextLanguage);
+    if (changed) {
+      setIsLanguageMenuOpen(false);
+      setLanguageQuery('');
+    }
   };
 
   return (
@@ -202,15 +234,61 @@ export default function NavBar({
             })}
           </nav>
 
-          <button
-            type="button"
-            onClick={() => changeLanguage(language === 'vi' ? 'en' : 'vi')}
-            className="flex h-10 shrink-0 items-center gap-2 rounded-full border border-[#4b362a]/10 bg-white/74 px-3 text-xs font-bold text-[#2c211b] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white active:scale-[0.98]"
-            aria-label="Toggle language"
-          >
-            <Globe size={15} className="text-[#b76548]" />
-            <span>{language.toUpperCase()}</span>
-          </button>
+          <div className="relative shrink-0" ref={languageMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsLanguageMenuOpen((open) => !open)}
+              className="flex h-10 shrink-0 items-center gap-2 rounded-full border border-[#4b362a]/10 bg-white/74 px-3 text-xs font-bold text-[#2c211b] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white active:scale-[0.98]"
+              aria-label="Select language"
+              aria-expanded={isLanguageMenuOpen}
+            >
+              <Globe size={15} className="text-[#b76548]" />
+              <span>{language.toUpperCase()}</span>
+              <ChevronDown size={13} className={`transition-transform ${isLanguageMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isLanguageMenuOpen && (
+              <div className="absolute right-0 top-[calc(100%+10px)] z-[120] w-72 overflow-hidden rounded-[1.35rem] border border-[#4b362a]/10 bg-[#fffaf4] shadow-[0_24px_70px_rgba(77,49,31,0.2)]">
+                <div className="flex items-center gap-2 border-b border-[#4b362a]/10 px-3 py-2.5">
+                  <Search size={14} className="shrink-0 text-[#b76548]" />
+                  <input
+                    value={languageQuery}
+                    onChange={(event) => setLanguageQuery(event.target.value)}
+                    className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-[#2c211b] outline-none placeholder:text-[#8d8074]"
+                    placeholder="Search language..."
+                    autoFocus
+                  />
+                </div>
+
+                <div className="max-h-80 overflow-y-auto py-1 hide-scrollbar">
+                  {filteredLanguages.map((item) => {
+                    const isActive = item.code === language;
+
+                    return (
+                      <button
+                        key={item.code}
+                        type="button"
+                        disabled={isLoadingLanguage}
+                        onClick={() => void selectLanguage(item.code)}
+                        className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors disabled:cursor-wait ${isActive ? 'bg-[#2c211b] text-[#fffaf4]' : 'text-[#2c211b] hover:bg-white'}`}
+                      >
+                        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-[10px] font-black uppercase ${isActive ? 'bg-[#fffaf4] text-[#2c211b]' : 'bg-[#f0e5d8] text-[#8f4f3b]'}`}>
+                          {item.code}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold">{item.nativeLabel}</span>
+                          <span className={`block truncate text-[10px] font-semibold ${isActive ? 'text-[#fffaf4]/70' : 'text-[#6f655b]'}`}>
+                            {item.label}
+                          </span>
+                        </span>
+                        {isActive && <Check size={15} className="shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 

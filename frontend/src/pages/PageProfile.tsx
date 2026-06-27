@@ -1,7 +1,7 @@
-import { lazy, Suspense, useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CommunityPost, Restaurant } from '../types';
-import { UserCircle, BadgeCheck, FileText, Star, Bookmark, MapPin, Globe, LogOut, User, Shield, Store, Edit2, Key, ChevronRight, ChevronDown, Eye, EyeOff, LockKeyhole, WalletCards } from 'lucide-react';
+import { UserCircle, BadgeCheck, FileText, Star, Bookmark, MapPin, Globe, LogOut, User, Shield, Store, Edit2, Key, ChevronRight, ChevronDown, Eye, EyeOff, LockKeyhole, WalletCards, Search, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
 import { apiBase } from '../api/apiConfig';
@@ -27,6 +27,13 @@ const AVATAR_PRESETS = [
   "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=150&auto=format&fit=crop&q=60"  // Seafood/Snails
 ];
 
+const normalizeString = (str: string) =>
+  str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u0111\u0110]/g, 'd')
+    .toLowerCase();
+
 const AdminDashboard = lazy(() => import('../components/Admin/AdminDashboard'));
 const OwnerDashboard = lazy(() => import('../components/Owner/OwnerDashboard'));
 
@@ -34,10 +41,13 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
   const { user, logout, updateAvatar, updateUsername, updatePassword } = useAuth();
   const { paymentSession, clearPayment } = usePayment();
   const { t } = useTranslation();
-  const { language, changeLanguage } = useLanguage();
+  const { language, languages, changeLanguage, isLoadingLanguage } = useLanguage();
   const [showStatus, setShowStatus] = useState<string | null>(null);
   const [remotePostIds, setRemotePostIds] = useState<Set<string>>(new Set());
   const [showSavedPlaces, setShowSavedPlaces] = useState(false);
+  const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
+  const [languageQuery, setLanguageQuery] = useState('');
+  const languageMenuRef = useRef<HTMLDivElement | null>(null);
   
   // Tab control: profile, admin (if admin), owner (if owner)
   const [activeConsole, setActiveConsole] = useState<'profile' | 'admin' | 'owner'>('profile');
@@ -82,6 +92,27 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
   const [usernameValue, setUsernameValue] = useState('');
   const [isSavingUsername, setIsSavingUsername] = useState(false);
 
+  const filteredLanguages = useMemo(() => {
+    const query = normalizeString(languageQuery.trim());
+    if (!query) return languages;
+
+    return languages.filter((item) => {
+      const searchText = normalizeString(`${item.code} ${item.label} ${item.nativeLabel}`);
+      return searchText.includes(query);
+    });
+  }, [languageQuery, languages]);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!languageMenuRef.current?.contains(event.target as Node)) {
+        setIsLanguageMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, []);
+
   useEffect(() => {
     if (user) {
       setSelectedAvatarUrl(user.avatar || '');
@@ -113,11 +144,17 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
     void fetchPostsCount();
   }, [user]);
 
-  const handleToggleLanguage = async () => {
-    const nextLang = language === 'en' ? 'vi' : 'en';
-    await changeLanguage(nextLang);
-    setShowStatus(nextLang === 'vi' ? '🌐 Đã chuyển ngôn ngữ sang Tiếng Việt' : `🌐 Changed app language to English`);
-    setTimeout(() => setShowStatus(null), 2000);
+  const handleSelectLanguage = async (nextLang: string) => {
+    const nextLanguage = languages.find((item) => item.code === nextLang);
+    const changed = await changeLanguage(nextLang);
+    setShowStatus(changed
+      ? `${t('profile.app_language')}: ${nextLanguage?.nativeLabel ?? nextLang.toUpperCase()}`
+      : 'Could not load this language. Check Google Cloud API key.');
+    if (changed) {
+      setIsLanguageMenuOpen(false);
+      setLanguageQuery('');
+    }
+    setTimeout(() => setShowStatus(null), 2500);
   };
 
   const handleSaveAvatar = async () => {
@@ -515,18 +552,70 @@ export default function PageProfile({ onLoginTrigger, sessionCommunityPosts = []
             <div className="md:col-span-7 flex flex-col gap-6">
               
               {/* Language Settings Card */}
-              <div className="bg-[#fffaf4] border border-white/70 rounded-[1.5rem] overflow-hidden shadow-[0_18px_46px_rgba(77,49,31,0.1)]">
+              <div className="relative z-[70] overflow-visible rounded-[1.5rem] border border-white/70 bg-[#fffaf4] shadow-[0_18px_46px_rgba(77,49,31,0.1)]">
                 <div 
-                  onClick={handleToggleLanguage}
-                  className="flex items-center justify-between p-5 cursor-pointer hover:bg-white transition-colors"
+                  className="flex items-center justify-between gap-4 p-5 hover:bg-white transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Globe size={18} className="text-[#1a1a1a]" />
                     <span className="font-mono text-xs text-[#1a1a1a] font-bold uppercase tracking-wider">{t('profile.app_language')}</span>
                   </div>
-                  <span className="text-[10px] font-mono font-extrabold uppercase text-[#e2533b]">
-                    {language === 'vi' ? 'Tiếng Việt 🇻🇳' : 'English 🇺🇸'}
-                  </span>
+                  <div className="relative shrink-0" ref={languageMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsLanguageMenuOpen((open) => !open)}
+                      disabled={isLoadingLanguage}
+                      className="flex h-10 min-w-[104px] items-center justify-center gap-2 rounded-full border border-[#4b362a]/10 bg-white/74 px-3 text-xs font-bold text-[#2c211b] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white active:scale-[0.98] disabled:cursor-wait disabled:text-[#1a1a1a]/35"
+                      aria-label={t('profile.app_language')}
+                      aria-expanded={isLanguageMenuOpen}
+                    >
+                      <Globe size={15} className="text-[#b76548]" />
+                      <span>{language.toUpperCase()}</span>
+                      <ChevronDown size={13} className={`transition-transform ${isLanguageMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {isLanguageMenuOpen && (
+                      <div className="absolute right-0 top-[calc(100%+10px)] z-[120] w-72 overflow-hidden rounded-[1.35rem] border border-[#4b362a]/10 bg-[#fffaf4] shadow-[0_24px_70px_rgba(77,49,31,0.2)]">
+                        <div className="flex items-center gap-2 border-b border-[#4b362a]/10 px-3 py-2.5">
+                          <Search size={14} className="shrink-0 text-[#b76548]" />
+                          <input
+                            value={languageQuery}
+                            onChange={(event) => setLanguageQuery(event.target.value)}
+                            className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-[#2c211b] outline-none placeholder:text-[#8d8074]"
+                            placeholder="Search language..."
+                            autoFocus
+                          />
+                        </div>
+
+                        <div className="max-h-80 overflow-y-auto py-1 hide-scrollbar">
+                          {filteredLanguages.map((item) => {
+                            const isActive = item.code === language;
+
+                            return (
+                              <button
+                                key={item.code}
+                                type="button"
+                                disabled={isLoadingLanguage}
+                                onClick={() => void handleSelectLanguage(item.code)}
+                                className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors disabled:cursor-wait ${isActive ? 'bg-[#2c211b] text-[#fffaf4]' : 'text-[#2c211b] hover:bg-white'}`}
+                              >
+                                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-[10px] font-black uppercase ${isActive ? 'bg-[#fffaf4] text-[#2c211b]' : 'bg-[#f0e5d8] text-[#8f4f3b]'}`}>
+                                  {item.code}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-sm font-bold">{item.nativeLabel}</span>
+                                  <span className={`block truncate text-[10px] font-semibold ${isActive ? 'text-[#fffaf4]/70' : 'text-[#6f655b]'}`}>
+                                    {item.label}
+                                  </span>
+                                </span>
+                                {isActive && <Check size={15} className="shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

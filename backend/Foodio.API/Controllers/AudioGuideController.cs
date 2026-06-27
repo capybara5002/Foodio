@@ -129,13 +129,16 @@ public class AudioGuideController : ControllerBase
         string targetLang,
         CancellationToken cancellationToken)
     {
-        var url = $"https://translation.googleapis.com/language/translate/v2?key={Uri.EscapeDataString(apiKey)}";
-        using var response = await client.PostAsJsonAsync(url, new
+        using var googleRequest = new HttpRequestMessage(HttpMethod.Post, "https://translation.googleapis.com/language/translate/v2");
+        googleRequest.Headers.Add("X-Goog-Api-Key", apiKey);
+        googleRequest.Content = JsonContent.Create(new
         {
             q = sourceText,
             target = targetLang,
             format = "text"
-        }, cancellationToken);
+        });
+
+        using var response = await client.SendAsync(googleRequest, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -160,8 +163,9 @@ public class AudioGuideController : ControllerBase
         string locale,
         CancellationToken cancellationToken)
     {
-        var url = $"https://texttospeech.googleapis.com/v1/text:synthesize?key={Uri.EscapeDataString(apiKey)}";
-        using var response = await client.PostAsJsonAsync(url, new
+        using var googleRequest = new HttpRequestMessage(HttpMethod.Post, "https://texttospeech.googleapis.com/v1/text:synthesize");
+        googleRequest.Headers.Add("X-Goog-Api-Key", apiKey);
+        googleRequest.Content = JsonContent.Create(new
         {
             input = new { text },
             voice = new
@@ -174,7 +178,9 @@ public class AudioGuideController : ControllerBase
                 audioEncoding = "MP3",
                 speakingRate = 0.95
             }
-        }, cancellationToken);
+        });
+
+        using var response = await client.SendAsync(googleRequest, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
