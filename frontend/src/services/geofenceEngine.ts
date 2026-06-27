@@ -3,6 +3,8 @@ import { UserPosition } from './locationService';
 
 let pendingPOI: { id: string; enteredAt: number } | null = null;
 const cooldowns: Record<string, number> = {};
+const DEFAULT_GEOFENCE_RADIUS_METERS = 30;
+const GEOFENCE_RADIUS_BUFFER_METERS = 15;
 
 export function getCoordinates(r: Restaurant): [number, number] {
   const lat = r.latitude;
@@ -40,7 +42,8 @@ export function checkGeofences(position: UserPosition, restaurants: Restaurant[]
     .map((r) => {
       const coords = getCoordinates(r);
       const dist = calculateHaversineDistance(position.lat, position.lng, coords[0], coords[1]);
-      const radius = r.geofenceRadiusMeters || 30;
+      const baseRadius = r.geofenceRadiusMeters || DEFAULT_GEOFENCE_RADIUS_METERS;
+      const radius = baseRadius + GEOFENCE_RADIUS_BUFFER_METERS;
       const inBounds = dist <= radius;
       const isOnCooldown = cooldowns[r.id] && now < cooldowns[r.id];
       return { restaurant: r, distance: dist, inBounds, isOnCooldown };

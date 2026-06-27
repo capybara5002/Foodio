@@ -14,7 +14,7 @@ import { Restaurant } from '../types';
 import { X, BadgeCheck, Star, Bookmark, MapPin, Map, Clock, LocateFixed, Flame, ArrowRight, MessageSquare, Volume2, VolumeX, Compass, Keyboard, ListOrdered, Navigation, ChevronRight, Ruler, Check, RotateCcw } from 'lucide-react';
 import { startLocationTracking, stopLocationTracking, LocationMode } from '../services/locationService';
 import { checkGeofences } from '../services/geofenceEngine';
-import { playNarration, stopNarration, onNarrationStart, onNarrationEnd, getMuted, setMuted } from '../services/narrationEngine';
+import { playNarration, stopNarration, onNarrationStart, onNarrationEnd, getMuted, setMuted, resolveBrowserNarrationLanguage } from '../services/narrationEngine';
 import ImageGallery from '../components/Common/ImageGallery';
 
 // Standard Leaflet asset fixes for Vite builds to prevent broken image references
@@ -477,7 +477,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
       // Verify geofence trigger
       const triggered = checkGeofences(pos, restaurants);
       if (triggered) {
-        const lang = localStorage.getItem('app_lang') || 'vi';
+        const lang = resolveBrowserNarrationLanguage(i18n.language);
         void playNarration(triggered, lang);
       }
     });
@@ -485,7 +485,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
     return () => {
       stopLocationTracking();
     };
-  }, [locationMode, restaurants]);
+  }, [i18n.language, locationMode, restaurants]);
 
   // Subscribe to active audio guide narrations
   useEffect(() => {
@@ -721,7 +721,7 @@ export default function PageMap({ restaurants, onSelectRestaurant, onSelectTour,
 
       {/* Live Audio Narration Guide Overlay (Glassmorphism + mini player styling) */}
       {currentNarration && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-[#1a1a1a]/95 backdrop-blur-md border border-white/20 text-white p-4 shadow-2xl flex items-start gap-3.5 z-[1005] animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="absolute top-20 sm:top-24 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-[#1a1a1a]/95 backdrop-blur-md border border-white/20 text-white p-4 shadow-2xl flex items-start gap-3.5 z-[1005] animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="w-12 h-12 shrink-0 overflow-hidden border border-white/10 bg-white/5">
             <img 
               src={currentNarration.restaurant.image} 
