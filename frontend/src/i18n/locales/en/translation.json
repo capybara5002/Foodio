@@ -29,6 +29,36 @@
   "footer": {
     "copyright": "© 2026 CraveMap Food Exploration System. Match visual mockup layouts."
   },
+  "payment": {
+    "checking": "Checking payment pass",
+    "access_label": "Foodio Access",
+    "title": "Pay to enter the app",
+    "open_24h": "Open for 24h",
+    "choose_plan": "Choose access plan",
+    "plans": {
+      "customer": {
+        "label": "Customer",
+        "description": "Unlock Food Map, Discover, Inbox, and booking for 24h."
+      },
+      "owner": {
+        "label": "Owner",
+        "description": "Unlock the app and restaurant management area for 24h."
+      }
+    },
+    "pass_note_title": "Payment pass cookies expire after 24h.",
+    "pass_note_body": "When it expires, Foodio automatically locks the app and asks for payment again.",
+    "create_qr": "Create payment QR",
+    "create_new_qr": "Create new QR",
+    "qr_ready": "QR is ready. Scan it and confirm to unlock the app for 24h.",
+    "qr_label": "QR Payment",
+    "scan_title": "Scan code",
+    "qr_alt": "Foodio payment QR",
+    "qr_placeholder": "Create a QR to start payment",
+    "plan_label": "Plan",
+    "amount_label": "Amount",
+    "reference_label": "Reference",
+    "confirm_paid": "I have paid"
+  },
   "profile": {
     "login_required": "Login Required",
     "login_required_desc": "Please log in to your account to view personal info or access admin/owner tools.",

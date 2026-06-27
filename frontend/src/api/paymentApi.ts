@@ -1,10 +1,11 @@
 import { PaymentAccessType, PaymentSession } from '../types';
 import { apiBase } from './apiConfig';
+import { detectBrowserAppLanguage, normalizeAppLanguage } from '../i18n/languages';
 
-const jsonHeaders = {
+const jsonHeaders = () => ({
   'Content-Type': 'application/json',
-  'Accept-Language': localStorage.getItem('app_lang') || 'vi'
-};
+  'Accept-Language': normalizeAppLanguage(localStorage.getItem('app_lang')) || detectBrowserAppLanguage()
+});
 
 const readResponse = async (response: Response) => {
   if (!response.ok) {
@@ -18,7 +19,7 @@ const readResponse = async (response: Response) => {
 export const createPaymentIntent = async (accessType: PaymentAccessType): Promise<PaymentSession> => {
   const response = await fetch(`${apiBase}/api/payments/intent`, {
     method: 'POST',
-    headers: jsonHeaders,
+    headers: jsonHeaders(),
     body: JSON.stringify({ accessType })
   });
 
@@ -28,7 +29,7 @@ export const createPaymentIntent = async (accessType: PaymentAccessType): Promis
 export const confirmPayment = async (clientToken: string): Promise<PaymentSession> => {
   const response = await fetch(`${apiBase}/api/payments/confirm`, {
     method: 'POST',
-    headers: jsonHeaders,
+    headers: jsonHeaders(),
     body: JSON.stringify({ clientToken, method: 'DemoQR' })
   });
 
@@ -38,7 +39,7 @@ export const confirmPayment = async (clientToken: string): Promise<PaymentSessio
 export const validatePayment = async (clientToken: string): Promise<PaymentSession | null> => {
   const response = await fetch(`${apiBase}/api/payments/validate`, {
     method: 'POST',
-    headers: jsonHeaders,
+    headers: jsonHeaders(),
     body: JSON.stringify({ clientToken })
   });
 

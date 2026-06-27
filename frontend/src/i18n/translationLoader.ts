@@ -8,11 +8,12 @@ type TranslationTree = {
   [key: string]: TranslationValue;
 };
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_PREFIX = `foodio_app_i18n_${CACHE_VERSION}`;
 const pendingLoads = new Map<string, Promise<boolean>>();
 
 const baseFlatResources = flattenTranslations(translationEN as TranslationTree);
+const baseResourceKeys = Object.keys(baseFlatResources);
 
 export function flattenTranslations(
   tree: TranslationTree,
@@ -78,9 +79,13 @@ export async function loadLanguageResources(i18n: I18nInstance, requestedLanguag
 
 async function loadDynamicLanguageResources(i18n: I18nInstance, language: string): Promise<boolean> {
   const cachedEntries = readCachedEntries(language);
-  if (cachedEntries) {
+  if (cachedEntries && hasCompleteCachedEntries(cachedEntries)) {
     i18n.addResourceBundle(language, 'translation', unflattenTranslations(cachedEntries), true, true);
     return true;
+  }
+
+  if (cachedEntries) {
+    removeCachedEntries(language);
   }
 
   try {
@@ -126,5 +131,17 @@ function cacheEntries(language: string, entries: Record<string, string>) {
     }));
   } catch (error) {
     console.warn(`[i18n] Failed to cache translations for '${language}'.`, error);
+  }
+}
+
+function hasCompleteCachedEntries(entries: Record<string, string>) {
+  return baseResourceKeys.every((key) => typeof entries[key] === 'string');
+}
+
+function removeCachedEntries(language: string) {
+  try {
+    localStorage.removeItem(getCacheKey(language));
+  } catch (error) {
+    console.warn(`[i18n] Failed to remove stale translations for '${language}'.`, error);
   }
 }

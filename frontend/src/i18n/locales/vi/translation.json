@@ -29,6 +29,36 @@
   "footer": {
     "copyright": "© 2026 Hệ thống khám phá ẩm thực CraveMap. Thiết kế chuẩn giao diện mẫu."
   },
+  "payment": {
+    "checking": "\u0110ang ki\u1ec3m tra payment pass",
+    "access_label": "Foodio Access",
+    "title": "Thanh to\u00e1n \u0111\u1ec3 v\u00e0o app",
+    "open_24h": "M\u1edf trong 24h",
+    "choose_plan": "Ch\u1ecdn g\u00f3i truy c\u1eadp",
+    "plans": {
+      "customer": {
+        "label": "Kh\u00e1ch h\u00e0ng",
+        "description": "M\u1edf Food Map, Discover, Inbox v\u00e0 \u0111\u1eb7t b\u00e0n trong 24h."
+      },
+      "owner": {
+        "label": "Ch\u1ee7 qu\u00e1n",
+        "description": "M\u1edf app v\u00e0 khu qu\u1ea3n l\u00fd qu\u00e1n trong 24h."
+      }
+    },
+    "pass_note_title": "Cookie payment pass h\u1ebft h\u1ea1n sau 24h.",
+    "pass_note_body": "H\u1ebft h\u1ea1n th\u00ec Foodio t\u1ef1 \u0111\u1ed9ng kh\u00f3a app v\u00e0 y\u00eau c\u1ea7u thanh to\u00e1n l\u1ea1i.",
+    "create_qr": "T\u1ea1o QR thanh to\u00e1n",
+    "create_new_qr": "T\u1ea1o QR m\u1edbi",
+    "qr_ready": "QR \u0111\u00e3 s\u1eb5n s\u00e0ng. Qu\u00e9t m\u00e3 v\u00e0 x\u00e1c nh\u1eadn \u0111\u1ec3 m\u1edf app 24h.",
+    "qr_label": "QR Payment",
+    "scan_title": "Qu\u00e9t m\u00e3",
+    "qr_alt": "QR thanh to\u00e1n Foodio",
+    "qr_placeholder": "T\u1ea1o QR \u0111\u1ec3 b\u1eaft \u0111\u1ea7u thanh to\u00e1n",
+    "plan_label": "G\u00f3i",
+    "amount_label": "S\u1ed1 ti\u1ec1n",
+    "reference_label": "N\u1ed9i dung",
+    "confirm_paid": "T\u00f4i \u0111\u00e3 thanh to\u00e1n"
+  },
   "profile": {
     "login_required": "Yêu cầu Đăng nhập",
     "login_required_desc": "Vui lòng đăng nhập tài khoản của bạn để xem thông tin cá nhân hoặc truy cập các công cụ quản trị/chủ quán.",
