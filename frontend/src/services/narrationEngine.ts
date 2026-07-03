@@ -4,10 +4,6 @@ import { apiBase } from '../api/apiConfig';
 type StartCallback = (restaurant: Restaurant, text: string) => void;
 type EndCallback = () => void;
 
-type BasicNarrationResponse = {
-  text?: string;
-};
-
 type CloudNarrationResponse = {
   translatedText?: string;
   audioSegments?: string[];
@@ -23,8 +19,6 @@ let activeRestaurant: Restaurant | null = null;
 let activeText = '';
 let isMuted = false;
 let playbackRunId = 0;
-
-const BASIC_NARRATION_LANGUAGES = new Set(['en', 'vi']);
 
 const SUPPORTED_NARRATION_LANGUAGES = new Set([
   'en',
@@ -232,101 +226,41 @@ export async function playNarration(restaurant: Restaurant, lang = resolveBrowse
   const runId = playbackRunId;
 
   activeRestaurant = restaurant;
+  const sourceText = getDescriptionNarrationText(restaurant, targetLang);
 
-  // Stored restaurant audio is the default English asset, so skip it for other browser languages.
-  if (restaurant.audioUrl && targetLang === 'en') {
-    activeText = `Playing audio guide for ${restaurant.name}`;
-    notifyStart(restaurant, activeText);
-
-    try {
-      const audio = new Audio(restaurant.audioUrl);
-      currentAudio = audio;
-      audio.onended = () => {
-        if (currentAudio === audio && playbackRunId === runId) {
-          stopNarration();
-        }
-      };
-      await audio.play();
-      return;
-    } catch (err) {
-      console.warn('Failed to play audioUrl, falling back to generated narration', err);
-    }
-  }
-
-  if (targetLang !== 'en') {
-    try {
-      const cloudNarration = await fetchCloudNarration(restaurant, targetLang);
-      if (playbackRunId !== runId || isMuted) return;
-
-      const translatedText = cloudNarration.translatedText?.trim();
-      const audioSegments = cloudNarration.audioSegments ?? [];
-
-      if (translatedText) {
-        activeText = translatedText;
-        notifyStart(restaurant, translatedText);
-      }
-
-      if (audioSegments.length > 0) {
-        try {
-          await playAudioSegments(audioSegments, cloudNarration.audioMimeType || 'audio/mpeg', runId);
-          return;
-        } catch (audioError) {
-          console.warn('Cloud narration audio failed, falling back to browser speech synthesis', audioError);
-        }
-      }
-
-      if (translatedText) {
-        await speakText(restaurant, translatedText, targetLang, runId);
-        return;
-      }
-    } catch (err) {
-      console.warn('Failed to create browser-language cloud narration, using local fallback', err);
-    }
-  }
-
-  let text = '';
-  let speechLang = targetLang;
   try {
-    text = await fetchBasicNarrationText(restaurant, targetLang);
-  } catch (err) {
-    console.warn('Failed to call backend narration endpoint, using client fallback', err);
-    text = buildFallbackText(restaurant, targetLang);
-  }
+    const cloudNarration = await fetchCloudNarration(sourceText, targetLang);
+    if (playbackRunId !== runId || isMuted) return;
 
-  if (!BASIC_NARRATION_LANGUAGES.has(targetLang)) {
-    speechLang = 'en';
+    const translatedText = cloudNarration.translatedText?.trim() || sourceText;
+    const audioSegments = cloudNarration.audioSegments ?? [];
+
+    activeText = translatedText;
+    notifyStart(restaurant, translatedText);
+
+    if (audioSegments.length > 0) {
+      try {
+        await playAudioSegments(audioSegments, cloudNarration.audioMimeType || 'audio/mpeg', runId);
+        return;
+      } catch (audioError) {
+        console.warn('Cloud narration audio failed, falling back to browser speech synthesis', audioError);
+      }
+    }
+
+    await speakText(restaurant, translatedText, targetLang, runId);
+    return;
+  } catch (err) {
+    console.warn('Failed to create description narration, using browser speech synthesis fallback', err);
   }
 
   if (playbackRunId !== runId || isMuted) return;
 
-  activeText = text;
-  notifyStart(restaurant, text);
-  await speakText(restaurant, text, speechLang, runId);
+  activeText = sourceText;
+  notifyStart(restaurant, sourceText);
+  await speakText(restaurant, sourceText, targetLang, runId);
 }
 
-async function fetchBasicNarrationText(restaurant: Restaurant, lang: string): Promise<string> {
-  const narrationLang = BASIC_NARRATION_LANGUAGES.has(lang) ? lang : 'en';
-  const response = await fetch(`${apiBase}/api/audio/narration`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept-Language': narrationLang
-    },
-    body: JSON.stringify({
-      restaurantId: restaurant.id,
-      language: narrationLang
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch: ${response.status}`);
-  }
-
-  const data = await response.json() as BasicNarrationResponse;
-  return data.text?.trim() || buildFallbackText(restaurant, narrationLang);
-}
-
-async function fetchCloudNarration(restaurant: Restaurant, lang: string): Promise<CloudNarrationResponse> {
+async function fetchCloudNarration(sourceText: string, lang: string): Promise<CloudNarrationResponse> {
   const response = await fetch(`${apiBase}/api/audio-guide/narrate`, {
     method: 'POST',
     headers: {
@@ -334,7 +268,7 @@ async function fetchCloudNarration(restaurant: Restaurant, lang: string): Promis
       'Accept-Language': lang
     },
     body: JSON.stringify({
-      text: buildCloudSourceText(restaurant),
+      text: sourceText,
       targetLang: lang
     })
   });
@@ -498,18 +432,9 @@ async function speakText(restaurant: Restaurant, text: string, lang: string, run
   }, 5000);
 }
 
-function buildCloudSourceText(restaurant: Restaurant): string {
-  const dishes = restaurant.dishes?.map((dish) => dish.name).slice(0, 3).join(', ');
-  const recommendedDishes = dishes || 'local specialties';
+function getDescriptionNarrationText(restaurant: Restaurant, lang: string): string {
   const description = restaurant.description?.trim();
-
-  return [
-    `${restaurant.name} is a food spot in ${restaurant.area}, located at ${restaurant.address}.`,
-    description,
-    `It has a rating of ${restaurant.rating} stars and a ${restaurant.priceRange} price range.`,
-    `Recommended dishes include ${recommendedDishes}.`,
-    `Opening hours: ${restaurant.openingHours}.`
-  ].filter(Boolean).join(' ');
+  return description || buildFallbackText(restaurant, lang);
 }
 
 function buildFallbackText(restaurant: Restaurant, lang: string): string {
